@@ -223,7 +223,7 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
                                         <div className={`text-[#DBDEE1] leading-[1.375rem] whitespace-pre-wrap text-base font-normal`}>
                                             <ReactMarkdown
                                                 components={{
-                                                    img: ({ node, ...props }) => <img {...props} className="max-w-sm rounded-lg my-2 border border-[#1F2023]" />
+                                                    img: (props: any) => <img {...props} className="max-w-sm rounded-lg my-2 border border-[#1F2023]" />
                                                 }}
                                             >
                                                 {msg.content}
