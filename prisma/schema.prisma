@@ -20,6 +20,10 @@ model User {
   affiliateCode String?   @unique
   referredBy    String?   // Code of the referrer
   
+  communityNickname String?
+  zipCode       String?
+  address       String?
+
   payoutPreference String @default("offset_purchase") // offset_purchase, bank_transfer
 
   createdAt     DateTime  @default(now())

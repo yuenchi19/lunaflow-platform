@@ -228,13 +228,7 @@ export const MOCK_CHANNELS: import("@/types").Channel[] = [
     },
 
     // --- 実践エリア (Practice Area) ---
-    {
-        id: "c_practice_1",
-        name: "仕入れ希望",
-        description: "仕入れに関する相談や希望。",
-        allowedPlans: ["light", "standard", "premium"],
-        category: "実践エリア",
-    },
+
     {
         id: "c_practice_2",
         name: "今日の売上報告",

@@ -27,7 +27,7 @@ export default function ManualPage() {
                             1. コース受講の流れ
                         </a>
                         <a href="#feedback" className="block px-3 py-2 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-sm">
-                            2. 感想の提出と承認
+                            2. アウトプットや課題（感想提出）
                         </a>
                         <a href="#community" className="block px-3 py-2 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-sm">
                             3. コミュニティ機能
@@ -75,18 +75,14 @@ export default function ManualPage() {
                     <section id="feedback" className="scroll-mt-24">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 font-bold text-lg">2</div>
-                            <h2 className="text-2xl font-bold text-slate-900">感想の提出と承認</h2>
+                            <h2 className="text-2xl font-bold text-slate-900">アウトプットや課題（感想提出）</h2>
                         </div>
                         <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-6">
                             <p className="text-slate-600 text-sm leading-relaxed">
-                                各カテゴリー（章）の最後には「アウトプット（感想提出）」のステップがあります。<br />
-                                ここでの学びや気づきを投稿してください。
+                                各カテゴリー（章）の最後には「アウトプットや課題（感想提出）」のステップがあります。<br />
+                                この作業を完了することで、次のステップが解放されます！<br />
+                                わからなければコミュニティのチャットに相談してください＾＾
                             </p>
-                            <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 text-sm text-amber-900">
-                                <strong>重要：承認制について</strong><br />
-                                提出された感想は講師が確認し、「承認」されると次のカテゴリーが解放されます。<br />
-                                内容が不十分な場合は「再提出」となることがあります。
-                            </div>
                         </div>
                     </section>
 
@@ -127,10 +123,18 @@ export default function ManualPage() {
                                 <div>
                                     <h3 className="font-bold text-slate-800 mb-2">登録情報の変更</h3>
                                     <p className="text-slate-600 text-sm leading-relaxed">
-                                        マイページから、お名前・メールアドレス・パスワードの変更が可能です。<br />
-                                        プロフィール画像の設定もこちらから行えます。
+                                        マイページから、お名前・メールアドレス・パスワード・コミュニティ用ニックネームの変更が可能です。
                                     </p>
                                 </div>
+                            </div>
+
+                            {/* Plan Change Info */}
+                            <div className="border-t border-slate-100 pt-6 mt-6">
+                                <h3 className="font-bold text-slate-800 mb-2">プラン変更について</h3>
+                                <p className="text-slate-600 text-sm leading-relaxed">
+                                    プランの変更については、ダウングレードのみ半年間の期間を経過後に変更が可能です。<br />
+                                    アップグレードについては、即日可能ですのでご検討ください。
+                                </p>
                             </div>
                         </div>
                     </section>

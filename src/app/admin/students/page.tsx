@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
+import { MOCK_USERS } from '@/lib/data';
 
 interface Student {
     id: string;
@@ -14,11 +15,8 @@ interface Student {
 }
 
 export default function StudentsPage() {
-    const [students, setStudents] = useState<Student[]>([
-        { id: 'st1', name: '山田 太郎', email: 'yamada@example.com', enrolledCourse: 'テストコース', progress: 45, lastActive: '2023-12-21' },
-        { id: 'st2', name: '鈴木 花子', email: 'suzuki@example.com', enrolledCourse: 'テストコース', progress: 80, lastActive: '2023-12-20' },
-        { id: 'st3', name: '田中 一郎', email: 'tanaka@example.com', enrolledCourse: 'テストコース', progress: 10, lastActive: '2023-12-19' },
-    ]);
+    // In a real app, fetch from API. Here we use MOCK_USERS directly for consistency.
+    const [students] = useState(MOCK_USERS.filter(u => u.role === 'student'));
 
     return (
         <div className={styles.container}>
@@ -53,11 +51,10 @@ export default function StudentsPage() {
                 <table className={styles.table}>
                     <thead>
                         <tr>
-                            <th>名前</th>
+                            <th>名前 (コミュニティ名)</th>
                             <th>メールアドレス</th>
-                            <th>受講中のコース</th>
-                            <th>進捗率</th>
-                            <th>最終ログイン</th>
+                            <th>プラン</th>
+                            <th>ステータス</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -66,21 +63,31 @@ export default function StudentsPage() {
                             <tr key={st.id}>
                                 <td>
                                     <div className={styles.studentInfo}>
-                                        <div className={styles.avatar}>{st.name[0]}</div>
-                                        {st.name}
+                                        {st.avatarUrl ? (
+                                            <img src={st.avatarUrl} alt="" className={styles.avatar} />
+                                        ) : (
+                                            <div className={styles.avatar}>{st.name[0]}</div>
+                                        )}
+                                        <div>
+                                            <div className="font-bold">{st.name}</div>
+                                            {st.communityNickname && (
+                                                <div className="text-xs text-slate-500">@{st.communityNickname}</div>
+                                            )}
+                                        </div>
                                     </div>
                                 </td>
                                 <td>{st.email}</td>
-                                <td>{st.enrolledCourse}</td>
                                 <td>
-                                    <div className={styles.progressRow}>
-                                        <div className={styles.progressBar}>
-                                            <div className={styles.progressFill} style={{ width: `${st.progress}%` }}></div>
-                                        </div>
-                                        <span className={styles.progressText}>{st.progress}%</span>
-                                    </div>
+                                    <span className={`px-2 py-1 rounded text-xs font-bold ${st.plan === 'premium' ? 'bg-amber-100 text-amber-700' :
+                                        st.plan === 'standard' ? 'bg-blue-100 text-blue-700' :
+                                            'bg-slate-100 text-slate-700'
+                                        }`}>
+                                        {st.plan.toUpperCase()}
+                                    </span>
                                 </td>
-                                <td>{st.lastActive}</td>
+                                <td>
+                                    <span className="text-emerald-600 font-bold text-sm">有効</span>
+                                </td>
                                 <td>
                                     <Link href={`/admin/students/${st.id}`} className={styles.detailBtn}>詳細</Link>
                                 </td>

@@ -18,8 +18,10 @@ import ReactMarkdown from 'react-markdown';
 export function ChatArea({ channelId, currentUser, channelName, introContent }: ChatAreaProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState("");
+    const [replyTo, setReplyTo] = useState<Message | null>(null); // [NEW] Reply state
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { isRulesAgreed, agreeToRules } = useCommunity();
+    const fileInputRef = useRef<HTMLInputElement>(null); // [NEW] File input
 
     // Check if this is the "Rules" channel
     const isRulesChannel = channelName.includes("はじめに①") || channelId === 'c1';
@@ -33,6 +35,28 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
         if (!confirm("このメッセージを削除しますか？")) return;
         deleteMessage(channelId, messageId);
         loadMessages();
+    };
+
+    const handleReply = (msg: Message) => {
+        setReplyTo(msg);
+        // Focus input
+    };
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Mock Image Upload (Base64 or URL)
+        // In real app, upload to storage and get URL
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64 = reader.result as string;
+            // Send message with image markdown
+            const imageMarkdown = `![${file.name}](${base64}) \n`;
+            sendMessage(channelId, currentUser.id, imageMarkdown);
+            loadMessages();
+        };
+        reader.readAsDataURL(file);
     };
 
     useEffect(() => {
@@ -51,7 +75,18 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
 
     const handleSend = () => {
         if (!inputValue.trim()) return;
-        sendMessage(channelId, currentUser.id, inputValue);
+
+        let content = inputValue;
+        if (replyTo) {
+            // Append reply context or handle as metadata. 
+            // For simple markdown chat, we'll prefix with a quote.
+            const replyUser = MOCK_USERS.find(u => u.id === replyTo.userId);
+            const replyName = replyUser?.communityNickname || replyUser?.name || "User";
+            content = `> **@${replyName}**: ${replyTo.content.substring(0, 50)}${replyTo.content.length > 50 ? "..." : ""}\n\n${inputValue}`;
+            setReplyTo(null);
+        }
+
+        sendMessage(channelId, currentUser.id, content);
         setInputValue("");
         loadMessages();
     };
@@ -79,9 +114,11 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-[0.1rem] scrollbar-thin scrollbar-thumb-[#1A1B1E] scrollbar-track-[#2E3338]">
 
-                {/* Special Layout for Rules Channel */}
+                {/* Special Layout for Rules Channel (omitted changes here, keeping existing if possible or re-pasting entire if needed) */}
+                {/* ... (Rules Channel Layout) ... */}
                 {isRulesChannel ? (
                     <div className="max-w-3xl mx-auto mt-10 p-6 bg-[#2B2D31] rounded-md shadow-lg border border-[#1F2023]">
+                        {/* ... Existing Rules Content ... */}
                         <div className="flex items-center gap-4 mb-6 border-b border-[#3F4147] pb-4">
                             <div className="w-16 h-16 bg-[#5865F2] rounded-full flex items-center justify-center">
                                 <Hash className="w-8 h-8 text-white" />
@@ -93,6 +130,7 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
                         </div>
 
                         <div className="space-y-6 text-[#DBDEE1]">
+                            {/* ... List items ... */}
                             <div className="flex gap-3">
                                 <span className="w-10 h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0">1</span>
                                 <div>
@@ -100,6 +138,7 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
                                     <p className="text-sm text-[#B5BAC1]">全てのメンバーに対して敬意を払い、建設的なコミュニケーションを心がけましょう。</p>
                                 </div>
                             </div>
+                            {/* ... */}
                             <div className="flex gap-3">
                                 <span className="w-10 h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0">2</span>
                                 <div>
@@ -148,7 +187,7 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
                             <p className="text-[#B5BAC1] text-base">ここが <span className="font-medium text-white">#{channelName}</span> の始まりです。</p>
                         </div>
 
-                        {/* Intro Content (Pinned System Message style) */}
+                        {/* Intro Content */}
                         {introContent && (
                             <div className="mb-6 mx-4 p-6 bg-[#2B2D31] rounded-md border border-[#1F2023] shadow-sm">
                                 <div className="prose prose-invert max-w-none prose-p:text-[#DBDEE1] prose-headings:text-white prose-a:text-[#00A8FC] prose-strong:text-white">
@@ -159,30 +198,49 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
 
                         {messages.map((msg, index) => {
                             const isSameUser = index > 0 && messages[index - 1].userId === msg.userId;
+                            const messageUser = msg.userId === currentUser.id ? currentUser : MOCK_USERS.find(u => u.id === msg.userId);
+                            const displayName = messageUser?.communityNickname || messageUser?.name || "Unknown User";
+
                             return (
                                 <div key={msg.id} className={`group flex pr-4 pl-[72px] py-0.5 relative hover:bg-[#2E3035] ${!isSameUser ? "mt-[17px]" : ""}`}>
                                     {!isSameUser && (
-                                        <div className="absolute left-4 top-0.5 w-[40px] h-[40px] rounded-full bg-transparent overflow-hidden mt-0.5 select-none" />
+                                        <div className="absolute left-4 top-0.5 w-[40px] h-[40px] rounded-full bg-indigo-500 overflow-hidden mt-0.5 select-none text-white flex items-center justify-center font-bold text-lg">
+                                            {displayName.charAt(0)}
+                                        </div>
                                     )}
 
-                                    <div className="flex flex-col flex-1 min-w-0 -ml-[50px]">
+                                    <div className="flex flex-col flex-1 min-w-0">
                                         {!isSameUser && (
                                             <div className="flex items-center gap-2 mb-0.5">
                                                 <span className="font-medium text-base text-[#F2F3F5] hover:underline cursor-pointer">
-                                                    {msg.userId === currentUser.id ? currentUser.name : (MOCK_USERS.find(u => u.id === msg.userId)?.name || `User ${msg.userId}`)}
+                                                    {displayName}
                                                 </span>
                                                 <span className="text-[12px] text-[#949BA4] font-medium ml-1">
                                                     {new Date(msg.createdAt).toLocaleString()}
                                                 </span>
                                             </div>
                                         )}
-                                        <p className={`text-[#DBDEE1] leading-[1.375rem] whitespace-pre-wrap text-base font-normal`}>
-                                            {msg.content}
-                                        </p>
+                                        <div className={`text-[#DBDEE1] leading-[1.375rem] whitespace-pre-wrap text-base font-normal`}>
+                                            <ReactMarkdown
+                                                components={{
+                                                    img: ({ node, ...props }) => <img {...props} className="max-w-sm rounded-lg my-2 border border-[#1F2023]" />
+                                                }}
+                                            >
+                                                {msg.content}
+                                            </ReactMarkdown>
+                                        </div>
                                     </div>
 
-                                    {currentUser.role === 'admin' && (
-                                        <div className="absolute right-4 top-0 bg-[#313338] shadow-sm rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-[#2E3035]">
+                                    {/* Actions */}
+                                    <div className="absolute right-4 top-0 bg-[#313338] shadow-sm rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-[#2E3035] flex gap-1">
+                                        <button
+                                            onClick={() => handleReply(msg)}
+                                            className="p-1 text-[#B5BAC1] hover:text-indigo-400 transition-colors"
+                                            title="返信"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-reply"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
+                                        </button>
+                                        {currentUser.role === 'admin' && (
                                             <button
                                                 onClick={() => handleDelete(msg.id)}
                                                 className="p-1 text-[#B5BAC1] hover:text-[#F23F42] transition-colors"
@@ -190,8 +248,8 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
                             );
                         })}
@@ -200,50 +258,58 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
                 )}
             </div>
 
-            {/* Input Area - Hide for Rules channel if not admin, or just keep it? Usually read-only */}
-            {/* User request: "確認ボタンを設置して押したら次が開かれる形". Usually read-only channel. */}
-            {/* Let's hide input for Rules channel to force focus on button */}
             {/* Input Area */}
             {!isRulesChannel && (
                 <div className="px-4 pb-6 bg-[#313338] flex-shrink-0">
-                    {currentUser.plan === 'light' && channelId !== 'c_practice_1' ? (
+                    {/* Removed Old Plan Restriction for light plan in specific channel, now strict check if needed or just allow basic */}
+                    {currentUser.plan === 'light' ? (
                         <div className="bg-[#383A40] rounded-lg px-4 py-4 text-center text-[#B5BAC1] text-sm">
                             🔒 ライトプランの方はメッセージの投稿ができません（閲覧のみ可能です）
                         </div>
                     ) : (
-                        <div className="bg-[#383A40] rounded-lg px-4 py-2.5 flex items-start gap-3 relative">
-                            {/* Plus Button */}
-                            <button className="text-[#B5BAC1] hover:text-[#F2F3F5] p-1 h-fit mt-0.5 transition-colors flex-shrink-0">
-                                <div className="bg-[#B5BAC1] text-[#383A40] w-6 h-6 rounded-full flex items-center justify-center hover:text-white transition-colors">
-                                    <Plus className="w-4 h-4 font-bold" />
+                        <div className="bg-[#383A40] rounded-lg px-4 py-2.5 flex flex-col gap-2 relative">
+                            {/* Reply Context */}
+                            {replyTo && (
+                                <div className="flex items-center justify-between text-xs text-[#B5BAC1] bg-[#2B2D31] p-2 rounded mb-1">
+                                    <span>Replying to User...</span>
+                                    <button onClick={() => setReplyTo(null)} className="hover:text-white">✕</button>
                                 </div>
-                            </button>
+                            )}
 
-                            <textarea
-                                className="flex-1 bg-transparent border-none outline-none text-[#DBDEE1] placeholder-[#949BA4] resize-none min-h-[44px] text-base py-1 scrollbar-thin scrollbar-thumb-[#202225]"
-                                placeholder={`#${channelName} へメッセージを送信`}
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" && !e.shiftKey) {
-                                        e.preventDefault();
-                                        handleSend();
-                                    }
-                                }}
-                                rows={1}
-                                style={{ overflow: 'hidden' }}
-                            />
+                            <div className="flex items-start gap-3 w-full">
+                                {/* Image Upload Button */}
+                                <button
+                                    className="text-[#B5BAC1] hover:text-[#F2F3F5] p-1 h-fit mt-0.5 transition-colors flex-shrink-0"
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    <div className="bg-[#B5BAC1] text-[#383A40] w-6 h-6 rounded-full flex items-center justify-center hover:text-white transition-colors">
+                                        <Plus className="w-4 h-4 font-bold" />
+                                    </div>
+                                </button>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                />
 
-                            <div className="flex items-center gap-3 self-center mr-1">
-                                <div className="group relative cursor-pointer">
-                                    <Gift className="w-7 h-7 text-[#B5BAC1] hover:text-[#F2F3F5] transition-colors" />
-                                </div>
-                                <div className="group relative cursor-pointer">
-                                    <span className="bg-[#B5BAC1] text-[10px] font-bold text-[#383A40] rounded px-1 group-hover:bg-[#F2F3F5] transition-colors">GIF</span>
-                                </div>
-                                <div className="group relative cursor-pointer">
-                                    <Smile className="w-7 h-7 text-[#B5BAC1] hover:text-[#F2F3F5] transition-colors" />
-                                </div>
+                                <textarea
+                                    className="flex-1 bg-transparent border-none outline-none text-[#DBDEE1] placeholder-[#949BA4] resize-none min-h-[44px] text-base py-1 scrollbar-thin scrollbar-thumb-[#202225]"
+                                    placeholder={`#${channelName} へメッセージを送信`}
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSend();
+                                        }
+                                    }}
+                                    rows={1}
+                                    style={{ overflow: 'hidden' }}
+                                />
+
+                                {/* Removed Gift/Smile, keeping Send button implicit or minimalistic */}
                             </div>
                         </div>
                     )}

@@ -49,6 +49,9 @@ export interface User {
     affiliateCode?: string;
     referredBy?: string;
     payoutPreference?: 'bank_transfer' | 'offset_purchase';
+    communityNickname?: string;
+    zipCode?: string;
+    address?: string;
 }
 
 export interface StripeSettings {
