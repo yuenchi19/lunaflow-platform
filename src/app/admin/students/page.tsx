@@ -65,7 +65,7 @@ export default function StudentsPage() {
                     <div className={styles.breadcrumb}>
                         <Link href="/admin/dashboard">ダッシュボード</Link> / 受講生管理
                     </div>
-                    <h1 className={styles.title}>受講生管理</h1>
+                    <h1 className={styles.title}>受講生管理 <span className="text-sm font-normal text-slate-500">(Ver 2.0)</span></h1>
                 </div>
                 <div className={styles.actions}>
                     <button className={styles.csvBtn}>CSV出力</button>
