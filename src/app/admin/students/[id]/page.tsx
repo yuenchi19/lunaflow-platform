@@ -4,14 +4,15 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
-import { MOCK_USERS, getStudentPayments } from '@/lib/data';
+import { MOCK_USERS, getStudentPayments, getStudentProgressDetail } from '@/lib/data';
 import { calculateStudentStatus } from '@/lib/utils';
-import { User, Payment } from '@/types';
+import { User, Payment, ProgressDetail } from '@/types';
 
 export default function StudentDetailPage({ params }: { params: { id: string } }) {
     const router = useRouter();
     const [student, setStudent] = useState<User | null>(null);
     const [payments, setPayments] = useState<Payment[]>([]);
+    const [progressLogs, setProgressLogs] = useState<ProgressDetail[]>([]);
     const [isEditing, setIsEditing] = useState(false);
 
     // Edit Form State
@@ -33,8 +34,14 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                 communityNickname: found.communityNickname || "",
                 plan: found.plan
             });
-            // Fetch Payments
-            setPayments(getStudentPayments(found.id));
+
+            // Fetch Payments & Sort DESC by date
+            const allPayments = getStudentPayments(found.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            // Requirement: Limit to latest 3 succeeded/valid history items for display
+            setPayments(allPayments.filter(p => p.status === 'succeeded').slice(0, 3));
+
+            // Fetch Progress
+            setProgressLogs(getStudentProgressDetail(found.id));
         }
     }, [params.id]);
 
@@ -54,8 +61,11 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
 
     const handleDownloadCSV = () => {
         if (!student) return;
+        // Re-fetch full list for CSV so the download is complete
+        const fullPayments = getStudentPayments(student.id);
+
         const headers = ["日付", "金額", "方法", "ステータス"];
-        const rows = payments.map(p => [
+        const rows = fullPayments.map(p => [
             p.date,
             p.amount.toString(),
             p.method,
@@ -90,7 +100,6 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                 <div className={styles.headerActions}>
                     <button onClick={handleDownloadCSV} className={styles.headerBtn}>📥 履歴CSV出力</button>
                     <button onClick={handleSendEmail} className={styles.headerBtnPrimary}>📧 この受講生にメールを送る</button>
-                    {/* Beta removed */}
                     <Link href="/admin/emails" className={styles.headerLink}>📧 メール送信履歴</Link>
                 </div>
             </div>
@@ -98,7 +107,6 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
             <div className={styles.section}>
                 <div className={styles.studentCard}>
                     <div className={styles.studentHeader}>
-                        {/* Avatar Removed as requested */}
                         <div className={styles.studentMainInfo}>
                             <div className={styles.nameRow}>
                                 {isEditing ? (
@@ -161,8 +169,8 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                                     ) : (
                                         <div className={styles.infoValue}>
                                             <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${student.plan === 'premium' ? 'bg-amber-100 text-amber-700' :
-                                                student.plan === 'standard' ? 'bg-blue-100 text-blue-700' :
-                                                    'bg-slate-100 text-slate-700'
+                                                    student.plan === 'standard' ? 'bg-blue-100 text-blue-700' :
+                                                        'bg-slate-100 text-slate-700'
                                                 }`}>
                                                 {student.plan}
                                             </span>
@@ -248,9 +256,54 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                 </div>
             </div>
 
-            {/* Payment History Table */}
+            {/* Progress History - NEW */}
             <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>決済・購入履歴</h3>
+                <h3 className={styles.sectionTitle}>受講進捗詳細 (行動ログ)</h3>
+                <div className={styles.tableCard}>
+                    <table className="w-full text-left text-sm text-gray-600">
+                        <thead className="bg-gray-50 text-gray-700 uppercase font-medium border-b">
+                            <tr>
+                                <th className="px-6 py-3">完了日時</th>
+                                <th className="px-6 py-3">コース / カテゴリ</th>
+                                <th className="px-6 py-3">ブロック名</th>
+                                <th className="px-6 py-3 text-center">ステータス</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {progressLogs.map((log, idx) => (
+                                <tr key={`prog-${idx}`} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap font-mono text-xs">
+                                        {new Date(log.completedAt).toLocaleString('ja-JP')}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="font-medium text-gray-900">{log.courseTitle}</div>
+                                        <div className="text-xs text-gray-400">{log.categoryTitle}</div>
+                                    </td>
+                                    <td className="px-6 py-4 text-gray-800">
+                                        {log.blockTitle}
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                                            完了
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
+                            {progressLogs.length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="text-center py-6 text-gray-400">
+                                        受講・完了履歴がまだありません
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Payment History Table (Limited to latest 3) */}
+            <div className={styles.section}>
+                <h3 className={styles.sectionTitle}>直近の決済・購入履歴 (最新3件)</h3>
                 <div className={styles.tableCard}>
                     <table className="w-full text-left text-sm text-gray-600">
                         <thead className="bg-gray-50 text-gray-700 uppercase font-medium border-b">
@@ -272,7 +325,7 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                                     <td className="px-6 py-4 text-right font-mono">¥{p.amount.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-center">
                                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${p.status === 'succeeded' ? 'bg-green-100 text-green-700' :
-                                            p.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                                                p.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
                                             }`}>
                                             {p.status}
                                         </span>
