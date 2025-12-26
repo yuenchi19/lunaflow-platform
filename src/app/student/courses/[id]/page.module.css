@@ -1,0 +1,160 @@
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+    min-height: 100vh;
+    background: #f8fafc;
+}
+
+.header {
+    margin-bottom: 3rem;
+    text-align: center;
+}
+
+.courseLabel {
+    display: inline-block;
+    background: #003366;
+    color: white;
+    padding: 0.25rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.courseTitle {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.progressSection {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 3rem;
+}
+
+.progressHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.progressLabel {
+    font-weight: 700;
+    color: #475569;
+}
+
+.progressPercent {
+    font-weight: 700;
+    color: #003366;
+}
+
+.progressBar {
+    height: 12px;
+    background: #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    background: #003366;
+    transition: width 0.3s ease;
+}
+
+.categoryList {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.categoryCard {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.categoryCard:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.categoryTop {
+    margin-bottom: 1.5rem;
+}
+
+.categoryIndex {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #3b82f6;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.categoryTitle {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.blockCount {
+    font-size: 1rem;
+    color: #64748b;
+    margin-bottom: 2rem;
+}
+
+.startBtn {
+    display: block;
+    width: 100%;
+    background: #003366;
+    color: white;
+    text-align: center;
+    padding: 1rem;
+    border-radius: 8px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.startBtn:hover {
+    background: #002244;
+}
+
+.empty {
+    text-align: center;
+    padding: 4rem;
+    color: #64748b;
+    background: white;
+    border-radius: 12px;
+}
+
+.footer {
+    margin-top: 4rem;
+    text-align: center;
+}
+
+.backLink {
+    color: #64748b;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.backLink:hover {
+    color: #1e293b;
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-weight: 700;
+    color: #64748b;
+}

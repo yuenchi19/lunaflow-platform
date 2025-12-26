@@ -1,0 +1,148 @@
+export interface Category {
+    id: string;
+    courseId: string;
+    title: string;
+    order: number;
+    description?: string;
+}
+
+export type BlockType = 'video' | 'text' | 'quiz';
+
+export interface Block {
+    id: string;
+    categoryId: string;
+    title: string;
+    type: BlockType;
+    content?: string;
+    videoUrl?: string;
+    order: number;
+}
+
+export interface Feedback {
+    id: string;
+    userId: string;
+    blockId: string;
+    content: string;
+    status: 'pending' | 'approved' | 'rejected';
+    staffComment?: string;
+    submittedAt: string;
+    updatedAt?: string;
+}
+
+export interface UserProgress {
+    userId: string;
+    lessonId: string; // Used for blocks for now
+    completed: boolean;
+    score?: number;
+    lastWatchedPosition?: number;
+    targetDate?: string; // For learning plan
+}
+
+export interface User {
+    id: string;
+    name: string;
+    email: string;
+    role: 'student' | 'admin' | 'accounting' | 'staff';
+    plan: Plan;
+    subscriptionStatus?: 'active' | 'inactive' | 'past_due';
+    avatarUrl?: string;
+    affiliateCode?: string;
+    referredBy?: string;
+    payoutPreference?: 'bank_transfer' | 'offset_purchase';
+}
+
+export interface StripeSettings {
+    enabled: boolean;
+    apiKey: string;
+    targetCourseIds: string[];
+}
+
+export interface Student {
+    id: string;
+    name: string;
+    email: string;
+    customFields?: string;
+    courses?: string[];
+    startDate?: string;
+    endDate?: string;
+    registrationDate: string;
+    progressStatus: 'completed' | 'excellent' | 'good' | 'stagnant' | 'dropout' | 'waiting' | 'all';
+}
+
+export interface SentEmail {
+    id: string;
+    recipientName: string;
+    recipientEmail: string;
+    subject: string;
+    content: string;
+    sentAt: string;
+    status: 'waiting' | 'sent' | 'failed';
+}
+
+export type Plan = 'light' | 'standard' | 'premium';
+
+export interface Channel {
+    id: string;
+    name: string;
+    description: string;
+    allowedPlans: Plan[];
+    allowedRoles?: ('admin' | 'staff' | 'student')[];
+    category?: string;
+}
+
+export interface Message {
+    id: string;
+    channelId: string;
+    userId: string;
+    content: string;
+    createdAt: string;
+}
+
+export interface Course {
+    id: string;
+    title: string;
+    description: string;
+    thumbnailUrl?: string;
+    expirationDate?: string;
+}
+
+export interface Announcement {
+    id: string;
+    title: string;
+    content: string;
+    date: string;
+}
+
+export interface Lesson {
+    id: string;
+    title: string;
+    description: string;
+    videoUrl?: string;
+    thumbnailUrl?: string;
+    isCompleted?: boolean;
+    duration?: number;
+}
+
+export interface Quiz {
+    id: string;
+    questions: any[];
+    passingScore?: number;
+}
+
+// Affiliate Types
+export interface RewardTransaction {
+    id: string;
+    userId: string;
+    date: string;
+    amount: number; // Negative for usage/payout, Positive for earnings
+    type: 'offset_purchase' | 'bank_transfer_payout' | 'bank_transfer_fee' | 'earning';
+    description: string;
+    purchaseRequestId?: string;
+    status: 'completed' | 'pending';
+}
+
+export interface AffiliateEarnings {
+    directReferrals: number;
+    indirectReferrals: number;
+    monthlyEarnings: number;
+}

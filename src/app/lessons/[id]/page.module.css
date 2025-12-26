@@ -1,0 +1,50 @@
+.layout {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.backLink {
+    display: inline-block;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.backLink:hover {
+    text-decoration: underline;
+    color: var(--color-primary);
+}
+
+.lessonHeader {
+    margin-bottom: 2rem;
+}
+
+.title {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-text-main);
+}
+
+.description {
+    font-size: 1.1rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+}
+
+.videoSection {
+    margin-bottom: 3rem;
+}
+
+.quizSection {
+    margin-top: 3rem;
+    border-top: 2px dashed var(--color-border);
+    padding-top: 2rem;
+}
+
+.notFound {
+    text-align: center;
+    padding: 4rem;
+    font-size: 1.5rem;
+    color: var(--color-text-muted);
+}

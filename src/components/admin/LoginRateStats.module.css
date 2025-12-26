@@ -1,0 +1,78 @@
+.container {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    /* Make it same height as motivation section if side-by-side */
+    height: 100%;
+}
+
+.title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #374151;
+    margin-bottom: 1.5rem;
+}
+
+.chartRow {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 1rem;
+}
+
+.chartWrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.pie {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: #e5e7eb;
+    /* Base gray */
+    position: relative;
+}
+
+/* Conic gradients for charts */
+.pie7Days {
+    background: conic-gradient(#8b5cf6 0% 8.6%, #e5e7eb 8.6% 100%);
+}
+
+.pie30Days {
+    background: conic-gradient(#ef4444 0% 2%, #e5e7eb 2% 100%);
+}
+
+.pieCustom {
+    background: conic-gradient(#e5e7eb 0% 100%);
+}
+
+.labelGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.labelText {
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.percentage {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #111827;
+}
+
+.percentageSmall {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #111827;
+}
+
+.dateRangePicker {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: flex-end;
+}

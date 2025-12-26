@@ -1,0 +1,270 @@
+.container {
+    padding: 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+    background: #f8fafc;
+    min-height: 100vh;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #475569;
+}
+
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.headerBtn {
+    background: #003366;
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    border: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.headerBtnPrimary {
+    background: #003366;
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    border: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.betaTag {
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.headerLink {
+    color: #475569;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.section {
+    margin-bottom: 2.5rem;
+}
+
+.sectionTitle {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 1rem;
+}
+
+.studentCard {
+    background: white;
+    border-radius: 8px;
+    padding: 2.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.studentHeader {
+    display: flex;
+    gap: 2rem;
+}
+
+.avatarLarge {
+    width: 80px;
+    height: 80px;
+    background: #e2e8f0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #94a3b8;
+}
+
+.studentMainInfo {
+    flex: 1;
+}
+
+.nameRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.studentName {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.editActions {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.textLink {
+    background: none;
+    border: none;
+    color: #3b82f6;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.deleteRed {
+    color: #ef4444;
+}
+
+.infoGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.infoItem {
+    margin-bottom: 1rem;
+}
+
+.infoLabel {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+}
+
+.infoValue {
+    font-size: 1rem;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+.statsCard {
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+    display: flex;
+    gap: 4rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.statItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.statLabel {
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.statValue {
+    color: #64748b;
+}
+
+.courseCard {
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.courseHeaderSmall {
+    margin-bottom: 1.5rem;
+}
+
+.courseBadge {
+    background: #003366;
+    color: white;
+    padding: 0.2rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.courseStats {
+    display: flex;
+    gap: 4rem;
+    margin-bottom: 2.5rem;
+}
+
+.cStat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.cLabel {
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.cValue {
+    color: #64748b;
+}
+
+.progressTableWrapper {
+    margin-top: 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+}
+
+.progressTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.progressTable th {
+    background: white;
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.85rem;
+    color: #64748b;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.emptyRow td {
+    height: 100px;
+    text-align: center;
+    color: #e2e8f0;
+}
+
+.footer {
+    margin-top: 3rem;
+}
+
+.backBtn {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-weight: 700;
+}

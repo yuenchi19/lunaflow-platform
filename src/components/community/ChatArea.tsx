@@ -1,0 +1,254 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { Message, User } from "@/types";
+import { sendMessage, getMessages, deleteMessage, MOCK_USERS } from "@/lib/data";
+import { Trash2, Hash, Gift, Smile, Plus, Bell, Check } from "lucide-react";
+import { useCommunity } from "@/components/community/CommunityContext";
+
+interface ChatAreaProps {
+    channelId: string;
+    currentUser: User;
+    channelName: string;
+    introContent?: string;
+}
+
+import ReactMarkdown from 'react-markdown';
+
+export function ChatArea({ channelId, currentUser, channelName, introContent }: ChatAreaProps) {
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [inputValue, setInputValue] = useState("");
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const { isRulesAgreed, agreeToRules } = useCommunity();
+
+    // Check if this is the "Rules" channel
+    const isRulesChannel = channelName.includes("はじめに①") || channelId === 'c1';
+
+    const loadMessages = () => {
+        const msgs = getMessages(channelId);
+        setMessages(msgs);
+    };
+
+    const handleDelete = (messageId: string) => {
+        if (!confirm("このメッセージを削除しますか？")) return;
+        deleteMessage(channelId, messageId);
+        loadMessages();
+    };
+
+    useEffect(() => {
+        loadMessages();
+        const interval = setInterval(loadMessages, 2000); // Polling for "real-time"
+        return () => clearInterval(interval);
+    }, [channelId]);
+
+    useEffect(() => {
+        // Scroll to bottom of message container without shifting the whole page
+        if (messagesEndRef.current?.parentElement) {
+            const container = messagesEndRef.current.parentElement;
+            container.scrollTop = container.scrollHeight;
+        }
+    }, [messages, channelId]);
+
+    const handleSend = () => {
+        if (!inputValue.trim()) return;
+        sendMessage(channelId, currentUser.id, inputValue);
+        setInputValue("");
+        loadMessages();
+    };
+
+    const handleConfirmRules = () => {
+        if (confirm("ルールを確認し、同意しますか？")) {
+            agreeToRules();
+            alert("確認しました。「はじめに②」などのチャンネルが開放されました！");
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-[#313338] text-[#DBDEE1] overflow-hidden">
+            {/* Header */}
+            <header className="h-12 border-b border-[#26272D] flex items-center px-4 bg-[#313338] shadow-sm justify-between flex-shrink-0 z-10 relative">
+                <div className="flex items-center gap-2">
+                    <Hash className="w-6 h-6 text-[#80848E]" />
+                    <h1 className="font-bold text-base text-[#F2F3F5]">{channelName}</h1>
+                </div>
+                <div className="flex items-center gap-4 text-[#B5BAC1]">
+                    <Bell className="w-6 h-6 hover:text-[#DBDEE1] cursor-pointer" />
+                </div>
+            </header>
+
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-[0.1rem] scrollbar-thin scrollbar-thumb-[#1A1B1E] scrollbar-track-[#2E3338]">
+
+                {/* Special Layout for Rules Channel */}
+                {isRulesChannel ? (
+                    <div className="max-w-3xl mx-auto mt-10 p-6 bg-[#2B2D31] rounded-md shadow-lg border border-[#1F2023]">
+                        <div className="flex items-center gap-4 mb-6 border-b border-[#3F4147] pb-4">
+                            <div className="w-16 h-16 bg-[#5865F2] rounded-full flex items-center justify-center">
+                                <Hash className="w-8 h-8 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-white">LunaFlow Communityへようこそ</h1>
+                                <p className="text-[#B5BAC1]">ここが、このサーバーの始まりです。</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6 text-[#DBDEE1]">
+                            <div className="flex gap-3">
+                                <span className="w-10 h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0">1</span>
+                                <div>
+                                    <h3 className="font-bold text-lg text-white mb-1">仲間へのリスペクトを忘れないこと</h3>
+                                    <p className="text-sm text-[#B5BAC1]">全てのメンバーに対して敬意を払い、建設的なコミュニケーションを心がけましょう。</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-3">
+                                <span className="w-10 h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0">2</span>
+                                <div>
+                                    <h3 className="font-bold text-lg text-white mb-1">スパム・勧誘・外部リンクは禁止</h3>
+                                    <p className="text-sm text-[#B5BAC1]">許可のない宣伝行為や、無関係なサイトへの誘導は厳禁です。</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-3">
+                                <span className="w-10 h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0">3</span>
+                                <div>
+                                    <h3 className="font-bold text-lg text-white mb-1">売れた人を祝おう！</h3>
+                                    <p className="text-sm text-[#B5BAC1]">仲間の成功を自分のことのように喜び、ポジティブな雰囲気を作りましょう。</p>
+                                </div>
+                            </div>
+
+                            <div className="mt-8 pt-6 border-t border-[#3F4147]">
+                                <p className="mb-4 font-bold text-white">確認してお約束できる人は、【✅】を押してください。<br />次の【はじめに②】が解放されます✨</p>
+
+                                <button
+                                    onClick={handleConfirmRules}
+                                    disabled={isRulesAgreed}
+                                    className={`
+                                        flex items-center gap-2 px-6 py-3 rounded text-white font-bold transition-all
+                                        ${isRulesAgreed
+                                            ? "bg-[#23A559] cursor-default opacity-80"
+                                            : "bg-[#5865F2] hover:bg-[#4752C4] shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                                        }
+                                    `}
+                                >
+                                    <div className={`w-6 h-6 border-2 border-white rounded flex items-center justify-center ${isRulesAgreed ? "bg-white text-[#23A559]" : ""}`}>
+                                        {isRulesAgreed && <Check className="w-4 h-4" />}
+                                    </div>
+                                    {isRulesAgreed ? "確認済み" : "ルールを確認しました"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        {/* Hero Section for Channel (Welcome) */}
+                        <div className="mb-4 mt-4 space-y-2 border-b border-[#3F4147] pb-4">
+                            <div className="w-[68px] h-[68px] rounded-full bg-[#41434A] flex items-center justify-center mb-2">
+                                <Hash className="w-10 h-10 text-white" />
+                            </div>
+                            <h1 className="text-[32px] font-bold text-white">#{channelName}へようこそ！</h1>
+                            <p className="text-[#B5BAC1] text-base">ここが <span className="font-medium text-white">#{channelName}</span> の始まりです。</p>
+                        </div>
+
+                        {/* Intro Content (Pinned System Message style) */}
+                        {introContent && (
+                            <div className="mb-6 mx-4 p-6 bg-[#2B2D31] rounded-md border border-[#1F2023] shadow-sm">
+                                <div className="prose prose-invert max-w-none prose-p:text-[#DBDEE1] prose-headings:text-white prose-a:text-[#00A8FC] prose-strong:text-white">
+                                    <ReactMarkdown>{introContent}</ReactMarkdown>
+                                </div>
+                            </div>
+                        )}
+
+                        {messages.map((msg, index) => {
+                            const isSameUser = index > 0 && messages[index - 1].userId === msg.userId;
+                            return (
+                                <div key={msg.id} className={`group flex pr-4 pl-[72px] py-0.5 relative hover:bg-[#2E3035] ${!isSameUser ? "mt-[17px]" : ""}`}>
+                                    {!isSameUser && (
+                                        <div className="absolute left-4 top-0.5 w-[40px] h-[40px] rounded-full bg-transparent overflow-hidden mt-0.5 select-none" />
+                                    )}
+
+                                    <div className="flex flex-col flex-1 min-w-0 -ml-[50px]">
+                                        {!isSameUser && (
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <span className="font-medium text-base text-[#F2F3F5] hover:underline cursor-pointer">
+                                                    {msg.userId === currentUser.id ? currentUser.name : (MOCK_USERS.find(u => u.id === msg.userId)?.name || `User ${msg.userId}`)}
+                                                </span>
+                                                <span className="text-[12px] text-[#949BA4] font-medium ml-1">
+                                                    {new Date(msg.createdAt).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <p className={`text-[#DBDEE1] leading-[1.375rem] whitespace-pre-wrap text-base font-normal`}>
+                                            {msg.content}
+                                        </p>
+                                    </div>
+
+                                    {currentUser.role === 'admin' && (
+                                        <div className="absolute right-4 top-0 bg-[#313338] shadow-sm rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-[#2E3035]">
+                                            <button
+                                                onClick={() => handleDelete(msg.id)}
+                                                className="p-1 text-[#B5BAC1] hover:text-[#F23F42] transition-colors"
+                                                title="メッセージを削除"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                        <div ref={messagesEndRef} className="h-4" />
+                    </>
+                )}
+            </div>
+
+            {/* Input Area - Hide for Rules channel if not admin, or just keep it? Usually read-only */}
+            {/* User request: "確認ボタンを設置して押したら次が開かれる形". Usually read-only channel. */}
+            {/* Let's hide input for Rules channel to force focus on button */}
+            {/* Input Area */}
+            {!isRulesChannel && (
+                <div className="px-4 pb-6 bg-[#313338] flex-shrink-0">
+                    {currentUser.plan === 'light' && channelId !== 'c_practice_1' ? (
+                        <div className="bg-[#383A40] rounded-lg px-4 py-4 text-center text-[#B5BAC1] text-sm">
+                            🔒 ライトプランの方はメッセージの投稿ができません（閲覧のみ可能です）
+                        </div>
+                    ) : (
+                        <div className="bg-[#383A40] rounded-lg px-4 py-2.5 flex items-start gap-3 relative">
+                            {/* Plus Button */}
+                            <button className="text-[#B5BAC1] hover:text-[#F2F3F5] p-1 h-fit mt-0.5 transition-colors flex-shrink-0">
+                                <div className="bg-[#B5BAC1] text-[#383A40] w-6 h-6 rounded-full flex items-center justify-center hover:text-white transition-colors">
+                                    <Plus className="w-4 h-4 font-bold" />
+                                </div>
+                            </button>
+
+                            <textarea
+                                className="flex-1 bg-transparent border-none outline-none text-[#DBDEE1] placeholder-[#949BA4] resize-none min-h-[44px] text-base py-1 scrollbar-thin scrollbar-thumb-[#202225]"
+                                placeholder={`#${channelName} へメッセージを送信`}
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSend();
+                                    }
+                                }}
+                                rows={1}
+                                style={{ overflow: 'hidden' }}
+                            />
+
+                            <div className="flex items-center gap-3 self-center mr-1">
+                                <div className="group relative cursor-pointer">
+                                    <Gift className="w-7 h-7 text-[#B5BAC1] hover:text-[#F2F3F5] transition-colors" />
+                                </div>
+                                <div className="group relative cursor-pointer">
+                                    <span className="bg-[#B5BAC1] text-[10px] font-bold text-[#383A40] rounded px-1 group-hover:bg-[#F2F3F5] transition-colors">GIF</span>
+                                </div>
+                                <div className="group relative cursor-pointer">
+                                    <Smile className="w-7 h-7 text-[#B5BAC1] hover:text-[#F2F3F5] transition-colors" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
