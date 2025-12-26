@@ -21,7 +21,6 @@ export default function SettingsPage() {
                     <button className={activeTab === 'general' ? styles.activeTab : ''} onClick={() => setActiveTab('general')}>全般設定</button>
                     <button className={activeTab === 'account' ? styles.activeTab : ''} onClick={() => setActiveTab('account')}>アカウント・セキュリティ</button>
                     <button className={activeTab === 'notifications' ? styles.activeTab : ''} onClick={() => setActiveTab('notifications')}>通知設定</button>
-                    <button className={activeTab === 'notifications' ? styles.activeTab : ''} onClick={() => setActiveTab('notifications')}>通知設定</button>
                     {/* Billing Tab Removed as per request */}
                 </aside>
 

@@ -54,6 +54,7 @@ export default function StudentsPage() {
                             <th>名前 (コミュニティ名)</th>
                             <th>メールアドレス</th>
                             <th>プラン</th>
+                            <th>契約</th>
                             <th>ステータス</th>
                             <th>操作</th>
                         </tr>

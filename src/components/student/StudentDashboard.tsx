@@ -277,9 +277,7 @@ export default function StudentDashboard() {
                             </div>
                             <div className="border-t border-slate-100 p-4 bg-slate-50/50">
                                 <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-2">アカウント情報</div>
-                                <div className="text-xs text-slate-600 truncate mb-1">{user.email}</div>
-                                <div className="text-xs text-slate-600 truncate mb-1">{user.email}</div>
-                                {/* ID Display Removed */}
+                                <div className="text-xs text-slate-600 truncate mb-1">{user.email || "未設定"}</div>
                             </div>
                         </div>
 
@@ -538,343 +536,349 @@ export default function StudentDashboard() {
 
                     </div>
                 </div>
-            </main>
+            </main >
 
             {/* Footer */}
-            <footer className="max-w-6xl mx-auto px-8 py-10 text-center space-y-4 border-t border-slate-100 mt-12">
+            < footer className="max-w-6xl mx-auto px-8 py-10 text-center space-y-4 border-t border-slate-100 mt-12" >
                 <img src="/logo.png" alt="LunaFlow" style={{ height: '20px' }} className="mx-auto grayscale opacity-30" />
                 <p className="text-[10px] text-slate-300 font-bold uppercase tracking-[0.2em]">© 2025 LunaFlow Online School. All Rights Reserved.</p>
-            </footer>
+            </footer >
 
             {/* Profile Edit Modal */}
-            {isProfileModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-lg p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
-                        <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">プロフィール・設定編集</h3>
+            {
+                isProfileModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl w-full max-w-lg p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+                            <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">プロフィール・設定編集</h3>
 
-                        <div className="space-y-6">
-                            {/* Name Section */}
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">お名前</label>
-                                <input
-                                    type="text"
-                                    value={newName}
-                                    onChange={(e) => setNewName(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-rose-500 transition-colors"
-                                />
-                                <p className="text-[11px] text-slate-400 mt-2">※フルネーム（漢字）で入力してください。</p>
-                            </div>
-
-                            {/* Email Section */}
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">メールアドレス</label>
-                                <div className="flex gap-2">
-                                    <div className="bg-slate-100 rounded-l-lg px-3 py-3 flex items-center text-slate-400">
-                                        <Settings className="w-4 h-4" /> {/* Reusing Settings Icon as Mail placeholder or import Mail */}
-                                    </div>
+                            <div className="space-y-6">
+                                {/* Name Section */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">お名前</label>
                                     <input
-                                        type="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-r-lg px-4 py-3 text-slate-800 outline-none focus:border-rose-500 transition-colors"
-                                        placeholder="your@email.com"
+                                        type="text"
+                                        value={newName}
+                                        onChange={(e) => setNewName(e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-rose-500 transition-colors"
                                     />
+                                    <p className="text-[11px] text-slate-400 mt-2">※フルネーム（漢字）で入力してください。</p>
                                 </div>
-                            </div>
 
-                            {/* Address Section */}
-                            {/* Nickname Section [NEW] */}
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">コミュニティ用ニックネーム（必須）</label>
-                                <input
-                                    type="text"
-                                    value={communityNickname}
-                                    onChange={(e) => setCommunityNickname(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-rose-500 transition-colors"
-                                    placeholder="コミュニティで表示される名前"
-                                />
-                                <p className="text-[11px] text-slate-400 mt-2">※コミュニティ内ではこの名前が表示されます。</p>
-                            </div>
-
-                            {/* Address Section */}
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">荷物送付住所</label>
-                                <div className="grid grid-cols-12 gap-4 mb-3">
-                                    <div className="col-span-4">
-                                        <input
-                                            type="text"
-                                            value={zipCode}
-                                            onChange={(e) => setZipCode(e.target.value)}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-rose-500 transition-colors"
-                                            placeholder="〒"
-                                        />
-                                    </div>
-                                    <div className="col-span-8">
-                                        <input
-                                            type="text"
-                                            readOnly
-                                            className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-400 cursor-not-allowed"
-                                            placeholder="都道府県（自動入力）"
-                                        />
-                                    </div>
-                                </div>
-                                <textarea
-                                    value={address}
-                                    onChange={(e) => setAddress(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-rose-500 transition-colors min-h-[80px]"
-                                    placeholder="市区町村以降の住所..."
-                                />
-                                <p className="text-[11px] text-slate-400 mt-2">※おまかせ仕入れや教材やプレゼントの発送に使用します。正確にご入力ください。</p>
-                            </div>
-
-                            {/* Plan Management (Moved here) */}
-                            <div className="pt-6 border-t border-slate-100">
-                                <h4 className="text-sm font-bold text-slate-700 mb-3">契約プラン管理</h4>
-                                <div className="bg-slate-50 rounded-lg p-4">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <span className="text-xs text-slate-500">現在のプラン</span>
-                                        <span className="text-sm font-bold text-slate-800 uppercase">{user.plan}</span>
-                                    </div>
-
-                                    {user.plan === 'light' ? (
-                                        <div className="space-y-2">
-                                            <button onClick={() => handleSubscriptionUpgrade('standard')} className="w-full text-xs bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700 transition-colors">スタンダードへアップグレード</button>
-                                            <button onClick={() => handleSubscriptionUpgrade('premium')} className="w-full text-xs bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700 transition-colors">プレミアムへアップグレード</button>
+                                {/* Email Section */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">メールアドレス</label>
+                                    <div className="flex gap-2">
+                                        <div className="bg-slate-100 rounded-l-lg px-3 py-3 flex items-center text-slate-400">
+                                            <Settings className="w-4 h-4" /> {/* Reusing Settings Icon as Mail placeholder or import Mail */}
                                         </div>
-                                    ) : (
-                                        <button
-                                            className="w-full text-xs border border-slate-200 text-slate-500 font-bold py-2 rounded-lg hover:bg-slate-50 transition-colors"
-                                            onClick={() => setIsPlanChangeModalOpen(true)}
-                                        >
-                                            プランの変更・解約
-                                        </button>
-                                    )}
+                                        <input
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-r-lg px-4 py-3 text-slate-800 outline-none focus:border-rose-500 transition-colors"
+                                            placeholder="your@email.com"
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        <div className="flex gap-4 mt-8">
-                            <button
-                                onClick={() => setIsProfileModalOpen(false)}
-                                className="flex-1 py-3 bg-slate-100 text-slate-500 font-bold rounded-lg hover:bg-slate-200 transition-colors"
-                            >
-                                キャンセル
-                            </button>
-                            <button
-                                onClick={handleProfileSave}
-                                className="flex-1 py-3 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200"
-                            >
-                                変更を保存
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Purchase Request Modal */}
-            {isPurchaseModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-2xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
-                        <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">仕入れ希望フォーム</h3>
-                        <form onSubmit={handlePurchaseSubmit} className="space-y-6">
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Address Section */}
+                                {/* Nickname Section [NEW] */}
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 block mb-2">メールアドレス <span className="text-red-500">*</span></label>
-                                    <input required type="email" name="email" value={purchaseForm.email} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" />
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">コミュニティ用ニックネーム（必須）</label>
+                                    <input
+                                        type="text"
+                                        value={communityNickname}
+                                        onChange={(e) => setCommunityNickname(e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-rose-500 transition-colors"
+                                        placeholder="コミュニティで表示される名前"
+                                    />
+                                    <p className="text-[11px] text-slate-400 mt-2">※コミュニティ内ではこの名前が表示されます。</p>
                                 </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 block mb-2">お名前 <span className="text-red-500">*</span></label>
-                                    <input required type="text" name="name" value={purchaseForm.name} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" />
-                                </div>
-                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Address Section */}
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 block mb-2">郵便番号 <span className="text-red-500">*</span></label>
-                                    <input required type="text" name="postalCode" value={purchaseForm.postalCode} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" />
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">荷物送付住所</label>
+                                    <div className="grid grid-cols-12 gap-4 mb-3">
+                                        <div className="col-span-4">
+                                            <input
+                                                type="text"
+                                                value={zipCode}
+                                                onChange={(e) => setZipCode(e.target.value)}
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-rose-500 transition-colors"
+                                                placeholder="〒"
+                                            />
+                                        </div>
+                                        <div className="col-span-8">
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-400 cursor-not-allowed"
+                                                placeholder="都道府県（自動入力）"
+                                            />
+                                        </div>
+                                    </div>
+                                    <textarea
+                                        value={address}
+                                        onChange={(e) => setAddress(e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-rose-500 transition-colors min-h-[80px]"
+                                        placeholder="市区町村以降の住所..."
+                                    />
+                                    <p className="text-[11px] text-slate-400 mt-2">※おまかせ仕入れや教材やプレゼントの発送に使用します。正確にご入力ください。</p>
                                 </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 block mb-2">都道府県 <span className="text-red-500">*</span></label>
-                                    <input required type="text" name="prefecture" value={purchaseForm.prefecture} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" />
-                                </div>
-                            </div>
 
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 block mb-2">市区町村以降の住所 <span className="text-red-500">*</span></label>
-                                <input required type="text" name="address" value={purchaseForm.address} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" />
-                            </div>
+                                {/* Plan Management (Moved here) */}
+                                <div className="pt-6 border-t border-slate-100">
+                                    <h4 className="text-sm font-bold text-slate-700 mb-3">契約プラン管理</h4>
+                                    <div className="bg-slate-50 rounded-lg p-4">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="text-xs text-slate-500">現在のプラン</span>
+                                            <span className="text-sm font-bold text-slate-800 uppercase">{user.plan}</span>
+                                        </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 block mb-2">電話番号 <span className="text-red-500">*</span></label>
-                                    <input required type="tel" name="phone" value={purchaseForm.phone} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 block mb-2">加入中のプラン <span className="text-red-500">*</span></label>
-                                    <select name="plan" value={purchaseForm.plan} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-                                        <option value="Light">ライトプラン</option>
-                                        <option value="Standard">スタンダードプラン</option>
-                                        <option value="Premium">プレミアムプラン</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 block mb-2">希望購入金額 <span className="text-red-500">*</span></label>
-                                <input required type="text" name="amount" value={purchaseForm.amount} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" placeholder="例: 10000" />
-                                <p className="text-[10px] text-slate-400 mt-1">※月間仕入れ目標: Light 8万円 / Standard 6万円 / Premium 3万円</p>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 block mb-2">希望する配達業者 <span className="text-red-500">*</span></label>
-                                    <select name="carrier" value={purchaseForm.carrier} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-                                        <option value="郵便局">郵便局</option>
-                                        <option value="ヤマト">ヤマト</option>
-                                        <option value="佐川急便">佐川急便</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 block mb-2">希望支払い方法 <span className="text-red-500">*</span></label>
-                                    <select name="payment" value={purchaseForm.payment} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-                                        <option value="銀行振込">銀行振込</option>
-                                        <option value="クレジットカード">クレジットカード</option>
-                                    </select>
+                                        {user.plan === 'light' ? (
+                                            <div className="space-y-2">
+                                                <button onClick={() => handleSubscriptionUpgrade('standard')} className="w-full text-xs bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700 transition-colors">スタンダードへアップグレード</button>
+                                                <button onClick={() => handleSubscriptionUpgrade('premium')} className="w-full text-xs bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700 transition-colors">プレミアムへアップグレード</button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                className="w-full text-xs border border-slate-200 text-slate-500 font-bold py-2 rounded-lg hover:bg-slate-50 transition-colors"
+                                                onClick={() => setIsPlanChangeModalOpen(true)}
+                                            >
+                                                プランの変更・解約
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 block mb-2">補足情報</label>
-                                <textarea name="note" value={purchaseForm.note} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 h-20" placeholder="ライブ購入との同梱希望など" />
-                            </div>
-
-                            <div className="flex gap-4 mt-8 pt-4 border-t border-slate-100">
+                            <div className="flex gap-4 mt-8">
                                 <button
-                                    type="button"
-                                    onClick={() => setIsPurchaseModalOpen(false)}
+                                    onClick={() => setIsProfileModalOpen(false)}
                                     className="flex-1 py-3 bg-slate-100 text-slate-500 font-bold rounded-lg hover:bg-slate-200 transition-colors"
                                 >
                                     キャンセル
                                 </button>
                                 <button
-                                    type="submit"
+                                    onClick={handleProfileSave}
                                     className="flex-1 py-3 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200"
                                 >
-                                    {isSubmitting ? "送信中..." : "希望を送信／請求書発行"}
+                                    変更を保存
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
-                </div>
-            )}
-            {/* Plan Change Modal */}
-            {isPlanChangeModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-lg p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
-                        <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">プラン変更・解約手続き</h3>
+                )
+            }
 
-                        <div className="space-y-6">
-                            <div className="bg-slate-50 p-4 rounded-lg text-sm">
-                                <p className="font-bold text-slate-700 mb-2">現在の契約状況</p>
-                                <ul className="space-y-1 text-xs text-slate-600">
-                                    <li>現在のプラン: <span className="font-bold uppercase">{user.plan}</span></li>
-                                    <li>契約開始日: {registrationDate.toLocaleDateString()} ({Math.floor((new Date().getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24 * 30))}ヶ月経過)</li>
-                                    <li>累積仕入れ額: ¥{lifetimePurchaseTotal.toLocaleString()}</li>
-                                </ul>
-                            </div>
+            {/* Purchase Request Modal */}
+            {
+                isPurchaseModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl w-full max-w-2xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+                            <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">仕入れ希望フォーム</h3>
+                            <form onSubmit={handlePurchaseSubmit} className="space-y-6">
 
-                            {/* Upgrade Section */}
-                            <div>
-                                <h4 className="text-sm font-bold text-indigo-700 mb-2 flex items-center gap-2">
-                                    <span className="bg-indigo-100 p-1 rounded">⬆️</span> アップグレード
-                                </h4>
-                                <p className="text-xs text-slate-500 mb-3">上位プランへの変更は<span className="font-bold text-indigo-600">即日可能</span>です。</p>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {user.plan !== 'premium' && (
-                                        <button onClick={() => handleSubscriptionUpgrade('premium')} className="py-2 px-3 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors">
-                                            Premiumへ変更
-                                        </button>
-                                    )}
-                                    {user.plan === 'light' && (
-                                        <button onClick={() => handleSubscriptionUpgrade('standard')} className="py-2 px-3 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors">
-                                            Standardへ変更
-                                        </button>
-                                    )}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 block mb-2">メールアドレス <span className="text-red-500">*</span></label>
+                                        <input required type="email" name="email" value={purchaseForm.email} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 block mb-2">お名前 <span className="text-red-500">*</span></label>
+                                        <input required type="text" name="name" value={purchaseForm.name} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" />
+                                    </div>
                                 </div>
-                            </div>
 
-                            <hr className="border-slate-100" />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 block mb-2">郵便番号 <span className="text-red-500">*</span></label>
+                                        <input required type="text" name="postalCode" value={purchaseForm.postalCode} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 block mb-2">都道府県 <span className="text-red-500">*</span></label>
+                                        <input required type="text" name="prefecture" value={purchaseForm.prefecture} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" />
+                                    </div>
+                                </div>
 
-                            {/* Downgrade/Cancel Section */}
-                            <div>
-                                <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                                    <span className="bg-slate-100 p-1 rounded">⬇️</span> ダウングレード・解約
-                                </h4>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 block mb-2">市区町村以降の住所 <span className="text-red-500">*</span></label>
+                                    <input required type="text" name="address" value={purchaseForm.address} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" />
+                                </div>
 
-                                {/* Logic Check */}
-                                {(() => {
-                                    const monthsElapsed = Math.floor((new Date().getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
-                                    const requiredMonths = 6;
-                                    const monthlyTarget = user.plan === 'premium' ? 30000 : 60000; // Standard/Premium logic
-                                    const requiredTotal = monthlyTarget * requiredMonths;
-                                    const deficit = requiredTotal - lifetimePurchaseTotal;
-                                    const isEligibleTime = monthsElapsed >= requiredMonths;
-                                    const isEligiblePayment = lifetimePurchaseTotal >= requiredTotal;
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 block mb-2">電話番号 <span className="text-red-500">*</span></label>
+                                        <input required type="tel" name="phone" value={purchaseForm.phone} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 block mb-2">加入中のプラン <span className="text-red-500">*</span></label>
+                                        <select name="plan" value={purchaseForm.plan} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                                            <option value="Light">ライトプラン</option>
+                                            <option value="Standard">スタンダードプラン</option>
+                                            <option value="Premium">プレミアムプラン</option>
+                                        </select>
+                                    </div>
+                                </div>
 
-                                    if (isEligibleTime && isEligiblePayment) {
-                                        return (
-                                            <div className="bg-green-50 p-3 rounded-lg border border-green-100">
-                                                <p className="text-xs text-green-700 font-bold mb-2">条件を満たしているため、手続きが可能です。</p>
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => alert("ダウングレード申請フォームへ（Mock）")} className="flex-1 py-2 bg-white border border-slate-300 text-slate-600 text-xs font-bold rounded hover:bg-slate-50">
-                                                        ダウングレード
-                                                    </button>
-                                                    <button onClick={() => alert("解約申請フォームへ（Mock）")} className="flex-1 py-2 bg-white border border-red-200 text-red-600 text-xs font-bold rounded hover:bg-red-50">
-                                                        解約する
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 block mb-2">希望購入金額 <span className="text-red-500">*</span></label>
+                                    <input required type="text" name="amount" value={purchaseForm.amount} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" placeholder="例: 10000" />
+                                    <p className="text-[10px] text-slate-400 mt-1">※月間仕入れ目標: Light 8万円 / Standard 6万円 / Premium 3万円</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 block mb-2">希望する配達業者 <span className="text-red-500">*</span></label>
+                                        <select name="carrier" value={purchaseForm.carrier} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                                            <option value="郵便局">郵便局</option>
+                                            <option value="ヤマト">ヤマト</option>
+                                            <option value="佐川急便">佐川急便</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 block mb-2">希望支払い方法 <span className="text-red-500">*</span></label>
+                                        <select name="payment" value={purchaseForm.payment} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                                            <option value="銀行振込">銀行振込</option>
+                                            <option value="クレジットカード">クレジットカード</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 block mb-2">補足情報</label>
+                                    <textarea name="note" value={purchaseForm.note} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 h-20" placeholder="ライブ購入との同梱希望など" />
+                                </div>
+
+                                <div className="flex gap-4 mt-8 pt-4 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsPurchaseModalOpen(false)}
+                                        className="flex-1 py-3 bg-slate-100 text-slate-500 font-bold rounded-lg hover:bg-slate-200 transition-colors"
+                                    >
+                                        キャンセル
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 py-3 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200"
+                                    >
+                                        {isSubmitting ? "送信中..." : "希望を送信／請求書発行"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )
+            }
+            {/* Plan Change Modal */}
+            {
+                isPlanChangeModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl w-full max-w-lg p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+                            <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">プラン変更・解約手続き</h3>
+
+                            <div className="space-y-6">
+                                <div className="bg-slate-50 p-4 rounded-lg text-sm">
+                                    <p className="font-bold text-slate-700 mb-2">現在の契約状況</p>
+                                    <ul className="space-y-1 text-xs text-slate-600">
+                                        <li>現在のプラン: <span className="font-bold uppercase">{user.plan}</span></li>
+                                        <li>契約開始日: {registrationDate.toLocaleDateString()} ({Math.floor((new Date().getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24 * 30))}ヶ月経過)</li>
+                                        <li>累積仕入れ額: ¥{lifetimePurchaseTotal.toLocaleString()}</li>
+                                    </ul>
+                                </div>
+
+                                {/* Upgrade Section */}
+                                <div>
+                                    <h4 className="text-sm font-bold text-indigo-700 mb-2 flex items-center gap-2">
+                                        <span className="bg-indigo-100 p-1 rounded">⬆️</span> アップグレード
+                                    </h4>
+                                    <p className="text-xs text-slate-500 mb-3">上位プランへの変更は<span className="font-bold text-indigo-600">即日可能</span>です。</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {user.plan !== 'premium' && (
+                                            <button onClick={() => handleSubscriptionUpgrade('premium')} className="py-2 px-3 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors">
+                                                Premiumへ変更
+                                            </button>
+                                        )}
+                                        {user.plan === 'light' && (
+                                            <button onClick={() => handleSubscriptionUpgrade('standard')} className="py-2 px-3 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors">
+                                                Standardへ変更
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <hr className="border-slate-100" />
+
+                                {/* Downgrade/Cancel Section */}
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                        <span className="bg-slate-100 p-1 rounded">⬇️</span> ダウングレード・解約
+                                    </h4>
+
+                                    {/* Logic Check */}
+                                    {(() => {
+                                        const monthsElapsed = Math.floor((new Date().getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
+                                        const requiredMonths = 6;
+                                        const monthlyTarget = user.plan === 'premium' ? 30000 : 60000; // Standard/Premium logic
+                                        const requiredTotal = monthlyTarget * requiredMonths;
+                                        const deficit = requiredTotal - lifetimePurchaseTotal;
+                                        const isEligibleTime = monthsElapsed >= requiredMonths;
+                                        const isEligiblePayment = lifetimePurchaseTotal >= requiredTotal;
+
+                                        if (isEligibleTime && isEligiblePayment) {
+                                            return (
+                                                <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                                                    <p className="text-xs text-green-700 font-bold mb-2">条件を満たしているため、手続きが可能です。</p>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => alert("ダウングレード申請フォームへ（Mock）")} className="flex-1 py-2 bg-white border border-slate-300 text-slate-600 text-xs font-bold rounded hover:bg-slate-50">
+                                                            ダウングレード
+                                                        </button>
+                                                        <button onClick={() => alert("解約申請フォームへ（Mock）")} className="flex-1 py-2 bg-white border border-red-200 text-red-600 text-xs font-bold rounded hover:bg-red-50">
+                                                            解約する
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        } else {
+                                            return (
+                                                <div className="bg-red-50 p-4 rounded-lg border border-red-100">
+                                                    <p className="text-xs text-red-600 font-bold mb-2">🔒 現在の手続きには条件が不足しています</p>
+                                                    <ul className="text-[11px] text-red-500 space-y-1 mb-3 list-disc list-inside">
+                                                        <li>契約期間: 最低6ヶ月（現在: {monthsElapsed}ヶ月）</li>
+                                                        <li>おまかせ仕入れ総額: {requiredMonths}ヶ月分の目標額</li>
+                                                    </ul>
+
+                                                    {!isEligiblePayment && (
+                                                        <div className="bg-white p-2 rounded border border-red-200 mb-2">
+                                                            <p className="text-[10px] text-slate-500 text-center">不足金額の明細</p>
+                                                            <p className="text-center font-bold text-red-600 text-sm">あと ¥{deficit.toLocaleString()}</p>
+                                                            <p className="text-[9px] text-slate-400 text-center mt-1">※この金額をお支払いいただくことで即日手続き可能です。</p>
+                                                        </div>
+                                                    )}
+
+                                                    <button onClick={() => setIsPurchaseModalOpen(true)} className="w-full py-2 bg-red-600 text-white text-xs font-bold rounded hover:bg-red-700">
+                                                        不足分を支払って手続きへ進む
                                                     </button>
                                                 </div>
-                                            </div>
-                                        );
-                                    } else {
-                                        return (
-                                            <div className="bg-red-50 p-4 rounded-lg border border-red-100">
-                                                <p className="text-xs text-red-600 font-bold mb-2">🔒 現在の手続きには条件が不足しています</p>
-                                                <ul className="text-[11px] text-red-500 space-y-1 mb-3 list-disc list-inside">
-                                                    <li>契約期間: 最低6ヶ月（現在: {monthsElapsed}ヶ月）</li>
-                                                    <li>おまかせ仕入れ総額: {requiredMonths}ヶ月分の目標額</li>
-                                                </ul>
+                                            );
+                                        }
+                                    })()}
+                                </div>
 
-                                                {!isEligiblePayment && (
-                                                    <div className="bg-white p-2 rounded border border-red-200 mb-2">
-                                                        <p className="text-[10px] text-slate-500 text-center">不足金額の明細</p>
-                                                        <p className="text-center font-bold text-red-600 text-sm">あと ¥{deficit.toLocaleString()}</p>
-                                                        <p className="text-[9px] text-slate-400 text-center mt-1">※この金額をお支払いいただくことで即日手続き可能です。</p>
-                                                    </div>
-                                                )}
-
-                                                <button onClick={() => setIsPurchaseModalOpen(true)} className="w-full py-2 bg-red-600 text-white text-xs font-bold rounded hover:bg-red-700">
-                                                    不足分を支払って手続きへ進む
-                                                </button>
-                                            </div>
-                                        );
-                                    }
-                                })()}
                             </div>
 
-                        </div>
-
-                        <div className="mt-8 pt-4 border-t border-slate-100 text-center">
-                            <button
-                                onClick={() => setIsPlanChangeModalOpen(false)}
-                                className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
-                            >
-                                閉じる
-                            </button>
+                            <div className="mt-8 pt-4 border-t border-slate-100 text-center">
+                                <button
+                                    onClick={() => setIsPlanChangeModalOpen(false)}
+                                    className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
+                                >
+                                    閉じる
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }

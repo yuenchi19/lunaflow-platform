@@ -103,11 +103,6 @@ export default function ManualPage() {
                                     </p>
                                 </div>
                             </div>
-                            <ul className="list-disc list-inside text-sm text-slate-600 space-y-2 pl-2">
-                                <li>一般チャンネル：雑談や自己紹介</li>
-                                <li>学習サポート：学習内容に関する質問</li>
-                                <li>通知機能：新着メッセージがあるとヘッダーにバッジがつきます</li>
-                            </ul>
                         </div>
                     </section>
 
