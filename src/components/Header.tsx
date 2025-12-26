@@ -30,7 +30,7 @@ export default function Header() {
     };
 
     const handleLogin = () => {
-        if (email === "instructor@example.com" && password === "admin123") {
+        if (email === "instructor@example.com" && password === "LunaFlowSecure2025!") {
             localStorage.setItem("admin_token", "valid_token");
             setIsInstructorModalOpen(false);
             router.push("/admin/dashboard");
@@ -92,7 +92,7 @@ export default function Header() {
                                 <input
                                     type="password"
                                     className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-blue-500"
-                                    placeholder="Password"
+                                    placeholder="LunaFlowSecure2025!"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
