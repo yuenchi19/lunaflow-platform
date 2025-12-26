@@ -54,6 +54,7 @@ export interface User {
     communityNickname?: string;
     zipCode?: string;
     address?: string;
+    phoneNumber?: string;
 }
 
 export interface StripeSettings {

@@ -8,20 +8,25 @@ import Link from "next/link";
 export default function SettingsPage() {
     const defaultUser = MOCK_USERS[0];
     const [email, setEmail] = useState(defaultUser.email);
-    const [address, setAddress] = useState("");
+    const [address, setAddress] = useState(defaultUser.address || "");
+    const [phoneNumber, setPhoneNumber] = useState(defaultUser.phoneNumber || "");
     const [isSaved, setIsSaved] = useState(false);
 
     useEffect(() => {
-        // Load from storage
+        // Load from storage, fallback to mock user default if not in storage (for demo continuity)
         const storedEmail = localStorage.getItem("user_email");
         const storedAddress = localStorage.getItem("user_address");
+        const storedPhone = localStorage.getItem("user_phone");
+
         if (storedEmail) setEmail(storedEmail);
         if (storedAddress) setAddress(storedAddress);
+        if (storedPhone) setPhoneNumber(storedPhone);
     }, []);
 
     const handleSave = () => {
         localStorage.setItem("user_email", email);
         localStorage.setItem("user_address", address);
+        localStorage.setItem("user_phone", phoneNumber);
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 3000);
     };
@@ -65,19 +70,29 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
-                    {/* Address Settings */}
+                    {/* Address & Phone Settings */}
                     <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
                         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
                             <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600">
                                 <MapPin className="w-5 h-5" />
                             </div>
                             <div>
-                                <h2 className="font-bold text-slate-800">荷物送付住所変更</h2>
-                                <p className="text-xs text-slate-500">教材や特典の送付先住所を変更します。</p>
+                                <h2 className="font-bold text-slate-800">登録住所・電話番号</h2>
+                                <p className="text-xs text-slate-500">教材送付先や緊急連絡先情報です。</p>
                             </div>
                         </div>
 
                         <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">電話番号</label>
+                                <input
+                                    type="tel"
+                                    value={phoneNumber}
+                                    onChange={(e) => setPhoneNumber(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-emerald-500 transition-colors"
+                                    placeholder="090-0000-0000"
+                                />
+                            </div>
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">ご住所</label>
                                 <textarea

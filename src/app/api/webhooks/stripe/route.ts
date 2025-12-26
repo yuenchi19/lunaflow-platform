@@ -39,6 +39,35 @@ export async function POST(req: Request) {
         console.log(`[Stripe Webhook] Customer Email: ${session.customer_details?.email}`);
         console.log(`[Stripe Webhook] Subscription Status: ${subscription.status}`);
 
+        // Extract Customer Details for DB Sync
+        const customerDetails = session.customer_details;
+        const syncData = {
+            name: customerDetails?.name,
+            email: customerDetails?.email,
+            phone: customerDetails?.phone,
+            address: {
+                line1: customerDetails?.address?.line1,
+                line2: customerDetails?.address?.line2,
+                city: customerDetails?.address?.city,
+                state: customerDetails?.address?.state,
+                postal_code: customerDetails?.address?.postal_code,
+                country: customerDetails?.address?.country,
+            }
+        };
+
+        console.log(`[Stripe Webhook] SYNCING CUSTOMER DATA:`, JSON.stringify(syncData, null, 2));
+
+        // TODO: In a real app, you would verify the user exists and update their profile
+        // await db.user.update({
+        //   where: { email: syncData.email },
+        //   data: {
+        //     name: syncData.name,
+        //     phoneNumber: syncData.phone,
+        //     address: `${syncData.address.postal_code} ${syncData.address.state}${syncData.address.city}${syncData.address.line1}${syncData.address.line2 || ''}`
+        //   }
+        // });
+        console.log(`[Stripe Webhook] MOCK DB UPDATE: User Profile Updated.`);
+
         // TODO: In a real app, you would update the database here.
         // const userId = session.client_reference_id;
         // await updateDatabase(userId, { plan: 'premium', status: 'active' });

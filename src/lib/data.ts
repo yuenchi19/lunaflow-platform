@@ -12,6 +12,8 @@ export const MOCK_USERS: User[] = [
         affiliateCode: "ALICE001",
         registrationDate: "2025-05-01", // 7+ months
         lifetimePurchaseTotal: 250000,
+        address: "〒100-0001 東京都千代田区千代田1-1",
+        phoneNumber: "090-1234-5678",
     },
     {
         id: "u2",
