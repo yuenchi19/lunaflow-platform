@@ -87,6 +87,11 @@ export default function StudentsPage() {
                                     </span>
                                 </td>
                                 <td>
+                                    <span className="text-xs font-bold text-slate-500 block">
+                                        支払い: {st.subscriptionStatus === 'active' ? 'OK' : '未払い'}
+                                    </span>
+                                </td>
+                                <td>
                                     <span className="text-emerald-600 font-bold text-sm">有効</span>
                                 </td>
                                 <td>
