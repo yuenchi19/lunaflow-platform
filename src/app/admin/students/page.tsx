@@ -59,7 +59,7 @@ export default function StudentsPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {students.map(st => (
+                        {students.map((st: any) => (
                             <tr key={st.id}>
                                 <td>
                                     <div className={styles.studentInfo}>
