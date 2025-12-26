@@ -1,4 +1,4 @@
-import { Course, Category, Block, Feedback, User, UserProgress, Student, SentEmail, Plan, AffiliateEarnings, Payment, Article } from "@/types";
+import { Course, Category, Block, Feedback, User, UserProgress, Student, SentEmail, Plan, AffiliateEarnings, Payment, Article, ProgressDetail } from "@/types";
 
 export const MOCK_USERS: User[] = [
     {
@@ -619,4 +619,47 @@ export function getArticles(): Article[] {
 
 export function getArticle(id: string): Article | undefined {
     return MOCK_ARTICLES.find(a => a.id === id);
+}
+
+export const MOCK_PROGRESS_DETAILS: ProgressDetail[] = [
+    {
+        userId: "u1",
+        courseId: "course1",
+        courseTitle: "テスト",
+        categoryId: "cat1",
+        categoryTitle: "サブ",
+        blockId: "b1",
+        blockTitle: "テスト",
+        completedAt: "2025-12-21T10:30:00",
+        status: "completed"
+    },
+    {
+        userId: "u1",
+        courseId: "course1",
+        courseTitle: "テスト",
+        categoryId: "cat2",
+        categoryTitle: "サブ 2",
+        blockId: "b2",
+        blockTitle: "【奇跡】人生初のクリスマスマーケットで...",
+        completedAt: "2025-12-22T14:15:00",
+        status: "completed"
+    },
+    // Student 5 (Ichiro) - Fast progress
+    {
+        userId: "u5",
+        courseId: "course1",
+        courseTitle: "テスト",
+        categoryId: "cat1",
+        categoryTitle: "サブ",
+        blockId: "b1",
+        blockTitle: "テスト",
+        completedAt: "2025-01-02T09:00:00",
+        status: "completed"
+    },
+];
+
+export function getStudentProgressDetail(userId: string): ProgressDetail[] {
+    // Return sorted by completion date desc
+    const logs = MOCK_PROGRESS_DETAILS.filter(p => p.userId === userId);
+    return logs.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
 }

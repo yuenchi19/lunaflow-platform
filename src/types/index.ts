@@ -169,3 +169,15 @@ export interface Article {
     publishedAt: string;
     isFaq?: boolean;
 }
+
+export interface ProgressDetail {
+    userId: string;
+    courseId: string;
+    courseTitle: string;
+    categoryId: string;
+    categoryTitle: string;
+    blockId: string;
+    blockTitle: string;
+    completedAt: string; // ISO Date
+    status: 'completed' | 'viewed' | 'not_started';
+}
