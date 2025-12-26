@@ -16,6 +16,7 @@ interface Student {
 
 export default function StudentsPage() {
     // In a real app, fetch from API. Here we use MOCK_USERS directly for consistency.
+    // Version: 2025-12-26 Rev 2
     const [students] = useState(MOCK_USERS.filter(u => u.role === 'student'));
 
     const calculateStatus = (user: any) => {
@@ -121,8 +122,8 @@ export default function StudentsPage() {
                                     <td>
                                         <div className="flex flex-col gap-1">
                                             <span className={`w-fit px-2 py-0.5 rounded text-xs font-bold ${st.plan === 'premium' ? 'bg-amber-100 text-amber-700' :
-                                                    st.plan === 'standard' ? 'bg-blue-100 text-blue-700' :
-                                                        'bg-slate-100 text-slate-700'
+                                                st.plan === 'standard' ? 'bg-blue-100 text-blue-700' :
+                                                    'bg-slate-100 text-slate-700'
                                                 }`}>
                                                 {st.plan.toUpperCase()}
                                             </span>
