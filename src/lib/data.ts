@@ -1,4 +1,4 @@
-import { Course, Category, Block, Feedback, User, UserProgress, Student, SentEmail, Plan, AffiliateEarnings, Payment, Article, ProgressDetail } from "@/types";
+import { Course, Category, Block, Feedback, User, UserProgress, Student, SentEmail, Plan, AffiliateEarnings, Payment, ProgressDetail } from "@/types";
 
 export const MOCK_USERS: User[] = [
     {
@@ -586,40 +586,6 @@ export function getStudentPayments(userId: string): Payment[] {
     return payments;
 }
 
-export const MOCK_ARTICLES: Article[] = [
-    {
-        id: "art1",
-        title: "LunaFlowの歩き方（受講マニュアル）",
-        content: "LunaFlowへようこそ！このプラットフォームでは、動画講義を中心に、実践的なスキルを学ぶことができます...",
-        category: "マニュアル",
-        publishedAt: "2025-12-01",
-        isFaq: true
-    },
-    {
-        id: "art2",
-        title: "コミュニティで質問するコツ",
-        content: "コミュニティでは、技術的な質問からキャリア相談まで幅広く受け付けています。良い回答を得るためのコツは...",
-        category: "学習のヒント",
-        publishedAt: "2025-12-05",
-        isFaq: false
-    },
-    {
-        id: "art3",
-        title: "よくある質問集 (FAQ)",
-        content: "Q. パスワードを忘れました\nA. ログイン画面の「パスワードを忘れた場合」から再設定が可能です...",
-        category: "サポート",
-        publishedAt: "2025-12-10",
-        isFaq: true
-    }
-];
-
-export function getArticles(): Article[] {
-    return MOCK_ARTICLES;
-}
-
-export function getArticle(id: string): Article | undefined {
-    return MOCK_ARTICLES.find(a => a.id === id);
-}
 
 export const MOCK_PROGRESS_DETAILS: ProgressDetail[] = [
     {

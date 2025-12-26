@@ -161,15 +161,6 @@ export interface Payment {
     status: 'succeeded' | 'pending' | 'failed';
 }
 
-export interface Article {
-    id: string;
-    title: string;
-    content: string;
-    category: string;
-    publishedAt: string;
-    isFaq?: boolean;
-}
-
 export interface ProgressDetail {
     userId: string;
     courseId: string;
