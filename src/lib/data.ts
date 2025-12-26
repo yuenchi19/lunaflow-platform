@@ -1,4 +1,4 @@
-import { Course, Category, Block, Feedback, User, UserProgress, Student, SentEmail, Plan, AffiliateEarnings } from "@/types";
+import { Course, Category, Block, Feedback, User, UserProgress, Student, SentEmail, Plan, AffiliateEarnings, Payment } from "@/types";
 
 export const MOCK_USERS: User[] = [
     {
@@ -559,4 +559,29 @@ export function hasReadIntro2(userId: string): boolean {
 export function setReadIntro2(userId: string) {
     if (typeof window === 'undefined') return;
     localStorage.setItem(`luna_intro2_read_${userId}`, 'true');
+}
+
+export const MOCK_PAYMENTS: Payment[] = [
+    { id: "pay1", userId: "u1", date: "2025-05-01", amount: 29800, method: "card", status: "succeeded" },
+    { id: "pay2", userId: "u1", date: "2025-06-01", amount: 29800, method: "card", status: "succeeded" },
+    { id: "pay3", userId: "u1", date: "2025-07-01", amount: 29800, method: "card", status: "succeeded" },
+    // ... simulate recurring payments
+    { id: "pay4", userId: "u3", date: "2025-11-01", amount: 29800, method: "card", status: "succeeded" },
+    { id: "pay5", userId: "u3", date: "2025-12-01", amount: 29800, method: "card", status: "succeeded" },
+
+    { id: "pay6", userId: "u5", date: "2025-01-01", amount: 2980, method: "card", status: "succeeded" },
+    { id: "pay7", userId: "u5", date: "2025-02-01", amount: 2980, method: "card", status: "succeeded" },
+];
+
+export function getStudentPayments(userId: string): Payment[] {
+    // In real app, filter by userId from DB
+    // For mock, we simply return what matches or generate some if empty for demo
+    const payments = MOCK_PAYMENTS.filter(p => p.userId === userId);
+    if (payments.length === 0) {
+        // Generate dummy if none found for demo purposes
+        return [
+            { id: `mock_${userId}_1`, userId, date: "2025-12-01", amount: 9800, method: "card", status: "succeeded" }
+        ];
+    }
+    return payments;
 }

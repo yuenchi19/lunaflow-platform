@@ -151,3 +151,12 @@ export interface AffiliateEarnings {
     indirectReferrals: number;
     monthlyEarnings: number;
 }
+
+export interface Payment {
+    id: string;
+    userId: string;
+    date: string;
+    amount: number;
+    method: 'card' | 'bank_transfer' | 'other';
+    status: 'succeeded' | 'pending' | 'failed';
+}

@@ -4,58 +4,42 @@ import { useState } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { MOCK_USERS } from '@/lib/data';
-
-interface Student {
-    id: string;
-    name: string;
-    email: string;
-    enrolledCourse: string;
-    progress: number;
-    lastActive: string;
-}
+import { calculateStudentStatus } from '@/lib/utils';
 
 export default function StudentsPage() {
-    // In a real app, fetch from API. Here we use MOCK_USERS directly for consistency.
-    // Version: 2025-12-26 Rev 2
+    // Version: 2025-12-27 Refined
+    const [searchTerm, setSearchTerm] = useState("");
     const [students] = useState(MOCK_USERS.filter(u => u.role === 'student'));
 
-    const calculateStatus = (user: any) => {
-        // Defaults
-        const regDate = user.registrationDate ? new Date(user.registrationDate) : new Date("2025-01-01");
-        const monthsElapsed = Math.floor((new Date().getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
-        const currentTotal = user.lifetimePurchaseTotal || 0;
+    const filteredStudents = students.filter(student =>
+        student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-        let requiredMonths = 0;
-        let requiredTotal = 0;
+    const handleDownloadCSV = () => {
+        const headers = ["ID", "名前", "プラン", "メールアドレス", "コミュニティ名", "登録日", "合計購入額"];
+        const rows = filteredStudents.map(st => [
+            st.id,
+            st.name,
+            st.plan,
+            st.email,
+            st.communityNickname || "",
+            st.registrationDate || "",
+            st.lifetimePurchaseTotal || 0
+        ]);
 
-        // Plan Logic based on User Request
-        if (user.plan === 'premium') {
-            requiredMonths = 10;
-            // 30k * 10 = 300k
-            requiredTotal = 30000 * 10;
-        } else if (user.plan === 'standard') {
-            requiredMonths = 11;
-            // 60k * 11 = 660k
-            requiredTotal = 60000 * 11;
-        } else if (user.plan === 'light') {
-            requiredMonths = 12;
-            // 80k * 12 = 960k
-            requiredTotal = 80000 * 12;
-        }
+        const csvContent = [headers, ...rows]
+            .map(row => row.join(","))
+            .join("\n");
 
-        const isDurationOk = monthsElapsed >= requiredMonths;
-        const purchaseDeficit = Math.max(0, requiredTotal - currentTotal);
-        const isPurchaseOk = purchaseDeficit === 0;
-
-        return {
-            monthsElapsed,
-            requiredMonths,
-            currentTotal,
-            requiredTotal,
-            purchaseDeficit,
-            isDurationOk,
-            isPurchaseOk
-        };
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `students_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return (
@@ -65,16 +49,22 @@ export default function StudentsPage() {
                     <div className={styles.breadcrumb}>
                         <Link href="/admin/dashboard">ダッシュボード</Link> / 受講生管理
                     </div>
-                    <h1 className={styles.title}>受講生管理 <span className="text-sm font-normal text-slate-500">(Ver 2.0)</span></h1>
+                    <h1 className={styles.title}>受講生管理</h1>
                 </div>
                 <div className={styles.actions}>
-                    <button className={styles.csvBtn}>CSV出力</button>
-                    <button className={styles.addBtn}>＋ 受講生を個別追加</button>
+                    <button onClick={handleDownloadCSV} className={styles.csvBtn}>CSV出力</button>
+                    {/* Removed "Add Individual Student" and Beta tag as requested */}
                 </div>
             </div>
 
             <div className={styles.filterBar}>
-                <input type="text" placeholder="名前 or メールで検索" className={styles.searchInput} />
+                <input
+                    type="text"
+                    placeholder="名前 or メールで検索"
+                    className={styles.searchInput}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
                 <select className={styles.select}>
                     <option>すべてのコース</option>
                     <option>テストコース</option>
@@ -99,22 +89,22 @@ export default function StudentsPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {students.map((st: any) => {
-                            const stats = calculateStatus(st);
+                        {filteredStudents.map((st: any) => {
+                            const stats = calculateStudentStatus(st);
                             return (
                                 <tr key={st.id}>
                                     <td>
                                         <div className={styles.studentInfo}>
-                                            {st.avatarUrl ? (
-                                                <img src={st.avatarUrl} alt="" className={styles.avatar} />
-                                            ) : (
-                                                <div className={styles.avatar}>{st.name[0]}</div>
-                                            )}
+                                            {/* Removed Avatar Icon as requested */}
                                             <div>
-                                                <div className="font-bold">{st.name}</div>
-                                                {st.communityNickname && (
-                                                    <div className="text-xs text-slate-500">@{st.communityNickname}</div>
-                                                )}
+                                                <div className="font-bold flex items-center gap-2">
+                                                    {st.name}
+                                                    {st.communityNickname && (
+                                                        <span className="text-xs bg-indigo-100 text-indigo-700 px-1 rounded border border-indigo-200">
+                                                            @{st.communityNickname}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="text-[10px] text-slate-400">{st.email}</div>
                                             </div>
                                         </div>
@@ -165,11 +155,18 @@ export default function StudentsPage() {
                                         </div>
                                     </td>
                                     <td>
-                                        <Link href={`/admin/students/${st.id}`} className={styles.detailBtn}>详细</Link>
+                                        <Link href={`/admin/students/${st.id}`} className={styles.detailBtn}>詳細</Link>
                                     </td>
                                 </tr>
                             );
                         })}
+                        {filteredStudents.length === 0 && (
+                            <tr>
+                                <td colSpan={5} className="text-center py-8 text-gray-500">
+                                    該当する受講生が見つかりません
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
