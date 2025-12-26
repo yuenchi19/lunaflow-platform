@@ -61,7 +61,7 @@ export default function Header() {
                             </span>
                         )}
                     </Link>
-                    <Link href="/manual" className={styles.navLink}>
+                    <Link href="/student/manuals" className={styles.navLink}>
                         マニュアル
                     </Link>
                     <a href="#" onClick={handleInstructorClick} className={styles.navLink}>

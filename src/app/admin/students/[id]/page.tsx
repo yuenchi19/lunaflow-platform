@@ -118,11 +118,6 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                                 ) : (
                                     <h2 className={styles.studentName}>
                                         {student.name}
-                                        {student.communityNickname && (
-                                            <span className="ml-2 text-sm bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200 font-normal">
-                                                @{student.communityNickname}
-                                            </span>
-                                        )}
                                     </h2>
                                 )}
 
@@ -166,11 +161,30 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                                     ) : (
                                         <div className={styles.infoValue}>
                                             <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${student.plan === 'premium' ? 'bg-amber-100 text-amber-700' :
-                                                    student.plan === 'standard' ? 'bg-blue-100 text-blue-700' :
-                                                        'bg-slate-100 text-slate-700'
+                                                student.plan === 'standard' ? 'bg-blue-100 text-blue-700' :
+                                                    'bg-slate-100 text-slate-700'
                                                 }`}>
                                                 {student.plan}
                                             </span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className={styles.infoItem}>
+                                    <div className={styles.infoLabel}>ニックネーム</div>
+                                    {isEditing ? (
+                                        <input
+                                            className="border p-1 rounded w-full text-sm"
+                                            value={editForm.communityNickname}
+                                            onChange={e => setEditForm({ ...editForm, communityNickname: e.target.value })}
+                                            placeholder="@ユーザー名"
+                                        />
+                                    ) : (
+                                        <div className={styles.infoValue}>
+                                            {student.communityNickname ? (
+                                                <span className="text-indigo-600 font-medium">{student.communityNickname}</span>
+                                            ) : (
+                                                <span className="text-slate-400 text-xs">未設定</span>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -258,7 +272,7 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                                     <td className="px-6 py-4 text-right font-mono">¥{p.amount.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-center">
                                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${p.status === 'succeeded' ? 'bg-green-100 text-green-700' :
-                                                p.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                                            p.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
                                             }`}>
                                             {p.status}
                                         </span>

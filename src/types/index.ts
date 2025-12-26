@@ -160,3 +160,12 @@ export interface Payment {
     method: 'card' | 'bank_transfer' | 'other';
     status: 'succeeded' | 'pending' | 'failed';
 }
+
+export interface Article {
+    id: string;
+    title: string;
+    content: string;
+    category: string;
+    publishedAt: string;
+    isFaq?: boolean;
+}
