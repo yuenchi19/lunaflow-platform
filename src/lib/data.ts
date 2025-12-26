@@ -10,6 +10,8 @@ export const MOCK_USERS: User[] = [
         subscriptionStatus: "active",
         avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
         affiliateCode: "ALICE001",
+        registrationDate: "2025-05-01", // 7+ months
+        lifetimePurchaseTotal: 250000,
     },
     {
         id: "u2",
@@ -30,6 +32,8 @@ export const MOCK_USERS: User[] = [
         avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Hanako",
         affiliateCode: "HANAKO001",
         referredBy: "ALICE001",
+        registrationDate: "2025-11-01", // New user
+        lifetimePurchaseTotal: 50000,
     },
     {
         id: "u4",
@@ -49,6 +53,8 @@ export const MOCK_USERS: User[] = [
         subscriptionStatus: "active",
         avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ichiro",
         referredBy: "HANAKO001",
+        registrationDate: "2025-01-01", // Almost done
+        lifetimePurchaseTotal: 1000000, // Achieved
     },
 ];
 

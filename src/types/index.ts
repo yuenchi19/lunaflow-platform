@@ -48,6 +48,8 @@ export interface User {
     avatarUrl?: string;
     affiliateCode?: string;
     referredBy?: string;
+    registrationDate?: string;
+    lifetimePurchaseTotal?: number;
     payoutPreference?: 'bank_transfer' | 'offset_purchase';
     communityNickname?: string;
     zipCode?: string;
