@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from 'next/link';
 import styles from './Header.module.css';
-import { MOCK_USERS, getUnreadMessageCount } from '@/lib/data';
+import { getUnreadMessageCount } from '@/lib/data';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
