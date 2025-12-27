@@ -5,38 +5,98 @@ import Link from 'next/link';
 import styles from './Header.module.css';
 import { MOCK_USERS, getUnreadMessageCount } from '@/lib/data';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { User } from '@supabase/supabase-js';
 
 export default function Header() {
-    // Simulate logged-in user (student)
-    const user = MOCK_USERS[0];
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [isInstructorModalOpen, setIsInstructorModalOpen] = useState(false);
+    const router = useRouter();
+    const supabase = createClient();
+
+    // Auth State
+    const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Modal State
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const router = useRouter();
+    const [errorMsg, setErrorMsg] = useState("");
 
+    // App State
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    // Check Login Status on Mount
     useEffect(() => {
-        const updateCount = () => {
-            setUnreadCount(getUnreadMessageCount(user.id));
+        const checkUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+            setIsLoading(false);
         };
-        updateCount();
-        const interval = setInterval(updateCount, 5000); // Poll every 5 seconds
-        return () => clearInterval(interval);
-    }, [user.id]);
+        checkUser();
 
-    const handleInstructorClick = (e: React.MouseEvent) => {
-        e.preventDefault();
-        setIsInstructorModalOpen(true);
+        // Listen for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+            setIsLoading(false);
+        });
+
+        return () => subscription.unsubscribe();
+    }, [supabase]);
+
+    // Polling for unread messages (Optimized/Mock persistence for now)
+    useEffect(() => {
+        if (!user) {
+            setUnreadCount(0);
+            return;
+        }
+        // TODO: Replace with Real DB Count. For now, use Mock if ID matches, else 0
+        const mockCount = getUnreadMessageCount(user.id) || 0; // Will likely be 0 for new generic users
+        setUnreadCount(mockCount);
+
+        const interval = setInterval(() => {
+            // Re-fetch logic here
+        }, 10000);
+        return () => clearInterval(interval);
+    }, [user]);
+
+    const handleAuthAction = async () => {
+        setErrorMsg("");
+        try {
+            if (authMode === 'login') {
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+                setIsAuthModalOpen(false);
+                router.refresh(); // Refresh to update middleware/server components
+            } else {
+                const { error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            name: email.split('@')[0], // Default name
+                        }
+                    }
+                });
+                if (error) throw error;
+                alert("登録確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。");
+                setIsAuthModalOpen(false);
+            }
+        } catch (err: any) {
+            setErrorMsg(err.message);
+        }
     };
 
-    const handleLogin = () => {
-        if (email === "instructor@example.com" && password === "LunaFlowSecure2025!") {
-            localStorage.setItem("admin_token", "valid_token");
-            setIsInstructorModalOpen(false);
-            router.push("/admin/dashboard");
-        } else {
-            alert("メールアドレスまたはパスワードが違います");
-        }
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        router.push('/');
+        router.refresh();
+    };
+
+    const handleOpenLogin = (e: React.MouseEvent) => {
+        e.preventDefault();
+        setAuthMode('login');
+        setIsAuthModalOpen(true);
     };
 
     return (
@@ -50,38 +110,60 @@ export default function Header() {
                     <Link href="/" className={styles.navLink}>
                         コース一覧
                     </Link>
-                    <Link href="/student/dashboard" className={styles.navLink}>
-                        マイページ
-                    </Link>
-                    <Link href="/community" className={styles.navLink} style={{ position: "relative" }}>
-                        コミュニティ
-                        {unreadCount > 0 && (
-                            <span className={styles.badge}>
-                                {unreadCount > 99 ? "99+" : unreadCount}
-                            </span>
-                        )}
-                    </Link>
-                    <Link href="/manual" className={styles.navLink}>
-                        マニュアル
-                    </Link>
-                    <a href="#" onClick={handleInstructorClick} className={styles.navLink}>
-                        講師用
-                    </a>
+
+                    {user ? (
+                        <>
+                            <Link href="/student/dashboard" className={styles.navLink}>
+                                マイページ
+                            </Link>
+                            <Link href="/community" className={styles.navLink} style={{ position: "relative" }}>
+                                コミュニティ
+                                {unreadCount > 0 && (
+                                    <span className={styles.badge}>
+                                        {unreadCount > 99 ? "99+" : unreadCount}
+                                    </span>
+                                )}
+                            </Link>
+                            <Link href="/manual" className={styles.navLink}>
+                                マニュアル
+                            </Link>
+                            <button onClick={handleLogout} className={styles.navLink}>
+                                ログアウト
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            {!isLoading && (
+                                <a href="#" onClick={handleOpenLogin} className={styles.navLink}>
+                                    ログイン / 登録
+                                </a>
+                            )}
+                        </>
+                    )}
                 </nav>
             </header>
 
-            {/* Instructor Login Modal */}
-            {isInstructorModalOpen && (
+            {/* Auth Modal */}
+            {isAuthModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl">
-                        <h3 className="text-lg font-bold text-slate-800 mb-4 text-center">講師用ログイン</h3>
+                        <h3 className="text-lg font-bold text-slate-800 mb-4 text-center">
+                            {authMode === 'login' ? 'ログイン' : '新規登録'}
+                        </h3>
+
+                        {errorMsg && (
+                            <div className="bg-red-50 text-red-600 p-3 rounded text-sm mb-4">
+                                {errorMsg}
+                            </div>
+                        )}
+
                         <div className="space-y-4 mb-6">
                             <div>
                                 <label className="text-xs font-bold text-slate-500 block mb-1">メールアドレス</label>
                                 <input
                                     type="email"
                                     className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-blue-500"
-                                    placeholder="instructor@example.com"
+                                    placeholder="user@example.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     autoFocus
@@ -92,24 +174,34 @@ export default function Header() {
                                 <input
                                     type="password"
                                     className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-blue-500"
-                                    placeholder="LunaFlowSecure2025!"
+                                    placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
                             </div>
                         </div>
-                        <div className="flex gap-3">
+
+                        <div className="flex flex-col gap-3">
                             <button
-                                onClick={() => setIsInstructorModalOpen(false)}
-                                className="flex-1 py-2 bg-slate-100 text-slate-600 rounded font-bold hover:bg-slate-200"
+                                onClick={handleAuthAction}
+                                className="w-full py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700"
+                            >
+                                {authMode === 'login' ? 'ログイン' : '登録メールを送信'}
+                            </button>
+                            <button
+                                onClick={() => setIsAuthModalOpen(false)}
+                                className="w-full py-2 bg-slate-100 text-slate-600 rounded font-bold hover:bg-slate-200"
                             >
                                 キャンセル
                             </button>
+                        </div>
+
+                        <div className="mt-4 text-center">
                             <button
-                                onClick={handleLogin}
-                                className="flex-1 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700"
+                                onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                                className="text-xs text-blue-500 hover:underline"
                             >
-                                ログイン
+                                {authMode === 'login' ? 'アカウントをお持ちでない方はこちら' : 'すでにアカウントをお持ちの方はこちら'}
                             </button>
                         </div>
                     </div>

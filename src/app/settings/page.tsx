@@ -105,6 +105,38 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
+                    {/* Subscription Management */}
+                    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                            <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600">
+                                <span className="font-bold text-lg">💳</span>
+                            </div>
+                            <div>
+                                <h2 className="font-bold text-slate-800">契約・支払いの管理</h2>
+                                <p className="text-xs text-slate-500">プラン変更、解約、クレジットカード情報の変更はこちら。</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const res = await fetch('/api/create-portal-session', { method: 'POST' });
+                                        if (!res.ok) throw new Error("Portal creation failed");
+                                        const data = await res.json();
+                                        window.location.href = data.url;
+                                    } catch (error) {
+                                        alert("管理画面への移動に失敗しました。まだ決済情報が登録されていない可能性があります。");
+                                    }
+                                }}
+                                className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                            >
+                                契約管理画面へ移動（Stripe）
+                            </button>
+                            <p className="text-[10px] text-slate-400 text-center">※外部サイト（Stripe）へ移動します。</p>
+                        </div>
+                    </div>
+
                     {/* Submit Button */}
                     <div className="flex justify-end">
                         <button

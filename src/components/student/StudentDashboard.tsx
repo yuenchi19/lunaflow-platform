@@ -1,15 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, Course, Announcement } from "@/types";
+import { User, Course, Announcement, ProgressDetail } from "@/types";
 import { createMockStripeSession } from "@/lib/stripe-integration";
 import { MOCK_USERS, MOCK_COURSES, getAnnouncements, getAffiliateEarnings } from "@/lib/data";
 import { User as UserIcon, Bell, ExternalLink, Book, LogOut, Settings, PlayCircle, Clock, Edit3, Camera, TrendingUp } from "lucide-react";
 import Link from "next/link";
-// import styles from "@/app/page.module.css"; 
 
-export default function StudentDashboard() {
-    const [user, setUser] = useState<User>(MOCK_USERS[0]); // Yamada Taro
+interface StudentDashboardProps {
+    initialUser?: User | null;
+}
+
+export default function StudentDashboard({ initialUser }: StudentDashboardProps) {
+    const [user, setUser] = useState<User>(initialUser || MOCK_USERS[0]); // Fallback to Mock if null (e.g. error)
     const [courses] = useState<Course[]>(MOCK_COURSES);
     const [announcements] = useState<Announcement[]>(getAnnouncements());
     const [affiliateEarnings, setAffiliateEarnings] = useState({ directReferrals: 0, indirectReferrals: 0, monthlyEarnings: 0 });
