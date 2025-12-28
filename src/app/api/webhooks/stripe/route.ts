@@ -186,7 +186,7 @@ export async function POST(req: Request) {
                     }
                 }
             }
-        }
+        } // Close else
 
         // 2. Log Purchase
         if (targetUserId) {
@@ -205,9 +205,9 @@ export async function POST(req: Request) {
                 // Don't throw, critical part (user creation) is done
             }
         }
-    }
+    } // Close checkout.session.completed
 
-        return NextResponse.json({ received: true });
+    return NextResponse.json({ received: true });
 
 } catch (err: any) {
     console.error("Handler Logic Error:", err);
