@@ -23,7 +23,13 @@ export async function POST(req: Request) {
         );
     } catch (error: any) {
         console.error(`Webhook Error: ${error.message}`);
-        return NextResponse.json({ error: `Webhook Error: ${error.message}` }, { status: 400 });
+        const secret = process.env.STRIPE_WEBHOOK_SECRET || "undefined";
+        const maskedSecret = secret.length > 5 ? `${secret.substring(0, 5)}...` : secret;
+        return NextResponse.json({
+            error: `Webhook Error: ${error.message}`,
+            debug_secret_prefix: maskedSecret,
+            received_signature: signature ? "YES" : "NO"
+        }, { status: 400 });
     }
 
     // Initialize Supabase Admin Client (Service Role)
@@ -73,29 +79,90 @@ export async function POST(req: Request) {
 
         if (targetUserId) {
             // Update Profile
-            const { error: profileError } = await supabaseAdmin
-                .from('profiles')
-                .update({
-                    name: customerDetails?.name,
-                    phone_number: customerDetails?.phone,
-                    // Schema has 'address' as text. Let's format it nicely or store JSON if you want structured.
-                    // Request was "address" field. Let's format text for compatibility with Settings page text area.
-                    address: customerDetails?.address ?
-                        `〒${customerDetails.address.postal_code} ${customerDetails.address.state}${customerDetails.address.city}${customerDetails.address.line1} ${customerDetails.address.line2 || ''}`
-                        : null,
-                    zip_code: customerDetails?.address?.postal_code,
-                    role: 'student', // Ensure role
-                    plan: 'premium', // Or derive from Price ID
-                    stripe_customer_id: session.customer as string,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', targetUserId);
+            await supabaseAdmin.from('profiles').update({
+                name: customerDetails?.name,
+                phone_number: customerDetails?.phone,
+                address: customerDetails?.address ?
+                    `〒${customerDetails.address.postal_code} ${customerDetails.address.state}${customerDetails.address.city}${customerDetails.address.line1} ${customerDetails.address.line2 || ''}`
+                    : null,
+                zip_code: customerDetails?.address?.postal_code,
+                role: 'student',
+                plan: 'premium',
+                stripe_customer_id: session.customer as string,
+                updated_at: new Date().toISOString()
+            }).eq('id', targetUserId);
 
-            if (profileError) console.error("Profile Update Error:", profileError);
-            else console.log("[Webhook] Profile updated successfully.");
+            console.log("[Webhook] Existing profile updated.");
         } else {
-            console.warn(`[Webhook] User not found for email: ${email}. Profile sync skipped (User must sign up first).`);
-            // Optional: Create a "Pending Purchase" record to link later?
+            // User doesn't exist -> Create Auth User
+            console.log(`[Webhook] User not found for ${email}. Creating new account...`);
+
+            // Generate Random Temp Password
+            const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8); // e.g. "a1b2c3d4e5f6"
+
+            const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+                email: email!,
+                password: tempPassword,
+                email_confirm: true, // Auto-confirm
+                user_metadata: {
+                    name: customerDetails?.name || email!.split('@')[0],
+                    role: 'student',
+                    plan: 'premium'
+                }
+            });
+
+            if (createError) {
+                console.error("[Webhook] Failed to create user:", createError);
+                // Return success anyway to avoid Stripe retry loop for business logic error
+                // (or throw if you want retry)
+            } else if (newUser.user) {
+                targetUserId = newUser.user.id;
+                console.log(`[Webhook] User created! ID: ${targetUserId}`);
+                console.log(`[Webhook] TEMP PASSWORD for ${email}: ${tempPassword}`);
+
+                // Real Email Sending with Resend
+                const { Resend } = await import('resend');
+                const resend = new Resend(process.env.RESEND_API_KEY);
+
+                try {
+                    const { data: emailData, error: emailError } = await resend.emails.send({
+                        from: 'onboarding@resend.dev', // Default for testing. User should verify domain later.
+                        to: email!, // If using 'onboarding@resend.dev', 'to' must be the verified email in Resend dashboard during testing.
+                        subject: '【重要】Luna Flowへようこそ！アカウント登録が完了しました ✨',
+                        html: `
+                            <p>${customerDetails?.name || 'お客様'} 様</p>
+                            <p>Luna Flowへの入会誠にありがとうございます。<br>
+                            お客様のアカウント作成が完了いたしました！</p>
+
+                            <p>新しい一歩を踏み出すお手伝いができること、心より嬉しく思います。<br>
+                            これから、理想の毎日を一緒に叶えていきましょう！</p>
+
+                            <p>さっそく、以下の情報でマイページにログインいただけます。</p>
+                            
+                            <p><strong>■ ログイン情報</strong><br>
+                            ・ログインURL： ${process.env.NEXT_PUBLIC_APP_URL}<br>
+                            ・メールアドレス： ${email}<br>
+                            ・初期パスワード： ${tempPassword}</p>
+                            
+                            <p>※セキュリティのため、ログイン後は速やかに「設定」よりパスワードの変更をお願いいたします。</p>
+
+                            <p>これから始まるLuna Flowでの体験が、${customerDetails?.name || 'お客様'} 様にとって輝かしいものとなりますように。<br>
+                            あなたの毎日が、もっと心地よく、もっと私らしくなりますように。<br>
+                            心を込めて。</p>
+
+                            <p>Luna Flow 運営事務局</p>
+                        `
+                    });
+
+                    if (emailError) {
+                        console.error("[Webhook] Resend Error:", emailError);
+                    } else {
+                        console.log(`[Webhook] Email sent! ID: ${emailData?.id}`);
+                    }
+                } catch (e: any) {
+                    console.error("[Webhook] Failed to send email:", e.message);
+                }
+            }
         }
 
         // 2. Log Purchase

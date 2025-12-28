@@ -12,7 +12,10 @@ export default function PlansPage() {
             const res = await fetch('/api/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ priceId }),
+                body: JSON.stringify({
+                    priceId,
+                    includeInitialFee: true // Always add initial fee for new signups
+                }),
             });
             const data = await res.json();
             if (data.url) {

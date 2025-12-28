@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { MOCK_USERS } from "@/lib/data";
-import { ArrowLeft, Mail, MapPin, Save } from "lucide-react";
+import { ArrowLeft, Mail, MapPin, Save, Lock } from "lucide-react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SettingsPage() {
     const defaultUser = MOCK_USERS[0];
@@ -43,6 +44,40 @@ export default function SettingsPage() {
 
             <main className="max-w-2xl mx-auto p-8">
                 <div className="space-y-8">
+
+                    {/* Password Settings */}
+                    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                            <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-600">
+                                <Lock className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h2 className="font-bold text-slate-800">パスワード変更</h2>
+                                <p className="text-xs text-slate-500">仮パスワードをご利用の方は、こちらで変更してください。</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <Link
+                                href="/manual" // In a real app, this would be a proper change password form or Supabase recovery link
+                                // Since we don't have a dedicated password change page yet, we might want to just show a button that triggers a password reset email
+                                onClick={async (e) => {
+                                    e.preventDefault();
+                                    const supabase = createClient(); // Will need usage inside component or just import pure client
+                                    const { data: { user } } = await supabase.auth.getUser();
+                                    if (user?.email) {
+                                        await supabase.auth.resetPasswordForEmail(user.email, {
+                                            redirectTo: `${window.location.origin}/settings/update-password`,
+                                        });
+                                        alert("パスワード再設定用のメールを送信しました。メール内のリンクから設定を行ってください。");
+                                    }
+                                }}
+                                className="w-full flex items-center justify-center gap-2 py-3 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 transition-colors"
+                            >
+                                パスワード再設定メールを送信
+                            </Link>
+                        </div>
+                    </div>
 
                     {/* Email Settings */}
                     <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">

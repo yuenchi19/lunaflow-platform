@@ -175,10 +175,12 @@ export const MOCK_COURSES: Course[] = [
 
 // Mock Stripe Price IDs for integration testing
 export const STRIPE_PRICES = {
-    light: "price_mock_light_plan", // PromoteKit will filter this out
-    standard: "price_mock_standard_plan",
-    premium: "price_mock_premium_plan",
+    light: "price_1Sio8JEG3Sato8fA5bGnbvkD",
+    standard: "price_1SMk15EG3Sato8fAltFsa5AQ",
+    premium: "price_1Sio8pEG3Sato8fA1E7RxhW6",
 };
+
+export const STRIPE_INITIAL_FEE_PRICE_ID = "price_1S0douEG3Sato8fAOcBAGw1X";
 
 export const MOCK_CATEGORIES: Category[] = [
     {

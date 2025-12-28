@@ -11,11 +11,10 @@ export default function PricingPage() {
             id: "light",
             name: "ライトプラン",
             price: 5980,
-            description: "手軽に始めたい方向け",
+            description: "物販経験者の方向けのサポートサービス",
             features: [
                 "学習サイトボリューム：100本",
-                "サポート：専用学習サイトのみ",
-                "お任せ仕入れ購入金額：最低80,000円〜"
+                "サポート：専用学習サイトのみ"
             ],
             color: "bg-teal-500",
             link: "https://buy.stripe.com/00wdR90j8fprfVo7pjc7u01"
@@ -24,11 +23,10 @@ export default function PricingPage() {
             id: "standard",
             name: "スタンダードプラン",
             price: 12980,
-            description: "本格的に学びたい方へ",
+            description: "物販を1年ほど経験した方向けのサポートプラン",
             features: [
                 "学習サイト：150本 ＋ Zoomサポート",
-                "対面実技指導・アフィリエイト参加権",
-                "お任せ仕入れ購入金額：最低60,000円〜"
+                "対面実技指導・アフィリエイト参加権"
             ],
             color: "bg-blue-600",
             featured: true,
@@ -38,11 +36,10 @@ export default function PricingPage() {
             id: "premium",
             name: "プレミアムプラン",
             price: 19800,
-            description: "最短で収益化を目指す",
+            description: "物販ビジネス初心者向けの充実のサポート",
             features: [
                 "学習サイト：200本 ＋ 対面講習",
-                "ハイスペック塗料伝授・還元祭無料招待",
-                "お任せ仕入れ購入金額：最低30,000円〜"
+                "ハイスペック塗料伝授・還元祭無料招待"
             ],
             color: "bg-indigo-700",
             link: "https://buy.stripe.com/eVqfZhd5UcdfeRkdNHc7u03"

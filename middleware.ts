@@ -9,8 +9,8 @@ export async function middleware(request: NextRequest) {
     })
 
     const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        process.env.NEXT_PUBLIC_SUPABASE_URL || "https://example.com",
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "mock-key",
         {
             cookies: {
                 getAll() {
@@ -71,6 +71,6 @@ export const config = {
          * - favicon.ico (favicon file)
          * Feel free to modify this pattern to include more paths.
          */
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }

@@ -3,7 +3,7 @@ import { stripe } from '@/lib/stripe';
 
 export async function POST(req: Request) {
     try {
-        const { priceId } = await req.json();
+        const { priceId, includeInitialFee } = await req.json();
 
         if (!priceId) {
             return NextResponse.json({ error: 'Price ID is required' }, { status: 400 });
@@ -16,15 +16,32 @@ export async function POST(req: Request) {
             return NextResponse.json({ url: "https://checkout.stripe.com/c/pay/mock_session_id" });
         }
 
+        const line_items = [
+            {
+                price: priceId,
+                quantity: 1,
+            },
+        ];
+
+        // Add Initial Fee if requested
+        if (includeInitialFee) {
+            // We need to import this differently or pass it. 
+            // To avoid circular deps if importing from data.ts (which might import types), 
+            // we'll use the check.
+            // Actually data.ts is safe to import.
+            const { STRIPE_INITIAL_FEE_PRICE_ID } = await import('@/lib/data');
+            if (STRIPE_INITIAL_FEE_PRICE_ID) {
+                line_items.push({
+                    price: STRIPE_INITIAL_FEE_PRICE_ID,
+                    quantity: 1,
+                });
+            }
+        }
+
         const session = await stripe.checkout.sessions.create({
             mode: 'subscription',
             payment_method_types: ['card'],
-            line_items: [
-                {
-                    price: priceId,
-                    quantity: 1,
-                },
-            ],
+            line_items,
             success_url: `${process.env.NEXT_PUBLIC_APP_URL}/student/dashboard?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/plans`,
         });
