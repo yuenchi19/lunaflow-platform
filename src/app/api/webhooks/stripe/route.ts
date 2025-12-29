@@ -185,36 +185,35 @@ export async function POST(req: Request) {
                         // Don't throw here, allowing transaction to complete
                     }
                 }
+            } // Close else
+
+            // 2. Log Purchase
+            if (targetUserId) {
+                const { error: purchaseError } = await supabaseAdmin
+                    .from('purchases')
+                    .insert({
+                        user_id: targetUserId,
+                        stripe_session_id: session.id,
+                        amount: session.amount_total || 0,
+                        currency: session.currency || 'jpy',
+                        status: 'succeeded'
+                    });
+
+                if (purchaseError) {
+                    console.error("Purchase Insert Error:", purchaseError);
+                    // Don't throw, critical part (user creation) is done
+                }
             }
-        } // Close else
+        } // Close checkout.session.completed
 
-        // 2. Log Purchase
-        if (targetUserId) {
-            const { error: purchaseError } = await supabaseAdmin
-                .from('purchases')
-                .insert({
-                    user_id: targetUserId,
-                    stripe_session_id: session.id,
-                    amount: session.amount_total || 0,
-                    currency: session.currency || 'jpy',
-                    status: 'succeeded'
-                });
+        return NextResponse.json({ received: true });
 
-            if (purchaseError) {
-                console.error("Purchase Insert Error:", purchaseError);
-                // Don't throw, critical part (user creation) is done
-            }
-        }
-    } // Close checkout.session.completed
-
-    return NextResponse.json({ received: true });
-
-} catch (err: any) {
-    console.error("Handler Logic Error:", err);
-    return NextResponse.json({
-        error: `Handler Check Failed`,
-        details: err.message,
-        stack: err.stack
-    }, { status: 500 });
-}
+    } catch (err: any) {
+        console.error("Handler Logic Error:", err);
+        return NextResponse.json({
+            error: `Handler Check Failed`,
+            details: err.message,
+            stack: err.stack
+        }, { status: 500 });
+    }
 }
