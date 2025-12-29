@@ -23,12 +23,8 @@ export async function POST(req: Request) {
         );
     } catch (error: any) {
         console.error(`Webhook Error: ${error.message}`);
-        const secret = process.env.STRIPE_WEBHOOK_SECRET || "undefined";
-        const maskedSecret = secret.length > 5 ? `${secret.substring(0, 5)}...` : secret;
         return NextResponse.json({
-            error: `Webhook Error: ${error.message}`,
-            debug_secret_prefix: maskedSecret,
-            received_signature: signature ? "YES" : "NO"
+            error: `Webhook Error: ${error.message}`
         }, { status: 400 });
     }
 
@@ -152,7 +148,7 @@ export async function POST(req: Request) {
 
                     try {
                         const { data: emailData, error: emailError } = await resend.emails.send({
-                            from: 'onboarding@resend.dev',
+                            from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
                             to: email!,
                             subject: '【重要】Luna Flowへようこそ！アカウント登録が完了しました ✨',
                             html: `
@@ -212,8 +208,7 @@ export async function POST(req: Request) {
         console.error("Handler Logic Error:", err);
         return NextResponse.json({
             error: `Handler Check Failed`,
-            details: err.message,
-            stack: err.stack
+            details: err.message
         }, { status: 500 });
     }
 }
