@@ -16,6 +16,7 @@ export interface Block {
     content?: string;
     videoUrl?: string;
     order: number;
+    correctionType?: 'manual' | 'ai'; // New field for AI Feedback
 }
 
 export interface Feedback {
@@ -172,4 +173,25 @@ export interface ProgressDetail {
     blockTitle: string;
     completedAt: string; // ISO Date
     status: 'completed' | 'viewed' | 'not_started';
+    feedbackStatus?: 'pending' | 'completed';
+    feedbackContent?: string;
+    feedbackAt?: string; // scheduled or actual feedback time
+}
+
+export interface PurchaseRequest {
+    id: string;
+    userId?: string; // Optional if coming from non-logged in user forms, but ideally linked
+    email: string;
+    name: string;
+    postalCode: string;
+    prefecture: string;
+    address: string;
+    phone: string;
+    plan: string;
+    amount: number; // changed from string to number for calculation
+    carrier: string;
+    payment: string;
+    note: string;
+    status: "pending" | "completed";
+    date: string;
 }

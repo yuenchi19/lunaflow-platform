@@ -101,7 +101,7 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
     return (
         <div className="flex flex-col h-full bg-[#313338] text-[#DBDEE1] overflow-hidden">
             {/* Header */}
-            <header className="h-12 border-b border-[#26272D] flex items-center px-4 bg-[#313338] shadow-sm justify-between flex-shrink-0 z-10 relative">
+            <header className="h-12 border-b border-[#26272D] flex items-center px-4 bg-[#313338] shadow-sm justify-between flex-shrink-0 z-30 relative">
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setIsMobileMenuOpen(true)}
@@ -166,7 +166,7 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
                         </div>
 
                         {/* Fixed Footer for Action Button */}
-                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-[#2B2D31] border-t border-[#1F2023] z-20">
+                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-[#2B2D31] border-t border-[#1F2023] z-30">
                             <div className="max-w-3xl mx-auto space-y-3">
                                 <p className="font-bold text-white text-sm md:text-base text-center">
                                     確認してお約束できる人は、【✅】を押してください。<br />

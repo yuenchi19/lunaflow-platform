@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { User, Course, Announcement } from "@/types";
 import { createMockStripeSession } from "@/lib/stripe-integration";
-import { MOCK_USERS, MOCK_COURSES, getAnnouncements, getAffiliateEarnings } from "@/lib/data";
-import { User as UserIcon, Bell, ExternalLink, Book, LogOut, Settings, PlayCircle, Clock, TrendingUp, Lock } from "lucide-react";
+import { MOCK_USERS, MOCK_COURSES, getAnnouncements, getAffiliateEarnings, getStudentProgressDetail } from "@/lib/data";
+import { User as UserIcon, Bell, ExternalLink, Book, LogOut, Settings, PlayCircle, Clock, TrendingUp, Lock, MessageSquare, X } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -103,6 +103,26 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
         const earnings = getAffiliateEarnings(user.id);
         setAffiliateEarnings(earnings);
+    }, [user.id]);
+
+    // AI Feedback Notifications and Data
+    const [feedbacks, setFeedbacks] = useState<import("@/types").ProgressDetail[]>([]);
+    const [showFeedbackToast, setShowFeedbackToast] = useState(false);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const allProgress = getStudentProgressDetail(user.id);
+        const completedFeedbacks = allProgress.filter(p => p.feedbackStatus === 'completed');
+        setFeedbacks(completedFeedbacks);
+
+        // Check for new feedbacks
+        const lastSeen = parseInt(localStorage.getItem(`luna_seen_feedback_count_${user.id}`) || "0");
+        if (completedFeedbacks.length > lastSeen) {
+            setShowFeedbackToast(true);
+            // Update seen count immediately (or on close) - effectively clearing the header badge
+            localStorage.setItem(`luna_seen_feedback_count_${user.id}`, completedFeedbacks.length.toString());
+            // Force header update via custom event or just let polling handle it (Header polls independently)
+        }
     }, [user.id]);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -283,6 +303,34 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         </div>
     );
 
+    const renderFeedbacks = () => {
+        if (feedbacks.length === 0) return null;
+        return (
+            <section>
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-serif font-bold text-slate-800 flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-indigo-600" />
+                        新着フィードバック
+                    </h2>
+                </div>
+                <div className="space-y-4">
+                    {feedbacks.map((item, idx) => (
+                        <div key={idx} className="bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm relative overflow-hidden">
+                            <div className="flex justify-between items-start mb-2">
+                                <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded-full">AI/講師からのコメント</span>
+                                <span className="text-[10px] text-slate-400">{new Date(item.feedbackAt || item.completedAt).toLocaleString()}</span>
+                            </div>
+                            <h3 className="font-bold text-slate-800 mb-2">{item.blockTitle}</h3>
+                            <div className="bg-slate-50 rounded-lg p-4 text-sm text-slate-600 leading-relaxed border border-slate-100">
+                                {item.feedbackContent}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+        );
+    };
+
     const renderCourses = () => (
         <section>
             <div className="flex items-center justify-between mb-6">
@@ -410,6 +458,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
                     {/* Right Content */}
                     <div className="lg:col-span-9 space-y-10">
+                        {renderFeedbacks()}
                         {renderCourses()}
                         {renderAnnouncements()}
                         {renderManual()}
@@ -525,17 +574,61 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                     <div className="bg-white rounded-2xl w-full max-w-2xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
                         <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">仕入れ希望フォーム</h3>
                         <form onSubmit={handlePurchaseSubmit} className="space-y-6">
-                            {/* ... simplified form ... */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 block mb-2">メールアドレス</label>
+                                    <input type="email" name="email" value={purchaseForm.email} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" required />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 block mb-2">お名前</label>
+                                    <input type="text" name="name" value={purchaseForm.name} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" required />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 block mb-2">電話番号</label>
+                                    <input type="tel" name="phone" value={purchaseForm.phone} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" required />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 block mb-2">郵便番号</label>
+                                    <input type="text" name="postalCode" value={purchaseForm.postalCode} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" required />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 block mb-2">住所</label>
+                                <input type="text" name="address" value={purchaseForm.address} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" required />
+                            </div>
                             <div>
                                 <label className="text-xs font-bold text-slate-500 block mb-2">希望購入金額</label>
-                                <input type="text" name="amount" value={purchaseForm.amount} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" />
+                                <input type="text" name="amount" value={purchaseForm.amount} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" placeholder="例: 300000" required />
                             </div>
                             <div className="flex gap-4 mt-8 pt-4 border-t border-slate-100">
-                                <button type="button" onClick={() => setIsPurchaseModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 font-bold rounded-lg">キャンセル</button>
-                                <button type="submit" className="flex-1 py-3 bg-rose-600 text-white font-bold rounded-lg">送信</button>
+                                <button type="button" onClick={() => setIsPurchaseModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 font-bold rounded-lg hover:bg-slate-200 transition-colors">キャンセル</button>
+                                <button type="submit" className="flex-1 py-3 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors">送信</button>
                             </div>
                         </form>
                     </div>
+                </div>
+            )}
+
+            <div className="text-center py-4 text-[10px] text-slate-300 opacity-50">
+                System v.2025-12-30 01:16 (Build 757) - AI Feedback Enabled
+            </div>
+
+            {/* Feedback Toast */}
+            {showFeedbackToast && (
+                <div className="fixed bottom-4 right-4 bg-white border border-indigo-100 shadow-2xl rounded-xl p-4 z-50 animate-bounce flex items-center gap-4 max-w-sm">
+                    <div className="bg-indigo-100 text-indigo-600 p-2 rounded-full">
+                        <MessageSquare className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-slate-800 text-sm">新しいフィードバックがあります！</h4>
+                        <p className="text-xs text-slate-500">課題の添削が完了しました。</p>
+                    </div>
+                    <button onClick={() => setShowFeedbackToast(false)} className="text-slate-400 hover:text-slate-600">
+                        <span className="sr-only">Close</span>
+                        <X size={16} />
+                    </button>
                 </div>
             )}
         </div>

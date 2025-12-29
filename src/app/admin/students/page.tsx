@@ -1,15 +1,19 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
-import { MOCK_USERS } from '@/lib/data';
+import { getUsers } from '@/lib/data';
 import { calculateStudentStatus } from '@/lib/utils';
 
 export default function StudentsPage() {
     // Version: 2025-12-27 Refined
     const [searchTerm, setSearchTerm] = useState("");
-    const [students] = useState(MOCK_USERS.filter(u => u.role === 'student'));
+    const [students, setStudents] = useState<any[]>([]);
+
+    useEffect(() => {
+        setStudents(getUsers().filter(u => u.role === 'student'));
+    }, []);
 
     const filteredStudents = students.filter(student =>
         student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -4,7 +4,7 @@ import EmbeddableLoginForm from "@/components/EmbeddableLoginForm";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#FDFCFB] flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-[#FDFCFB] flex flex-col relative overflow-x-hidden">
       {/* Abstract Background Decoration */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-50 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-amber-50 rounded-full blur-3xl opacity-50 translate-y-1/2 -translate-x-1/2" />

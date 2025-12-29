@@ -35,7 +35,7 @@ export default function CommunityLayout({ children }: { children: React.ReactNod
                     user={user}
                     currentChannelId={currentChannelId}
                 />
-                <main className="flex-1 flex flex-col min-w-0 bg-[#313338]">
+                <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-[#313338] overflow-hidden">
                     {children}
                 </main>
             </div>

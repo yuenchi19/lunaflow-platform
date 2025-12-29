@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
-import { MOCK_USERS, getStudentPayments, getStudentProgressDetail } from '@/lib/data';
+import { MOCK_USERS, getStudentPayments, getStudentProgressDetail, getUserById, savePayment, updateUser } from '@/lib/data';
 import { calculateStudentStatus } from '@/lib/utils';
 import { User, Payment, ProgressDetail } from '@/types';
 
@@ -25,7 +25,7 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
 
     useEffect(() => {
         // Mock fetch
-        const found = MOCK_USERS.find(u => u.id === params.id);
+        const found = getUserById(params.id);
         if (found) {
             setStudent(found);
             setEditForm({
@@ -85,6 +85,49 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
     const handleSendEmail = () => {
         if (!student) return;
         window.location.href = `mailto:${student.email}?subject=LunaFlowからのお知らせ`;
+    };
+
+    const [isAddingPayment, setIsAddingPayment] = useState(false);
+    const [newPayment, setNewPayment] = useState({
+        amount: "",
+        date: new Date().toISOString().split('T')[0],
+        method: "card",
+        note: ""
+    });
+
+    const handleAddPayment = () => {
+        if (!student || !newPayment.amount) return;
+
+        const amount = parseInt(newPayment.amount);
+        if (isNaN(amount)) {
+            alert("金額を正しく入力してください");
+            return;
+        }
+
+        const payment: Payment = {
+            id: `pay_${Date.now()}`,
+            userId: student.id,
+            date: newPayment.date,
+            amount: amount,
+            method: newPayment.method as any,
+            status: 'succeeded'
+        };
+
+        savePayment(payment);
+
+        // Update User Total
+        const newTotal = (student.lifetimePurchaseTotal || 0) + amount;
+        const updatedUser = { ...student, lifetimePurchaseTotal: newTotal };
+        updateUser(updatedUser);
+        setStudent(updatedUser); // Update local state immediately
+
+        // Refresh Payments
+        const allPayments = getStudentPayments(student.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setPayments(allPayments.filter(p => p.status === 'succeeded').slice(0, 3)); // Refresh list
+
+        setIsAddingPayment(false);
+        setNewPayment({ ...newPayment, amount: "" });
+        alert("購入履歴を追加しました");
     };
 
     if (!student) return <div className={styles.loading}>読み込み中...</div>;
@@ -169,8 +212,8 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                                     ) : (
                                         <div className={styles.infoValue}>
                                             <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${student.plan === 'premium' ? 'bg-amber-100 text-amber-700' :
-                                                    student.plan === 'standard' ? 'bg-blue-100 text-blue-700' :
-                                                        'bg-slate-100 text-slate-700'
+                                                student.plan === 'standard' ? 'bg-blue-100 text-blue-700' :
+                                                    'bg-slate-100 text-slate-700'
                                                 }`}>
                                                 {student.plan}
                                             </span>
@@ -303,7 +346,63 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
 
             {/* Payment History Table (Limited to latest 3) */}
             <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>直近の決済・購入履歴 (最新3件)</h3>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className={styles.sectionTitle} style={{ marginBottom: 0 }}>直近の決済・購入履歴 (最新3件)</h3>
+                    <button
+                        onClick={() => setIsAddingPayment(!isAddingPayment)}
+                        className="text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded hover:bg-indigo-100 font-bold"
+                    >
+                        {isAddingPayment ? "キャンセル" : "+ 購入履歴を追加"}
+                    </button>
+                </div>
+
+                {isAddingPayment && (
+                    <div className="bg-slate-50 p-4 rounded-lg mb-4 border border-indigo-100">
+                        <h4 className="font-bold text-sm text-slate-700 mb-3">新しい購入履歴を追加</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                            <div>
+                                <label className="block text-xs text-slate-500 mb-1">日付</label>
+                                <input
+                                    type="date"
+                                    className="w-full border rounded p-1.5 text-sm"
+                                    value={newPayment.date}
+                                    onChange={e => setNewPayment({ ...newPayment, date: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-slate-500 mb-1">金額 (円)</label>
+                                <input
+                                    type="number"
+                                    className="w-full border rounded p-1.5 text-sm"
+                                    placeholder="例: 10000"
+                                    value={newPayment.amount}
+                                    onChange={e => setNewPayment({ ...newPayment, amount: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-slate-500 mb-1">支払い方法</label>
+                                <select
+                                    className="w-full border rounded p-1.5 text-sm bg-white"
+                                    value={newPayment.method}
+                                    onChange={e => setNewPayment({ ...newPayment, method: e.target.value })}
+                                >
+                                    <option value="card">カード</option>
+                                    <option value="bank_transfer">銀行振込</option>
+                                    <option value="other">その他</option>
+                                </select>
+                            </div>
+                            <div className="flex items-end">
+                                <button
+                                    onClick={handleAddPayment}
+                                    className="w-full bg-indigo-600 text-white font-bold py-1.5 rounded text-sm hover:bg-indigo-700"
+                                >
+                                    追加する
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className={styles.tableCard}>
                     <table className="w-full text-left text-sm text-gray-600">
                         <thead className="bg-gray-50 text-gray-700 uppercase font-medium border-b">
@@ -325,7 +424,7 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                                     <td className="px-6 py-4 text-right font-mono">¥{p.amount.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-center">
                                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${p.status === 'succeeded' ? 'bg-green-100 text-green-700' :
-                                                p.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                                            p.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
                                             }`}>
                                             {p.status}
                                         </span>

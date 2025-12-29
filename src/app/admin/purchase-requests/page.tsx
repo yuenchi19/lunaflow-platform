@@ -3,22 +3,8 @@
 import { useState, useEffect } from "react";
 import { Download, Search, Filter, CheckCircle, Clock } from "lucide-react";
 
-type PurchaseRequest = {
-    id: string;
-    email: string;
-    name: string;
-    postalCode: string;
-    prefecture: string;
-    address: string;
-    phone: string;
-    plan: string;
-    amount: string;
-    carrier: string;
-    payment: string;
-    note: string;
-    status: "pending" | "completed";
-    date: string;
-};
+import { getUsers, updateUser, savePayment } from "@/lib/data";
+import { PurchaseRequest, Payment } from "@/types";
 
 export default function PurchaseRequestsPage() {
     const [requests, setRequests] = useState<PurchaseRequest[]>([]);
@@ -32,8 +18,50 @@ export default function PurchaseRequestsPage() {
     }, []);
 
     const toggleStatus = (id: string) => {
+        const targetReq = requests.find(r => r.id === id);
+        if (!targetReq) return;
+
+        const newStatus = targetReq.status === "pending" ? "completed" : "pending";
+
+        // Logic: specific automation when marking as Completed
+        if (newStatus === 'completed') {
+            const confirmed = confirm("このリクエストを完了にしますか？\n完了にすると、該当する受講生の「おまかせ仕入れ」実績に加算されます。");
+            if (!confirmed) return;
+
+            // Find user
+            const users = getUsers();
+            const user = users.find(u => u.email === targetReq.email); // Match by Email for now
+
+            if (user) {
+                // Parse amount (remove "円" or commas if any, though existing mock might be string "30000")
+                const amountVal = typeof targetReq.amount === 'string'
+                    ? parseInt((targetReq.amount as string).replace(/[^0-9]/g, ''))
+                    : targetReq.amount;
+
+                if (!isNaN(amountVal)) {
+                    // 1. Update User Total
+                    const newTotal = (user.lifetimePurchaseTotal || 0) + amountVal;
+                    updateUser({ ...user, lifetimePurchaseTotal: newTotal });
+
+                    // 2. Add Payment Record
+                    const newPayment: Payment = {
+                        id: `pay_req_${targetReq.id}_${Date.now()}`,
+                        userId: user.id,
+                        date: new Date().toISOString().split('T')[0],
+                        amount: amountVal,
+                        method: 'other', // Purchase Request
+                        status: 'succeeded'
+                    };
+                    savePayment(newPayment);
+                    alert(`${user.name}様の仕入れ実績に ${amountVal.toLocaleString()}円 を反映しました。`);
+                }
+            } else {
+                alert("該当するメールアドレスの受講生が見つかりませんでした。実績への反映はスキップされました。");
+            }
+        }
+
         const updatedRequests = requests.map(req =>
-            req.id === id ? { ...req, status: req.status === "pending" ? "completed" : "pending" as "pending" | "completed" } : req
+            req.id === id ? { ...req, status: newStatus as "pending" | "completed" } : req
         );
         setRequests(updatedRequests);
         localStorage.setItem("mock_purchase_requests", JSON.stringify(updatedRequests));
@@ -97,8 +125,8 @@ export default function PurchaseRequestsPage() {
                                 <tr key={req.id} className="hover:bg-slate-50 transition-colors">
                                     <td className="p-4">
                                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${req.status === 'completed'
-                                                ? 'bg-emerald-100 text-emerald-700'
-                                                : 'bg-amber-100 text-amber-700'
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : 'bg-amber-100 text-amber-700'
                                             }`}>
                                             {req.status === 'completed' ? (
                                                 <>
@@ -141,8 +169,8 @@ export default function PurchaseRequestsPage() {
                                         <button
                                             onClick={() => toggleStatus(req.id)}
                                             className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${req.status === 'pending'
-                                                    ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
-                                                    : 'border-slate-200 text-slate-400 hover:bg-slate-50'
+                                                ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                                                : 'border-slate-200 text-slate-400 hover:bg-slate-50'
                                                 }`}
                                         >
                                             {req.status === 'pending' ? '完了にする' : '未完了に戻す'}

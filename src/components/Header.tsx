@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from 'next/link';
 import styles from './Header.module.css';
-import { getUnreadMessageCount } from '@/lib/data';
+import { getUnreadMessageCount, getStudentProgressDetail } from '@/lib/data';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -29,6 +29,7 @@ export default function Header() {
 
     // App State
     const [unreadCount, setUnreadCount] = useState(0);
+    const [feedbackCount, setFeedbackCount] = useState(0);
 
     // Check Login Status on Mount
     useEffect(() => {
@@ -48,19 +49,35 @@ export default function Header() {
         return () => subscription.unsubscribe();
     }, [supabase]);
 
-    // Polling for unread messages (Optimized/Mock persistence for now)
+    // Polling for unread messages and feedbacks
     useEffect(() => {
         if (!user) {
             setUnreadCount(0);
+            setFeedbackCount(0);
             return;
         }
-        // TODO: Replace with Real DB Count. For now, use Mock if ID matches, else 0
-        const mockCount = getUnreadMessageCount(user.id) || 0; // Will likely be 0 for new generic users
-        setUnreadCount(mockCount);
 
-        const interval = setInterval(() => {
-            // Re-fetch logic here
-        }, 10000);
+        const fetchCounts = () => {
+            const mockCount = getUnreadMessageCount(user.id) || 0;
+            setUnreadCount(mockCount);
+
+            // Feedback Count (Simple: count completed feedbacks that user hasn't "cleared" - simplified to just total completed for now or check diff)
+            // Ideally we track "last_checked_feedback" timestamp.
+            const progress = getStudentProgressDetail(user.id);
+            const feedbacks = progress.filter(p => p.feedbackStatus === 'completed');
+
+            // Check against last seen count
+            const lastSeen = parseInt(localStorage.getItem(`luna_seen_feedback_count_${user.id}`) || "0");
+            if (feedbacks.length > lastSeen) {
+                setFeedbackCount(feedbacks.length - lastSeen);
+            } else {
+                setFeedbackCount(0);
+            }
+        };
+
+        fetchCounts();
+
+        const interval = setInterval(fetchCounts, 5000); // 5 sec poll
         return () => clearInterval(interval);
     }, [user]);
 
@@ -123,8 +140,13 @@ export default function Header() {
 
                     {user ? (
                         <>
-                            <Link href="/student/dashboard" className={styles.navLink}>
+                            <Link href="/student/dashboard" className={styles.navLink} style={{ position: "relative" }}>
                                 マイページ
+                                {feedbackCount > 0 && (
+                                    <span className={styles.badge} style={{ backgroundColor: '#F59E0B' }}>
+                                        {feedbackCount}
+                                    </span>
+                                )}
                             </Link>
                             <Link href="/community" className={styles.navLink} style={{ position: "relative" }}>
                                 コミュニティ

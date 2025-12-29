@@ -60,6 +60,36 @@ export const MOCK_USERS: User[] = [
     },
 ];
 
+// -- User Persistence Helpers --
+export function getUsers(): User[] {
+    if (typeof window === 'undefined') return MOCK_USERS;
+    const stored = localStorage.getItem("luna_users");
+    if (!stored) {
+        // Initialize
+        localStorage.setItem("luna_users", JSON.stringify(MOCK_USERS));
+        return MOCK_USERS;
+    }
+    const users = JSON.parse(stored);
+
+    // Merge any missing mock users (in case code updated with new mocks)
+    // This is optional but good for dev
+    if (users.length < MOCK_USERS.length) {
+        return MOCK_USERS;
+    }
+    return users;
+}
+
+export function updateUser(updatedUser: User) {
+    if (typeof window === 'undefined') return;
+    const users = getUsers();
+    const newUsers = users.map(u => u.id === updatedUser.id ? updatedUser : u);
+    localStorage.setItem("luna_users", JSON.stringify(newUsers));
+}
+
+export function getUserById(id: string): User | undefined {
+    return getUsers().find(u => u.id === id);
+}
+
 
 export function getAffiliateEarnings(userId: string): AffiliateEarnings {
     const user = MOCK_USERS.find(u => u.id === userId);
@@ -217,6 +247,7 @@ export const MOCK_BLOCKS: Block[] = [
         videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ", // Dummy
         content: "動画を見て学習しましょう",
         order: 1,
+        correctionType: 'ai', // Set this block to AI for testing
     }
 ];
 
@@ -579,15 +610,33 @@ export const MOCK_PAYMENTS: Payment[] = [
 
 export function getStudentPayments(userId: string): Payment[] {
     // In real app, filter by userId from DB
-    // For mock, we simply return what matches or generate some if empty for demo
     const payments = MOCK_PAYMENTS.filter(p => p.userId === userId);
-    if (payments.length === 0) {
+
+    let extra: Payment[] = [];
+    if (typeof window !== 'undefined') {
+        extra = JSON.parse(localStorage.getItem("luna_extra_payments") || "[]").filter((p: Payment) => p.userId === userId);
+    }
+
+    // Merge
+    const all = [...payments, ...extra];
+
+    if (all.length === 0) {
         // Generate dummy if none found for demo purposes
         return [
             { id: `mock_${userId}_1`, userId, date: "2025-12-01", amount: 9800, method: "card", status: "succeeded" }
         ];
     }
-    return payments;
+    return all;
+}
+
+export function savePayment(payment: Payment) {
+    if (typeof window === 'undefined') return;
+    const current = getStudentPayments(payment.userId); // This gets mock + local theoretically, but we need raw local storage
+
+    // We need to manage a separate "local_payments" or merge everything.
+    // For simplicity, let's keep a "luna_extra_payments" list in local storage and merge it.
+    const extra = JSON.parse(localStorage.getItem("luna_extra_payments") || "[]");
+    localStorage.setItem("luna_extra_payments", JSON.stringify([...extra, payment]));
 }
 
 
@@ -631,5 +680,134 @@ export const MOCK_PROGRESS_DETAILS: ProgressDetail[] = [
 export function getStudentProgressDetail(userId: string): ProgressDetail[] {
     // Return sorted by completion date desc
     const logs = MOCK_PROGRESS_DETAILS.filter(p => p.userId === userId);
-    return logs.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+
+    // Merge with Local Storage
+    let localLogs: ProgressDetail[] = [];
+    if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem(`luna_progress_details_${userId}`);
+        if (stored) {
+            localLogs = JSON.parse(stored);
+        }
+    }
+
+    // Check for AI Feedback Completion on Load (Lazy Evaluation)
+    const now = new Date();
+    let hasUpdates = false;
+    const allLogs = [...logs, ...localLogs].map(log => {
+        if (log.feedbackStatus === 'pending' && log.feedbackAt && new Date(log.feedbackAt) <= now) {
+            // "Release" the feedback
+            hasUpdates = true;
+            return {
+                ...log,
+                feedbackStatus: 'completed' as const,
+                status: 'completed' as const // Ensure main status is completed too
+            };
+        }
+        return log;
+    });
+
+    if (hasUpdates && typeof window !== 'undefined') {
+        // We only persist the LOCAL ones back to storage, but MOCK ones are in-memory relative to the page load unless we deep merge.
+        // For this demo, let's just update the local storage ones.
+        const updatedLocal = allLogs.filter(l => localLogs.some(local => local.blockId === l.blockId));
+        localStorage.setItem(`luna_progress_details_${userId}`, JSON.stringify(updatedLocal));
+    }
+
+    return allLogs.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+}
+
+// AI Feedback Timing Logic
+function calculateAIFeedbackTime(now: Date): Date {
+    const startHour = 9;
+    const startMinute = 30;
+    const endHour = 22;
+
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    const isBusinessHours =
+        (currentHour > startHour || (currentHour === startHour && currentMinute >= startMinute)) &&
+        currentHour < endHour;
+
+    if (isBusinessHours) {
+        // Business Hours: Random 30m to 2h delay
+        const minDelay = 30 * 60 * 1000; // 30 mins
+        const maxDelay = 2 * 60 * 60 * 1000; // 2 hours
+        const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+        return new Date(now.getTime() + delay);
+    } else {
+        // Night Time: Next day 9:30 + random small delay (0-30m)
+        const nextDay = new Date(now);
+        if (currentHour >= endHour) {
+            nextDay.setDate(nextDay.getDate() + 1);
+        }
+        nextDay.setHours(9, 30, 0, 0);
+
+        // Random slightly to avoid bot-like exactness
+        const randomDelay = Math.floor(Math.random() * 30 * 60 * 1000);
+        return new Date(nextDay.getTime() + randomDelay);
+    }
+}
+
+// Generate Mock AI Feedback Content
+function generateAIFeedback(name: string, blockTitle: string): string {
+    const templates = [
+        `${name}さん、課題の提出ありがとうございます！「${blockTitle}」の内容、拝見しました。非常に丁寧に取り組まれていて素晴らしいです。特に着眼点が鋭く、今後の成長が楽しみです。次はもう少し具体的な数字も意識してみるとさらに良くなると思います！`,
+        `お疲れ様です、${name}さん！「${blockTitle}」の課題、確認しました。全体的によくまとまっていますね。${name}さんらしい工夫が見られて嬉しく思います。引き続きこの調子で頑張りましょう！`,
+        `${name}さん、提出ありがとうございます。今回の「${blockTitle}」は少し難しかったかもしれませんが、よく食らいつきましたね！基礎はバッチリですので、自信を持って次のステップへ進んでください。応援しています！`,
+    ];
+    return templates[Math.floor(Math.random() * templates.length)];
+}
+
+export function submitAssignment(userId: string, blockId: string, content: string) {
+    if (typeof window === 'undefined') return;
+
+    const user = getUserById(userId);
+    const block = MOCK_BLOCKS.find(b => b.id === blockId);
+
+    if (!block || !user) return;
+
+    // Determine correction type
+    const correctionType = block.correctionType || 'manual';
+
+    const now = new Date();
+    let feedbackStatus: 'pending' | 'completed' = 'pending';
+    let feedbackContent = "";
+    let feedbackAt: string | undefined = undefined;
+
+    if (correctionType === 'ai') {
+        // Schedule AI logic
+        const scheduledTime = calculateAIFeedbackTime(now);
+        feedbackAt = scheduledTime.toISOString();
+        feedbackContent = generateAIFeedback(user.name, block.title);
+        // Status remains pending until time passes
+    }
+
+    const category = MOCK_CATEGORIES.find(c => c.id === block.categoryId);
+    const course = MOCK_COURSES.find(c => c.id === category?.courseId);
+
+    const newSubmission: ProgressDetail = {
+        userId,
+        courseId: course?.id || "unknown",
+        courseTitle: course?.title || "Unknown",
+        categoryId: category?.id || "unknown",
+        categoryTitle: category?.title || "Unknown",
+        blockId,
+        blockTitle: block.title,
+        completedAt: now.toISOString(),
+        status: correctionType === 'ai' ? 'viewed' : 'completed', // 'viewed' for pending AI? Or just completed? 
+        // Actually user wants feedback, so maybe 'viewed' (submitted) until feedback implies completion.
+        // But typically submission = completion of TASK, feedback is extra.
+        // Let's use 'viewed' as "Submitted/Pending" and 'completed' as "Feedback Received".
+        feedbackStatus: 'pending',
+        feedbackContent, // Store it but hidden until time
+        feedbackAt
+    };
+
+    // Store in LocalStorage
+    const stored = localStorage.getItem(`luna_progress_details_${userId}`);
+    const current = stored ? JSON.parse(stored) : [];
+    // Remove old submission for same block if any
+    const filtered = current.filter((p: ProgressDetail) => p.blockId !== blockId);
+    localStorage.setItem(`luna_progress_details_${userId}`, JSON.stringify([...filtered, newSubmission]));
 }

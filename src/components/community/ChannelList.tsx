@@ -63,8 +63,8 @@ export function ChannelList({ channels, user, currentChannelId }: ChannelListPro
         <>
             <div className={`
                 fixed inset-y-0 left-0 z-40 w-60 bg-[#2B2D31] text-[#949BA4] flex flex-col h-full transition-transform
-                md:relative md:translate-x-0
-                ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
+                md:relative md:translate-x-0 md:pointer-events-auto
+                ${isMobileMenuOpen ? "translate-x-0 pointer-events-auto shadow-2xl" : "-translate-x-full pointer-events-none"}
             `}>
                 {/* Header: Server Name */}
                 <div className="h-12 border-b border-[#1F2023] hover:bg-[#35373C] transition-colors cursor-pointer flex items-center px-4 shadow-sm flex-shrink-0">

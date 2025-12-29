@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getBlocks, submitFeedback, getFeedbacks, isBlockCompleted, MOCK_BLOCKS, MOCK_USERS, MOCK_CATEGORIES } from "@/lib/data";
-import { Block, Feedback, User, Category } from "@/types";
+import { getBlocks, submitAssignment, getStudentProgressDetail, MOCK_BLOCKS, MOCK_USERS, MOCK_CATEGORIES } from "@/lib/data";
+import { Block, User, Category, ProgressDetail } from "@/types";
 import { PlayCircle, MessageSquare, Send, CheckCircle, ChevronRight, AlertCircle, RotateCcw, Clock } from "lucide-react";
 import Link from "next/link";
 
@@ -16,7 +16,7 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
     const [category, setCategory] = useState<Category | null>(null);
     const [user] = useState<User>(MOCK_USERS[0]);
     const [feedbackContent, setFeedbackContent] = useState("");
-    const [currentFeedback, setCurrentFeedback] = useState<Feedback | null>(null);
+    const [currentProgress, setCurrentProgress] = useState<ProgressDetail | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccessToast, setShowSuccessToast] = useState(false);
 
@@ -25,10 +25,12 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
         if (b) {
             setBlock(b);
             setCategory(MOCK_CATEGORIES.find(c => c.id === b.categoryId) || null);
-            const feedbacks = getFeedbacks();
-            const existing = feedbacks.find(f => f.userId === user.id && f.blockId === blockId);
-            setCurrentFeedback(existing || null);
-            if (existing) setFeedbackContent(existing.content);
+
+            // Check progress
+            const progress = getStudentProgressDetail(user.id);
+            const entry = progress.find(p => p.blockId === blockId);
+            setCurrentProgress(entry || null);
+            if (entry && entry.feedbackContent) setFeedbackContent(entry.feedbackContent); // Show saved content/feedback
         }
     };
 
@@ -39,11 +41,7 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
     const handleSubmit = async () => {
         if (!feedbackContent.trim() || !block) return;
         setIsSubmitting(true);
-        submitFeedback({
-            userId: user.id,
-            blockId: block.id,
-            content: feedbackContent,
-        });
+        submitAssignment(user.id, block.id, feedbackContent);
 
         // Simulate delay
         setTimeout(() => {
@@ -56,9 +54,9 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
 
     if (!block) return <div className="p-10 text-center font-serif italic">Loading lesson...</div>;
 
-    const isApproved = currentFeedback?.status === 'approved';
-    const isPending = currentFeedback?.status === 'pending';
-    const isRejected = currentFeedback?.status === 'rejected';
+    const isApproved = currentProgress?.status === 'completed' || currentProgress?.feedbackStatus === 'completed';
+    const isPending = currentProgress?.feedbackStatus === 'pending';
+    const isRejected = false; // We don't have rejection logic in new AI flow yet, assuming always constructive or pending
 
     return (
         <div className="min-h-screen bg-[#FDFCFB] text-slate-800">
@@ -163,12 +161,12 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                             <div className="max-w-2xl mx-auto space-y-6">
                                 <div className="flex items-center gap-2 text-slate-800 font-bold mb-4">
                                     <MessageSquare className="w-5 h-5 text-blue-500" />
-                                    <span>感想を書いてみましょう</span>
+                                    <span>感想 / 課題を提出しましょう</span>
                                 </div>
 
                                 <div className="relative">
                                     <div className="absolute -top-2.5 left-4 bg-[#FDFCFB] px-2 text-[10px] text-rose-500 font-bold uppercase tracking-widest">
-                                        感想
+                                        提出内容
                                     </div>
                                     <textarea
                                         className={`w-full h-40 bg-white border-2 p-6 rounded-lg text-slate-700 focus:outline-none transition-all resize-none shadow-inner ${isRejected ? "border-rose-200 focus:border-rose-400" : "border-rose-100 focus:border-rose-400"}`}
@@ -188,7 +186,7 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                                         <div className="space-y-1">
                                             <div className="font-bold text-rose-800 text-sm">再提出のお願い</div>
                                             <p className="text-rose-700 text-xs leading-relaxed">
-                                                {currentFeedback?.staffComment || "もう少し具体的な内容を記載してください。"}
+                                                {"スタッフからのコメント"}
                                             </p>
                                         </div>
                                     </div>
@@ -197,7 +195,9 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                                 {isPending && (
                                     <div className="bg-blue-50 border border-blue-100 p-4 rounded-md flex items-center gap-3">
                                         <Clock className="w-5 h-5 text-blue-600" />
-                                        <div className="font-bold text-blue-800 text-sm">スタッフが確認中です。承認されるまでお待ちください。</div>
+                                        <div className="font-bold text-blue-800 text-sm">
+                                            {block.correctionType === 'ai' ? "AI講師が確認中です。フィードバックをお待ちください。" : "スタッフが確認中です。承認されるまでお待ちください。"}
+                                        </div>
                                     </div>
                                 )}
 
