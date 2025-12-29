@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function ManualPage() {
     return (
-        <div className="min-h-screen bg-[#FDFCFB]">
+        <div className="min-h-screen bg-[#FDFCFB] pb-20">
             {/* Hero Section */}
             <div className="bg-slate-900 text-white py-16">
                 <div className="max-w-4xl mx-auto px-6 text-center">
@@ -19,22 +19,24 @@ export default function ManualPage() {
             </div>
 
             <div className="max-w-4xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-12">
-                {/* Sidebar Navigation (Sticky) */}
-                <div className="hidden md:block col-span-1">
-                    <div className="sticky top-24 space-y-2">
-                        <p className="font-bold text-slate-900 mb-4 px-3">目次</p>
-                        <a href="#course-flow" className="block px-3 py-2 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-sm">
-                            1. コース受講の流れ
-                        </a>
-                        <a href="#feedback" className="block px-3 py-2 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-sm">
-                            2. アウトプットや課題（感想提出）
-                        </a>
-                        <a href="#community" className="block px-3 py-2 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-sm">
-                            3. コミュニティ機能
-                        </a>
-                        <a href="#account" className="block px-3 py-2 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-sm">
-                            4. アカウント設定
-                        </a>
+                {/* Sidebar Navigation (Sticky on Desktop, Block on Mobile) */}
+                <div className="col-span-1">
+                    <div className="md:sticky md:top-24 space-y-2 bg-white md:bg-transparent p-6 md:p-0 rounded-2xl md:rounded-none border md:border-none border-slate-100 shadow-sm md:shadow-none">
+                        <p className="font-bold text-slate-900 mb-4 px-3 border-b md:border-none pb-2 md:pb-0">目次</p>
+                        <nav className="space-y-1">
+                            <a href="#course-flow" className="block px-3 py-2 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-sm">
+                                1. コース受講の流れ
+                            </a>
+                            <a href="#feedback" className="block px-3 py-2 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-sm">
+                                2. アウトプットや課題
+                            </a>
+                            <a href="#community" className="block px-3 py-2 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-sm">
+                                3. コミュニティ機能
+                            </a>
+                            <a href="#account" className="block px-3 py-2 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-sm">
+                                4. アカウント設定
+                            </a>
+                        </nav>
                     </div>
                 </div>
 

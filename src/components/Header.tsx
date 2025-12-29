@@ -7,6 +7,7 @@ import { getUnreadMessageCount } from '@/lib/data';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
+import { Menu, X, PlayCircle } from 'lucide-react';
 
 export default function Header() {
     const router = useRouter();
@@ -22,6 +23,9 @@ export default function Header() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
+
+    // Mobile Menu State
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // App State
     const [unreadCount, setUnreadCount] = useState(0);
@@ -106,7 +110,13 @@ export default function Header() {
                     <img src="/logo.png" alt="LunaFlow" style={{ height: '24px' }} />
                 </Link>
 
+                {/* Desktop Nav */}
                 <nav className={styles.nav}>
+                    <Link href="/student/dashboard" className={styles.learningButton}>
+                        <PlayCircle size={16} />
+                        学習
+                    </Link>
+
                     <Link href="/" className={styles.navLink}>
                         コース一覧
                     </Link>
@@ -141,6 +151,61 @@ export default function Header() {
                         </>
                     )}
                 </nav>
+
+                {/* Mobile Controls */}
+                <div className={styles.mobileControls}>
+                    <Link href="/student/dashboard" className={styles.learningButton}>
+                        <PlayCircle size={16} />
+                        学習
+                    </Link>
+                    <button className={styles.menuButton} onClick={() => setIsMobileMenuOpen(true)}>
+                        <Menu size={24} />
+                    </button>
+                </div>
+
+                {/* Mobile Drawer */}
+                {isMobileMenuOpen && (
+                    <>
+                        <div className={styles.drawerOverlay} onClick={() => setIsMobileMenuOpen(false)} />
+                        <div className={styles.drawer}>
+                            <div className={styles.drawerHeader}>
+                                <button onClick={() => setIsMobileMenuOpen(false)} className={styles.menuButton}>
+                                    <X size={24} />
+                                </button>
+                            </div>
+                            <nav className={styles.drawerNav}>
+                                <Link href="/" className={styles.drawerNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                                    コース一覧
+                                </Link>
+                                {user ? (
+                                    <>
+                                        <Link href="/student/dashboard" className={styles.drawerNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                                            マイページ
+                                        </Link>
+                                        <Link href="/community" className={styles.drawerNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                                            コミュニティ
+                                            {unreadCount > 0 && (
+                                                <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">
+                                                    {unreadCount}
+                                                </span>
+                                            )}
+                                        </Link>
+                                        <Link href="/manual" className={styles.drawerNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                                            マニュアル
+                                        </Link>
+                                        <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className={`${styles.drawerNavLink} text-red-500`}>
+                                            ログアウト
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button onClick={(e) => { handleOpenLogin(e); setIsMobileMenuOpen(false); }} className={styles.drawerNavLink}>
+                                        ログイン / 登録
+                                    </button>
+                                )}
+                            </nav>
+                        </div>
+                    </>
+                )}
             </header>
 
             {/* Auth Modal */}

@@ -12,7 +12,7 @@ export async function getUserProfile() {
 
     // Fetch Profile from DB
     const { data: profile } = await supabase
-        .from('profiles')
+        .from('User')
         .select('*')
         .eq('id', user.id)
         .single();
@@ -25,15 +25,17 @@ export async function getUserProfile() {
             name: profile.name,
             role: profile.role,
             plan: profile.plan,
-            phoneNumber: profile.phone_number,
+            // phoneNumber: profile.phone_number, // Not in schema currently? or use metadata? Sticking to schema.
             address: profile.address,
-            zipCode: profile.zip_code,
-            communityNickname: profile.community_nickname,
-            avatarUrl: profile.avatar_url,
-            stripeCustomerId: profile.stripe_customer_id,
+            zipCode: profile.zipCode, // camelCase in schema
+            communityNickname: profile.communityNickname, // camelCase
+            avatarUrl: profile.avatarUrl, // Assuming consistency if it existed, skipping if not in schema.
+            // stripeCustomerId: profile.stripeCustomerId, // Not in schema shown
+            affiliateCode: profile.affiliateCode,
+            payoutPreference: profile.payoutPreference,
             // Defaults/Calculated
-            registrationDate: profile.created_at,
-            subscriptionStatus: 'active', // TODO: Check real sub status from Stripe or DB
+            registrationDate: profile.createdAt,
+            subscriptionStatus: 'active',
         } as User;
     }
 

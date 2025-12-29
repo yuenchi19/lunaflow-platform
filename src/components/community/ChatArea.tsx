@@ -112,7 +112,7 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
             </header>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-[0.1rem] scrollbar-thin scrollbar-thumb-[#1A1B1E] scrollbar-track-[#2E3338]">
+            <div className="flex-1 overflow-y-auto px-4 pb-20 space-y-[0.1rem] scrollbar-thin scrollbar-thumb-[#1A1B1E] scrollbar-track-[#2E3338]">
 
                 {/* Special Layout for Rules Channel (omitted changes here, keeping existing if possible or re-pasting entire if needed) */}
                 {/* ... (Rules Channel Layout) ... */}
