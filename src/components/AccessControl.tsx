@@ -16,10 +16,10 @@ export function AccessControl({ children }: { children: React.ReactNode }) {
         // In a real app, we get this from a hook like useAuth()
         // Here we simulate checking the current user from localStorage or defaulting
         const storedUserId = localStorage.getItem("currentUserId");
-        const currentUser = MOCK_USERS.find(u => u.id === storedUserId) || MOCK_USERS[0]; // Default User
+        const currentUser = MOCK_USERS.find(u => u.id === storedUserId); // No default fallback!
 
         // Check subscription
-        const isActive = isUserSubscriptionActive(currentUser);
+        const isActive = currentUser ? isUserSubscriptionActive(currentUser) : false;
 
         // Define paths that should be protected
         // Basically everything except login/lp, but let's assume everything under / is protected for this demo
