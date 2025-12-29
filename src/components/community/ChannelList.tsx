@@ -13,8 +13,7 @@ interface ChannelListProps {
 }
 
 export function ChannelList({ channels, user, currentChannelId }: ChannelListProps) {
-    const [isOpen, setIsOpen] = useState(false);
-    const { isRulesAgreed, isIntroRead } = useCommunity();
+    const { isRulesAgreed, isIntroRead, isMobileMenuOpen, setIsMobileMenuOpen } = useCommunity();
 
     // Group channels by category
     const groupedChannels = channels.reduce((acc, channel) => {
@@ -62,18 +61,10 @@ export function ChannelList({ channels, user, currentChannelId }: ChannelListPro
 
     return (
         <>
-            {/* Mobile Toggle */}
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="md:hidden fixed bottom-4 right-4 z-50 bg-[#8C6674] text-white p-3 rounded-full shadow-lg"
-            >
-                {isOpen ? <X className="w-6 h-6" /> : <Hash className="w-6 h-6" />}
-            </button>
-
             <div className={`
                 fixed inset-y-0 left-0 z-40 w-60 bg-[#2B2D31] text-[#949BA4] flex flex-col h-full transition-transform
                 md:relative md:translate-x-0
-                ${isOpen ? "translate-x-0" : "-translate-x-full"}
+                ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
             `}>
                 {/* Header: Server Name */}
                 <div className="h-12 border-b border-[#1F2023] hover:bg-[#35373C] transition-colors cursor-pointer flex items-center px-4 shadow-sm flex-shrink-0">
@@ -143,7 +134,7 @@ export function ChannelList({ channels, user, currentChannelId }: ChannelListPro
                                         }
 
                                         return (
-                                            <Link key={channel.id} href={`/community/${channel.id}`} onClick={() => setIsOpen(false)}>
+                                            <Link key={channel.id} href={`/community/${channel.id}`} onClick={() => setIsMobileMenuOpen(false)}>
                                                 {content}
                                             </Link>
                                         );
@@ -157,10 +148,10 @@ export function ChannelList({ channels, user, currentChannelId }: ChannelListPro
                 {/* User Status Bar (Bottom) REMOVED as requested */}
             </div>
 
-            {isOpen && (
+            {isMobileMenuOpen && (
                 <div
                     className="fixed inset-0 bg-black/50 z-30 md:hidden"
-                    onClick={() => setIsOpen(false)}
+                    onClick={() => setIsMobileMenuOpen(false)}
                 />
             )}
         </>

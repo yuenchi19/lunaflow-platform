@@ -96,37 +96,23 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                         {/* Curriculum Section (Image 1) */}
                         <section className="space-y-4">
                             <h2 className="text-xl font-serif font-bold text-slate-700">カリキュラム</h2>
-                            <div className="bg-white rounded-lg border border-slate-100 shadow-sm overflow-hidden">
-                                <table className="w-full border-collapse">
-                                    <thead className="bg-slate-50 border-b border-slate-100">
-                                        <tr className="text-slate-400 text-xs text-left">
-                                            <th className="py-4 px-6 font-medium"></th>
-                                            <th className="py-4 px-6 font-medium">カテゴリー一覧</th>
-                                            <th className="py-4 px-6 font-medium">完了予定日</th>
-                                            <th className="py-4 px-6 font-medium text-right">進捗状況</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {categories.map((cat, idx) => (
-                                            <tr key={cat.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
-                                                <td className="py-5 px-6 text-slate-300 text-sm font-serif">
-                                                    {idx + 1} / {categories.length}
-                                                </td>
-                                                <td className="py-5 px-6">
-                                                    <span className="font-bold text-slate-700 group-hover:text-rose-900 transition-colors">{cat.title}</span>
-                                                </td>
-                                                <td className="py-5 px-6 text-slate-400 text-sm italic">
-                                                    {targetDates[cat.id] || "未設定"}
-                                                </td>
-                                                <td className="py-5 px-6 text-right">
-                                                    <span className="text-[10px] px-2 py-1 rounded bg-slate-100 text-slate-400 font-bold border border-slate-200">
-                                                        未完了
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                            <div className="bg-white rounded-lg border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-50">
+                                {categories.map((cat, idx) => (
+                                    <div key={cat.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center font-serif text-sm font-bold group-hover:bg-rose-100 group-hover:text-rose-600 transition-colors">
+                                                {idx + 1}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-slate-700 group-hover:text-rose-800 transition-colors">{cat.title}</h3>
+                                                <p className="text-xs text-slate-400 mt-0.5">完了予定: {targetDates[cat.id] || "未設定"}</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] px-3 py-1 rounded-full bg-slate-100 text-slate-400 font-bold border border-slate-200">
+                                            未完了
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </section>
                     </div>

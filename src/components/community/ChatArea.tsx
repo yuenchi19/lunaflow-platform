@@ -20,7 +20,7 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
     const [inputValue, setInputValue] = useState("");
     const [replyTo, setReplyTo] = useState<Message | null>(null); // [NEW] Reply state
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const { isRulesAgreed, agreeToRules } = useCommunity();
+    const { isRulesAgreed, agreeToRules, setIsMobileMenuOpen } = useCommunity();
     const fileInputRef = useRef<HTMLInputElement>(null); // [NEW] File input
 
     // Check if this is the "Rules" channel
@@ -103,6 +103,12 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
             {/* Header */}
             <header className="h-12 border-b border-[#26272D] flex items-center px-4 bg-[#313338] shadow-sm justify-between flex-shrink-0 z-10 relative">
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setIsMobileMenuOpen(true)}
+                        className="md:hidden text-[#B5BAC1] mr-2"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
                     <Hash className="w-6 h-6 text-[#80848E]" />
                     <h1 className="font-bold text-base text-[#F2F3F5]">{channelName}</h1>
                 </div>

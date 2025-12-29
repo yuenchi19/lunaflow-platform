@@ -10,6 +10,8 @@ interface CommunityContextType {
     isIntroRead: boolean;
     agreeToRules: () => void;
     readIntro: () => void;
+    isMobileMenuOpen: boolean;
+    setIsMobileMenuOpen: (open: boolean) => void;
 }
 
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
@@ -39,8 +41,10 @@ export function CommunityProvider({ children, user }: { children: React.ReactNod
         }
     };
 
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
     return (
-        <CommunityContext.Provider value={{ isRulesAgreed, isIntroRead, agreeToRules, readIntro }}>
+        <CommunityContext.Provider value={{ isRulesAgreed, isIntroRead, agreeToRules, readIntro, isMobileMenuOpen, setIsMobileMenuOpen }}>
             {children}
         </CommunityContext.Provider>
     );

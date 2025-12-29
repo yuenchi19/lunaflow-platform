@@ -238,15 +238,16 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     );
 
     const renderAffiliateCard = () => (
-        (user.plan === 'standard' || user.plan === 'premium') ? (
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 shadow-sm overflow-hidden p-6 relative">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <span className="text-6xl">🤝</span>
-                </div>
-                <h3 className="font-bold text-amber-900 mb-2 flex items-center gap-2">
-                    <span className="bg-amber-100 p-1 rounded-md">🤝</span>
-                    アフィリエイト
-                </h3>
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 shadow-sm overflow-hidden p-6 relative">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+                <span className="text-6xl">🤝</span>
+            </div>
+            <h3 className="font-bold text-amber-900 mb-2 flex items-center gap-2">
+                <span className="bg-amber-100 p-1 rounded-md">🤝</span>
+                アフィリエイト
+            </h3>
+
+            {(user.plan === 'standard' || user.plan === 'premium') ? (
                 <div className="space-y-4 relative z-10">
                     <div>
                         <p className="text-[10px] text-amber-700 font-bold uppercase tracking-wider mb-1">あなたの紹介コード</p>
@@ -272,8 +273,13 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                         </div>
                     </div>
                 </div>
-            </div>
-        ) : null
+            ) : (
+                <div className="relative z-10 bg-white/60 rounded-xl p-4 text-center border border-amber-200/50 mt-4">
+                    <p className="text-sm font-bold text-amber-900 mb-1">スタンダードプラン以上で開放</p>
+                    <p className="text-xs text-amber-700">アフィリエイト機能を利用するにはプランのアップグレードが必要です。</p>
+                </div>
+            )}
+        </div>
     );
 
     const renderCourses = () => (
@@ -290,10 +296,6 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                         <div className="relative z-10">
                             <div className="flex justify-between items-start mb-4">
                                 <span className="bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-1 rounded-full">受講中</span>
-                                <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold bg-slate-100 px-2 py-1 rounded-full">
-                                    <Clock className="w-3 h-3" />
-                                    期限: {course.expirationDate || "無期限"}
-                                </div>
                             </div>
                             <h3 className="text-lg font-bold text-slate-800 mb-2 leading-relaxed group-hover:text-rose-700 transition-colors">
                                 <Link href={`/student/course/${course.id}`} className="before:absolute before:inset-0">
@@ -301,13 +303,17 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                                 </Link>
                             </h3>
                             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4">
-                                <div className="bg-rose-500 h-full w-[35%] rounded-full"></div>
+                                <div className="bg-rose-500 h-full w-[10%] rounded-full"></div>
                             </div>
-                            <div className="flex justify-between items-end">
-                                <p className="text-xs text-slate-500">進捗: 35%</p>
-                                <span className="text-xs font-bold text-rose-600 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                                    学習を再開 &rarr;
-                                </span>
+                            <div className="flex flex-col gap-3">
+                                <p className="text-xs text-slate-500 leading-tight">
+                                    {course.title}へようこそ！まずは動画を確認して感想を記載して受講を開始してください。
+                                </p>
+                                <div className="flex justify-end">
+                                    <span className="text-xs font-bold text-white bg-rose-600 px-3 py-2 rounded-lg shadow-sm group-hover:bg-rose-700 transition-colors">
+                                        感想を送ってスタート &rarr;
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -490,6 +496,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                                     onChange={(e) => setAddress(e.target.value)}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-rose-500 transition-colors"
                                 />
+                                <p className="text-[11px] text-slate-400 mt-2">※この住所におまかせ仕入れの商品の発送がされます。</p>
                             </div>
 
                             <div className="flex gap-4 mt-8">
