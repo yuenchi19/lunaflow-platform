@@ -256,7 +256,8 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                             <button
                                 className="text-[10px] bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold hover:bg-amber-200 transition-colors"
                                 onClick={() => {
-                                    navigator.clipboard.writeText(`https://lunaflow.com?ref=${user.affiliateCode}`);
+                                    const url = typeof window !== 'undefined' ? window.location.origin : 'https://lunaflow.space';
+                                    navigator.clipboard.writeText(`${url}?ref=${user.affiliateCode}`);
                                     alert("紹介リンクをコピーしました！");
                                 }}
                             >

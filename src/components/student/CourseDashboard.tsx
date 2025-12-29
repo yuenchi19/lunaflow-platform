@@ -37,34 +37,31 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                     <span>/</span>
                     <span className="text-slate-600 font-bold">{course.title}</span>
                 </div>
-                <button className="bg-rose-50 text-rose-700 px-4 py-1.5 rounded-full text-xs font-bold border border-rose-100 hover:bg-rose-100 transition-all">
-                    お問い合わせ
-                </button>
             </div>
 
-            <main className="max-w-5xl mx-auto p-8 space-y-8">
+            <main className="max-w-5xl mx-auto p-4 md:p-8 space-y-8">
                 {/* Title and Tabs */}
                 <div className="space-y-6">
                     <h1 className="text-3xl font-serif font-bold text-slate-800">{course.title}</h1>
 
-                    <div className="flex border-b border-slate-200">
+                    <div className="flex border-b border-slate-200 overflow-x-auto">
                         <button
                             onClick={() => setActiveTab('course')}
-                            className={`px-8 py-3 text-sm font-bold transition-all relative ${activeTab === 'course' ? "text-rose-700" : "text-slate-400 hover:text-slate-600"}`}
+                            className={`px-8 py-3 text-sm font-bold transition-all relative flex-shrink-0 ${activeTab === 'course' ? "text-rose-700" : "text-slate-400 hover:text-slate-600"}`}
                         >
                             コース
                             {activeTab === 'course' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-700" />}
                         </button>
                         <button
                             onClick={() => setActiveTab('plan')}
-                            className={`px-8 py-3 text-sm font-bold transition-all relative ${activeTab === 'plan' ? "text-rose-700" : "text-slate-400 hover:text-slate-600"}`}
+                            className={`px-8 py-3 text-sm font-bold transition-all relative flex-shrink-0 ${activeTab === 'plan' ? "text-rose-700" : "text-slate-400 hover:text-slate-600"}`}
                         >
                             学習計画
                             {activeTab === 'plan' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-700" />}
                         </button>
                         <button
                             onClick={() => setActiveTab('feedback')}
-                            className={`px-8 py-3 text-sm font-bold transition-all relative ${activeTab === 'feedback' ? "text-rose-700" : "text-slate-400 hover:text-slate-600"}`}
+                            className={`px-8 py-3 text-sm font-bold transition-all relative flex-shrink-0 ${activeTab === 'feedback' ? "text-rose-700" : "text-slate-400 hover:text-slate-600"}`}
                         >
                             感想履歴
                             {activeTab === 'feedback' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-700" />}
@@ -81,14 +78,14 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                                 <div className="absolute bottom-4 left-4 text-white text-xs opacity-60">学習の進捗</div>
                             </div>
                             <div className="p-8 flex-1 flex flex-col justify-center items-start gap-4">
-                                <p className="text-slate-600 leading-relaxed text-sm">
-                                    {course.description}
+                                <p className="text-slate-600 leading-relaxed text-sm font-bold">
+                                    {course.title}へようこそ！<br />まずは動画を確認して感想を記載して受講を開始してください。
                                 </p>
                                 <Link
                                     href={`/student/course/${course.id}/learn/b1`}
-                                    className="bg-[#00B050] text-white px-10 py-3 rounded-md font-bold hover:bg-[#009040] transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                    className="bg-rose-600 text-white px-8 py-3 rounded-md font-bold hover:bg-rose-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                                 >
-                                    学習を開始する
+                                    感想を送ってスタート
                                 </Link>
                             </div>
                         </section>
