@@ -33,7 +33,7 @@ export async function GET() {
         // Supabase Postgrest syntax:
 
         const { data: users, error } = await supabase
-            .from('profiles')
+            .from('User')
             .select(`
                 *,
                 purchases (
@@ -42,7 +42,7 @@ export async function GET() {
                 )
             `)
             .eq('role', 'student')
-            .order('created_at', { ascending: false });
+            .order('createdAt', { ascending: false });
 
         if (error) {
             console.error('Error fetching students:', error);
@@ -66,11 +66,11 @@ export async function GET() {
                 role: u.role,
                 plan: u.plan,
                 subscriptionStatus: 'active', // Placeholder until logic checks Stripe Sub
-                communityNickname: u.community_nickname, // snake_case
-                registrationDate: u.created_at, // snake_case
+                communityNickname: u.communityNickname,
+                registrationDate: u.createdAt, // camelCase
                 lifetimePurchaseTotal: totalPurchase,
                 address: u.address,
-                phoneNumber: u.phone_number // snake_case
+                phoneNumber: u.phoneNumber // camelCase
             };
         });
 

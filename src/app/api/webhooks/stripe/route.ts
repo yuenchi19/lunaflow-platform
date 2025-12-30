@@ -63,9 +63,9 @@ export async function POST(req: Request) {
             let targetUserId = userId;
 
             if (!targetUserId && email) {
-                // Try to find user by email in 'profiles' table
+                // Try to find user by email in 'User' table
                 const { data: userByEmail, error: userLookupError } = await supabaseAdmin
-                    .from('profiles')
+                    .from('User')
                     .select('id')
                     .eq('email', email)
                     .single();
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
             if (targetUserId) {
                 // Check existing role before updating
                 const { data: existingUser } = await supabaseAdmin
-                    .from('profiles')
+                    .from('User')
                     .select('role')
                     .eq('id', targetUserId)
                     .single();
@@ -89,13 +89,13 @@ export async function POST(req: Request) {
                 const newRole = (currentRole === 'admin' || currentRole === 'staff') ? currentRole : 'student';
 
                 // Update Existing User
-                const { error: updateError } = await supabaseAdmin.from('profiles').update({
+                const { error: updateError } = await supabaseAdmin.from('User').update({
                     name: customerDetails?.name,
-                    zip_code: customerDetails?.address?.postal_code, // snake_case
+                    zipCode: customerDetails?.address?.postal_code, // camelCase
                     role: newRole,
                     plan: 'premium',
-                    // stripe_customer_id: session.customer as string, 
-                    updated_at: new Date().toISOString() // snake_case
+                    // stripeCustomerId: session.customer as string, 
+                    updatedAt: new Date().toISOString() // camelCase
                 }).eq('id', targetUserId);
 
                 if (updateError) {
@@ -111,12 +111,6 @@ export async function POST(req: Request) {
             } else {
                 // Check if Auth User exists (even if public User doesn't)
                 const { data: { users: existingAuthUsers }, error: authLookupError } = await supabaseAdmin.auth.admin.listUsers();
-                // listUsers is heavy, better to use getUserByEmail? 
-                // Admin API doesn't have getUserByEmail easily exposed in type definition sometimes, 
-                // but usually createClient(..., { auth: { autoRefreshToken: false } }).auth.admin.getUserByEmail(email) works.
-                // Let's rely on listUsers filter for now or try/catch createUser.
-
-                // Better approach: Try to create. If fails with "User already registered", then GET user.
 
                 console.log(`[Webhook] User not found in Public Table for ${email}. Checking Auth...`);
 
@@ -144,14 +138,8 @@ export async function POST(req: Request) {
                 } else if (createError && createError.message.includes("already registered")) {
                     console.log("[Webhook] Auth User already exists. Linking...");
                     // 2. Fallback: Find the existing auth user
-                    // Since specific API might be vague, let's list users with filter? 
-                    // Or just use the error? We need the ID.
-                    // supabaseAdmin.auth.admin.listUsers() isn't ideal for High Scale, but for now:
-
-                    // Attempt to fetch user by email (Available in recent Supabase JS)
                     // @ts-ignore
                     const { data: existingAuthUser } = await supabaseAdmin.auth.admin.listUsers();
-                    // Filter locally (Inefficient but robust if API method missing)
                     const found = existingAuthUser?.users.find(u => u.email === email);
 
                     if (found) {
@@ -167,17 +155,17 @@ export async function POST(req: Request) {
 
                 if (authUserId) {
                     targetUserId = authUserId;
-                    // Insert into 'profiles' table
+                    // Insert into 'User' table
                     const { error: profileInsertError } = await supabaseAdmin
-                        .from('profiles')
+                        .from('User')
                         .insert({
                             id: targetUserId,
                             email: email!,
                             name: customerDetails?.name || email!.split('@')[0],
                             role: 'student',
                             plan: 'premium',
-                            zip_code: customerDetails?.address?.postal_code,
-                            updated_at: new Date().toISOString()
+                            zipCode: customerDetails?.address?.postal_code, // camelCase
+                            updatedAt: new Date().toISOString() // camelCase
                         });
 
                     if (profileInsertError) {

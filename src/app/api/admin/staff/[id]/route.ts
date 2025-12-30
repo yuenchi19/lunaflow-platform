@@ -17,9 +17,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         const body = await req.json();
         const { name, email, role, status } = body;
 
-        // Update profiles table
+        // Update User table
         const { error } = await supabase
-            .from('profiles')
+            .from('User')
             .update({ name, role, email }) // Note: Email update in DB doesn't change Auth email automatically. 
             // Creating a robust sync is complex. We will update DB metadata for now.
             .eq('id', id);

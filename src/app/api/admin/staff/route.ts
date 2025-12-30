@@ -19,10 +19,10 @@ export async function GET() {
 
     try {
         const { data: users, error } = await supabase
-            .from('profiles')
+            .from('User')
             .select('*')
             .in('role', ['admin', 'staff', 'accounting']) // Include accounting as staff-like
-            .order('created_at', { ascending: false });
+            .order('createdAt', { ascending: false });
 
         if (error) {
             console.error('Error fetching staff:', error);
@@ -34,8 +34,8 @@ export async function GET() {
             name: u.name || 'No Name',
             email: u.email,
             role: u.role,
-            avatarUrl: u.avatar_url || `https://ui-avatars.com/api/?name=${u.name || 'User'}&background=random`,
-            joinedAt: u.created_at,
+            avatarUrl: u.avatarUrl || `https://ui-avatars.com/api/?name=${u.name || 'User'}&background=random`,
+            joinedAt: u.createdAt,
         }));
 
         return NextResponse.json(formattedUsers);
@@ -74,15 +74,15 @@ export async function POST(req: Request) {
         // Check if user exists in public.User
         const userId = authData.user.id;
 
-        // Upsert to profiles table to ensure Role is set
+        // Upsert to User table to ensure Role is set
         const { error: dbError } = await supabase
-            .from('profiles')
+            .from('User')
             .upsert({
                 id: userId,
                 email: email,
                 name: name,
                 role: role,
-                updated_at: new Date().toISOString()
+                updatedAt: new Date().toISOString()
             });
 
         if (dbError) {
