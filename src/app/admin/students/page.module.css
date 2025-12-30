@@ -52,10 +52,13 @@
     cursor: pointer;
 }
 
+
 .filterBar {
     display: flex;
     gap: 1rem;
     margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    /* Allow wrapping on small screens */
 }
 
 .searchInput {
@@ -72,12 +75,48 @@
     background: white;
 }
 
+/* ... other styles ... */
+
 .tableCard {
     background: white;
     border-radius: 12px;
     border: 1px solid #e5e7eb;
-    overflow: hidden;
+    overflow-x: auto;
+    /* Enable horizontal scroll */
+    -webkit-overflow-scrolling: touch;
 }
+
+/* ... */
+
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .searchInput {
+        min-width: 100%;
+    }
+
+    .filterBar {
+        flex-direction: column;
+    }
+
+    .select {
+        width: 100%;
+    }
+}
+
 
 .table {
     width: 100%;

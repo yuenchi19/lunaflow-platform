@@ -15,12 +15,13 @@ export default function AdminLayout({
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const router = useRouter();
 
-    useEffect(() => {
-        const token = localStorage.getItem("admin_token");
-        if (!token) {
-            router.push("/");
-        }
-    }, [router]);
+    // Legacy token check removed. Access is protected by Middleware and AccessControl component.
+    // useEffect(() => {
+    //     const token = localStorage.getItem("admin_token");
+    //     if (!token) {
+    //         router.push("/");
+    //     }
+    // }, [router]);
 
     return (
         <div className={styles.container}>
