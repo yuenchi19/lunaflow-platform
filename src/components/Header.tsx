@@ -127,19 +127,18 @@ export default function Header() {
                     <img src="/logo.png" alt="LunaFlow" style={{ height: '24px' }} />
                 </Link>
 
-                {/* Desktop Nav */}
                 <nav className={styles.nav}>
-                    <Link href="/student/dashboard" className={styles.learningButton}>
-                        <PlayCircle size={16} />
-                        学習
-                    </Link>
-
-                    <Link href="/" className={styles.navLink}>
-                        コース一覧
-                    </Link>
-
                     {user ? (
                         <>
+                            <Link href="/student/dashboard" className={styles.learningButton}>
+                                <PlayCircle size={16} />
+                                学習
+                            </Link>
+
+                            <Link href="/" className={styles.navLink}>
+                                コース一覧
+                            </Link>
+
                             <Link href="/student/dashboard" className={styles.navLink} style={{ position: "relative" }}>
                                 マイページ
                                 {feedbackCount > 0 && (

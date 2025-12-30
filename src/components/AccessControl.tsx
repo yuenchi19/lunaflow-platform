@@ -16,6 +16,13 @@ export function AccessControl({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const checkUser = async () => {
+            // Allow Public Routes
+            if (pathname === '/' || pathname === '/login') {
+                setIsBlocked(false);
+                setIsLoading(false);
+                return;
+            }
+
             try {
                 // 1. Check Auth Session
                 const { data: { user: authUser } } = await supabase.auth.getUser();
