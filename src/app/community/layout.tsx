@@ -27,7 +27,8 @@ export default function CommunityLayout({ children }: { children: React.ReactNod
 
     return (
         <CommunityProvider user={user}>
-            <div className="flex h-[100dvh] w-full fixed inset-0 overflow-hidden bg-[#313338]">
+            {/* Added pt-[60px] to account for fixed/sticky header overlap */}
+            <div className="flex w-full fixed inset-0 overflow-hidden bg-[#313338] pt-[60px] md:pt-[70px]">
                 {/* Server List REMOVED as requested */}
 
                 <ChannelList
