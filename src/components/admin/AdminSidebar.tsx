@@ -48,7 +48,7 @@ export default function AdminSidebar() {
     return (
         <aside className={styles.sidebar}>
             <div className={styles.brand}>
-                <img src="/logo.png" alt="LunaFlow" className={styles.logoImage} style={{ height: '32px' }} />
+                <img src="/logo.png" alt="LunaFlow" className={styles.logoImage} style={{ height: '48px' }} />
             </div>
             <nav className={styles.menu}>
                 {menuSections.map((section) => (

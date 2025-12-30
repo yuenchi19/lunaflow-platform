@@ -133,3 +133,24 @@
     background: hsl(150, 70%, 55%);
     color: white;
 }
+
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+    .title {
+        font-size: 1.5rem;
+    }
+    .header {
+        margin-bottom: 1.5rem;
+    }
+    .statsGrid {
+        gap: 1rem;
+    }
+    .navCard {
+        padding: 1.5rem;
+    }
+    .mainStats, .sideStats>div, .quickLinks {
+        padding: 1.5rem;
+    }
+}

@@ -47,6 +47,21 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(redirectUrl)
     }
 
+    // Strict Guard for Content Access (Paid Plan Check)
+    if (path.startsWith('/student/course/') && user) {
+        const userPlan = user.user_metadata?.plan || 'light';
+        // Assuming 'light' is the unpaid/default plan. 
+        // If the user is admin/staff they might have 'light' but should bypass? 
+        // Metadata usually has role too.
+        const userRole = user.user_metadata?.role || 'student';
+
+        if (userPlan === 'light' && userRole === 'student') {
+            const redirectUrl = request.nextUrl.clone()
+            redirectUrl.pathname = '/pricing' // or /plans
+            return NextResponse.redirect(redirectUrl)
+        }
+    }
+
     return response
 }
 

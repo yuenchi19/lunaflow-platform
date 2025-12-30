@@ -124,7 +124,7 @@ export default function Header() {
         <>
             <header className={styles.header}>
                 <Link href="/" className={styles.logo}>
-                    <img src="/logo.png" alt="LunaFlow" className="h-10 md:h-12 w-auto" />
+                    <img src="/logo.png" alt="LunaFlow" className="h-16 md:h-20 w-auto" />
                 </Link>
 
                 <nav className={styles.nav}>

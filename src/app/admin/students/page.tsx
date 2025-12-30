@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
-import { getUsers } from '@/lib/data';
 import { calculateStudentStatus } from '@/lib/utils';
 
 export default function StudentsPage() {
@@ -11,8 +10,26 @@ export default function StudentsPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [students, setStudents] = useState<any[]>([]);
 
+    const [loading, setLoading] = useState(true);
+
     useEffect(() => {
-        setStudents(getUsers().filter(u => u.role === 'student'));
+        const fetchStudents = async () => {
+            try {
+                const res = await fetch('/api/admin/students');
+                if (res.ok) {
+                    const data = await res.json();
+                    setStudents(data);
+                } else {
+                    console.error("Failed to fetch students");
+                }
+            } catch (error) {
+                console.error("Error fetching students:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStudents();
     }, []);
 
     const filteredStudents = students.filter(student =>
