@@ -23,8 +23,20 @@ export default function StaffManagementPage() {
     const [newRole, setNewRole] = useState<'admin' | 'accounting' | 'staff'>('staff');
 
     useEffect(() => {
-        setStaffList(storage.getStaff());
+        fetchStaff();
     }, []);
+
+    const fetchStaff = async () => {
+        try {
+            const res = await fetch('/api/admin/staff');
+            if (res.ok) {
+                const data = await res.json();
+                setStaffList(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch staff:', error);
+        }
+    };
 
     const handleAddClick = () => {
         setEditingStaff(null);
@@ -42,38 +54,50 @@ export default function StaffManagementPage() {
         setIsAddModalOpen(true);
     };
 
-    const handleSaveStaff = (e: React.FormEvent) => {
+    const handleSaveStaff = async (e: React.FormEvent) => {
         e.preventDefault();
-        let updated: Staff[];
 
-        if (editingStaff) {
-            updated = staffList.map(s =>
-                s.id === editingStaff.id
-                    ? { ...s, name: newName, email: newEmail, role: newRole }
-                    : s
-            );
-        } else {
-            const newStaff: Staff = {
-                id: `s${Date.now()}`,
-                name: newName,
-                email: newEmail,
-                role: newRole,
-                status: 'active',
-                lastLogin: '-'
-            };
-            updated = [...staffList, newStaff];
+        try {
+            if (editingStaff) {
+                // UPDATE
+                const res = await fetch(`/api/admin/staff/${editingStaff.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName, email: newEmail, role: newRole })
+                });
+                if (!res.ok) throw new Error('Update failed');
+            } else {
+                // CREATE (Invite)
+                const res = await fetch('/api/admin/staff', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName, email: newEmail, role: newRole })
+                });
+                if (!res.ok) throw new Error('Create failed');
+            }
+
+            // Refresh list
+            await fetchStaff();
+            setIsAddModalOpen(false);
+
+        } catch (error) {
+            alert('保存に失敗しました。');
+            console.error(error);
         }
-
-        setStaffList(updated);
-        storage.saveStaff(updated);
-        setIsAddModalOpen(false);
     };
 
-    const handleDeleteStaff = (id: string) => {
+    const handleDeleteStaff = async (id: string) => {
         if (confirm('このスタッフを削除してもよろしいですか？')) {
-            const updated = staffList.filter(s => s.id !== id);
-            setStaffList(updated);
-            storage.saveStaff(updated);
+            try {
+                const res = await fetch(`/api/admin/staff/${id}`, {
+                    method: 'DELETE'
+                });
+                if (!res.ok) throw new Error('Delete failed');
+                await fetchStaff();
+            } catch (error) {
+                alert('削除に失敗しました。');
+                console.error(error);
+            }
         }
     };
 

@@ -138,19 +138,94 @@
     .container {
         padding: 1rem;
     }
+
     .title {
         font-size: 1.5rem;
     }
+
     .header {
         margin-bottom: 1.5rem;
     }
+
     .statsGrid {
         gap: 1rem;
     }
+
     .navCard {
         padding: 1.5rem;
     }
-    .mainStats, .sideStats>div, .quickLinks {
+
+    .mainStats,
+    .sideStats>div,
+    .quickLinks {
         padding: 1.5rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .container {
+        padding: 0.75rem;
+    }
+
+    .header {
+        margin-bottom: 1rem;
+    }
+
+    .title {
+        font-size: 1.25rem;
+        /* Smart/Compact */
+    }
+
+    .statsGrid {
+        grid-template-columns: 1fr;
+        /* Single column */
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .navCard {
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        text-align: left;
+    }
+
+    .navIcon {
+        font-size: 1.5rem;
+        /* Smaller icon */
+        margin-bottom: 0;
+    }
+
+    .navLabel {
+        font-size: 1rem;
+    }
+
+    .dashboardGrid {
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .mainStats,
+    .sideStats>div,
+    .quickLinks {
+        padding: 1rem;
+    }
+
+    .sectionTitle {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+
+    .buttonPrimary,
+    .buttonSecondary {
+        width: 100%;
+        text-align: center;
+        padding: 0.6rem;
+        font-size: 0.9rem;
+    }
+
+    .linkGroup {
+        gap: 0.5rem;
     }
 }

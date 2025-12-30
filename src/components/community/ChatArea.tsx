@@ -255,7 +255,7 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
 
             {/* Input Area - Fixed Bottom for Standard Chat Feel */}
             {!isRulesChannel && (
-                <div className="fixed bottom-0 left-0 right-0 px-2 md:px-4 py-2 bg-[#313338] border-t border-[#26272D] z-30 pb-[safe-area-inset-bottom]">
+                <div className="fixed bottom-0 left-0 right-0 md:left-64 px-2 md:px-4 py-2 bg-[#313338] border-t border-[#26272D] z-30 pb-[safe-area-inset-bottom]">
                     <div className="max-w-4xl mx-auto">
                         {currentUser.plan === 'light' ? (
                             <div className="bg-[#383A40] rounded px-4 py-2 text-center text-[#B5BAC1] text-xs">

@@ -63,9 +63,9 @@ export async function POST(req: Request) {
             let targetUserId = userId;
 
             if (!targetUserId && email) {
-                // Try to find user by email in 'User' table
+                // Try to find user by email in 'profiles' table
                 const { data: userByEmail, error: userLookupError } = await supabaseAdmin
-                    .from('User')
+                    .from('profiles')
                     .select('id')
                     .eq('email', email)
                     .single();
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
             if (targetUserId) {
                 // Check existing role before updating
                 const { data: existingUser } = await supabaseAdmin
-                    .from('User')
+                    .from('profiles')
                     .select('role')
                     .eq('id', targetUserId)
                     .single();
@@ -89,13 +89,13 @@ export async function POST(req: Request) {
                 const newRole = (currentRole === 'admin' || currentRole === 'staff') ? currentRole : 'student';
 
                 // Update Existing User
-                const { error: updateError } = await supabaseAdmin.from('User').update({
+                const { error: updateError } = await supabaseAdmin.from('profiles').update({
                     name: customerDetails?.name,
-                    zipCode: customerDetails?.address?.postal_code, // camelCase
+                    zip_code: customerDetails?.address?.postal_code, // snake_case
                     role: newRole,
                     plan: 'premium',
-                    // stripeCustomerId: session.customer as string, 
-                    updatedAt: new Date().toISOString() // camelCase
+                    // stripe_customer_id: session.customer as string, 
+                    updated_at: new Date().toISOString() // snake_case
                 }).eq('id', targetUserId);
 
                 if (updateError) {
@@ -167,17 +167,17 @@ export async function POST(req: Request) {
 
                 if (authUserId) {
                     targetUserId = authUserId;
-                    // Insert into 'User' table
+                    // Insert into 'profiles' table
                     const { error: profileInsertError } = await supabaseAdmin
-                        .from('User')
+                        .from('profiles')
                         .insert({
                             id: targetUserId,
                             email: email!,
                             name: customerDetails?.name || email!.split('@')[0],
                             role: 'student',
                             plan: 'premium',
-                            zipCode: customerDetails?.address?.postal_code,
-                            updatedAt: new Date().toISOString()
+                            zip_code: customerDetails?.address?.postal_code,
+                            updated_at: new Date().toISOString()
                         });
 
                     if (profileInsertError) {

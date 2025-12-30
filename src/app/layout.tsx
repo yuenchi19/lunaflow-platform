@@ -9,6 +9,11 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "LunaFlow - Online Education Platform",
   description: "Learn new skills with our immersive video courses.",
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
   other: {
     google: "notranslate",
   },
@@ -25,9 +30,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" translate="no">
-      <head>
-        <link rel="icon" href="/logo.png" />
-      </head>
       <body className={inter.className}>
         <AccessControl>
           <HeaderWrapper />
