@@ -28,7 +28,8 @@ export default function CommunityLayout({ children }: { children: React.ReactNod
     return (
         <CommunityProvider user={user}>
             {/* Added pt-[60px] to account for fixed/sticky header overlap */}
-            <div className="flex w-full fixed inset-0 overflow-hidden bg-[#313338] pt-[60px] md:pt-[70px]">
+            {/* FIX: Use overscroll-none to prevent body scroll chaining on iOS. Remove h-[100dvh] in favor of inset-0. */}
+            <div className="flex w-full fixed inset-0 overflow-hidden bg-[#313338] pt-[60px] md:pt-[70px] z-0 overscroll-none touch-none">
                 {/* Server List REMOVED as requested */}
 
                 <ChannelList
