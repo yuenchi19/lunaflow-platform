@@ -217,22 +217,35 @@ export async function POST(req: Request) {
                     console.error("Email Only Error (Non-fatal):", e);
                     // Don't throw here, allowing transaction to complete
                 }
-                // 2. Log Purchase
+                // 2. Log Purchase (PurchaseRequest)
                 if (targetUserId) {
                     const { error: purchaseError } = await supabaseAdmin
-                        .from('purchases')
+                        .from('PurchaseRequest')
                         .insert({
-                            user_id: targetUserId,
-                            stripe_session_id: session.id,
+                            userId: targetUserId,
+                            stripeInvoiceId: session.invoice as string || session.id, // storing session ID or invoice if available
                             amount: session.amount_total || 0,
-                            currency: session.currency || 'jpy',
-                            status: 'succeeded'
+                            plan: 'premium', // hardcoded based on context, or derive from session
+                            status: 'paid', // PurchaseRequest status: pending, paid, cancelled
+                            // payment: 'stripe', // extra fields if needed based on schema? Schema has `payment`? No.
+                            // Schema: userId, amount, plan, status, stripeInvoiceId.
+                            // PurchaseRequest schema also has: name, email, postalCode, prefecture, address, phone, carrier, payment, note, date in Interface?
+                            // BUT Schema.prisma says:
+                            // id, userId, amount, plan, status, stripeInvoiceId, createdAt, updatedAt.
+                            // So we stick to Schema.prisma fields.
                         });
 
                     if (purchaseError) {
+                        // If schema requires other fields (name, email etc) and they are not nullable, this might fail.
+                        // Schema.prisma:
+                        // model PurchaseRequest { ... userId String, amount Int, plan String, status String @default("pending"), stripeInvoiceId String? ... }
+                        // It does NOT have name, email etc in schema.prisma. The Interface in types.ts had them!
+                        // Trust schema.prisma for DB writes.
                         console.error("Purchase Insert Error:", purchaseError);
                     }
                 }
+
+
             } // Close else for auth fallback (if targetUserId was null initially)
 
         } // Close if (event.type === 'checkout.session.completed')

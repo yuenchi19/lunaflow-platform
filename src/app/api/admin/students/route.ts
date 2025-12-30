@@ -36,7 +36,7 @@ export async function GET() {
             .from('User')
             .select(`
                 *,
-                purchases (
+                PurchaseRequest (
                     amount,
                     status
                 )
@@ -52,8 +52,8 @@ export async function GET() {
         // Map to format expected by UI
         const formattedUsers = users.map((u: any) => {
             // Calculate Total Purchase
-            const totalPurchase = u.purchases?.reduce((acc: number, p: any) => {
-                if (p.status === 'succeeded' || p.status === 'paid') {
+            const totalPurchase = u.PurchaseRequest?.reduce((acc: number, p: any) => {
+                if (p.status === 'succeeded' || p.status === 'paid' || p.status === 'completed') {
                     return acc + (p.amount || 0);
                 }
                 return acc;
