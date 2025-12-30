@@ -51,7 +51,20 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     try {
-        // Delete from Auth (Cascade should handle DB, but safety first)
+        // 1. Delete from DB (User table) first to ensure no broken references
+        const { error: dbError } = await supabase
+            .from('User')
+            .delete()
+            .eq('id', id);
+
+        if (dbError) {
+            console.error('Error deleting from DB:', dbError);
+            // Continue to try deleting from Auth? Or stop? 
+            // If we stop, we might leave Auth orphaned. 
+            // Better to try Auth delete even if DB delete fails (or maybe DB delete fail means it doesn't exist).
+        }
+
+        // 2. Delete from Auth (Prevents login)
         const { error } = await supabase.auth.admin.deleteUser(id);
 
         if (error) {

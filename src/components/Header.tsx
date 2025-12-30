@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { Menu, X, PlayCircle } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
 
 export default function Header() {
     const router = useRouter();
@@ -135,12 +136,13 @@ export default function Header() {
                                 学習
                             </Link>
 
-                            <Link href="/" className={styles.navLink}>
-                                コース一覧
-                            </Link>
+                            {/* Course List Removed as requested */}
+
+                            <NotificationBell userId={user.id} />
 
                             <Link href="/student/dashboard" className={styles.navLink} style={{ position: "relative" }}>
                                 マイページ
+                                {/* Feedback Badge could be redundant if Bell exists, but keeping for safety unless asked to remove. */}
                                 {feedbackCount > 0 && (
                                     <span className={styles.badge} style={{ backgroundColor: '#F59E0B' }}>
                                         {feedbackCount}

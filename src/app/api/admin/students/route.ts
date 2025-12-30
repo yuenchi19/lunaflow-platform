@@ -42,6 +42,10 @@ export async function GET() {
                 )
             `)
             .eq('role', 'student')
+            // Filter: Only users with active subscription
+            // Note: Ensure webhook updates this field, or we might hide valid users if sync is broken.
+            // But per request, this is the requirement.
+            .eq('subscriptionStatus', 'active')
             .order('createdAt', { ascending: false });
 
         if (error) {

@@ -55,6 +55,14 @@ export function ChannelList({ channels, user, currentChannelId }: ChannelListPro
             return false;
         }
 
+        // 5. Strict Light Plan Restrictions (New Request)
+        // Block "Troubleshooting" and "Inventory Share" for Light plan
+        if (user.plan === 'light') {
+            const blockedKeywords = ["困った時のお悩み相談", "在庫シェア", "委託", "Consultation", "Inventory"]; // Broad match
+            if (blockedKeywords.some(keyword => channel.name.includes(keyword))) {
+                return false;
+            }
+        }
 
         return channel.allowedPlans.includes(user.plan);
     };
