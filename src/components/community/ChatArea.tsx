@@ -118,166 +118,163 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
             </header>
 
             {/* Content Area */}
-            <div
-                className="flex-1 overflow-y-auto px-4 pb-32 space-y-[0.1rem] scrollbar-thin scrollbar-thumb-[#1A1B1E] scrollbar-track-[#2E3338] touch-pan-y"
-                style={{ WebkitOverflowScrolling: 'touch' }}
-            >
-
-                {/* Special Layout for Rules Channel */}
-                {isRulesChannel ? (
-                    <div className="relative h-full flex flex-col">
-                        <div
-                            className="flex-1 overflow-y-auto px-4 pt-4 md:pt-10 pb-32 touch-pan-y"
-                            style={{ WebkitOverflowScrolling: 'touch' }}
-                        >
-                            <div className="max-w-3xl mx-auto p-4 md:p-6 bg-[#2B2D31] rounded-md shadow-lg border border-[#1F2023]">
-                                {/* ... Existing Rules Content ... */}
-                                <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 border-b border-[#3F4147] pb-3 md:pb-4">
-                                    <div className="w-12 h-12 md:w-16 md:h-16 bg-[#5865F2] rounded-full flex items-center justify-center flex-shrink-0">
-                                        <Hash className="w-6 h-6 md:w-8 md:h-8 text-white" />
-                                    </div>
-                                    <div>
-                                        <h1 className="text-lg md:text-2xl font-bold text-white">LunaFlow Communityへようこそ</h1>
-                                        <p className="text-[#B5BAC1] text-xs md:text-base">ここが、このサーバーの始まりです。</p>
-                                    </div>
+            {isRulesChannel ? (
+                // RULES CHANNEL LAYOUT (Fixed Flex structure for stability)
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-[#313338]">
+                    <div
+                        className="flex-1 overflow-y-auto px-4 pt-4 md:pt-10 pb-4 touch-pan-y"
+                        style={{ WebkitOverflowScrolling: 'touch' }}
+                    >
+                        <div className="max-w-3xl mx-auto p-4 md:p-6 bg-[#2B2D31] rounded-md shadow-lg border border-[#1F2023]">
+                            {/* ... Existing Rules Content ... */}
+                            <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 border-b border-[#3F4147] pb-3 md:pb-4">
+                                <div className="w-12 h-12 md:w-16 md:h-16 bg-[#5865F2] rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Hash className="w-6 h-6 md:w-8 md:h-8 text-white" />
                                 </div>
-
-                                <div className="space-y-4 md:space-y-6 text-[#DBDEE1]">
-                                    {/* ... List items ... */}
-                                    <div className="flex gap-2 md:gap-3">
-                                        <span className="w-8 h-8 md:w-10 md:h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-base md:text-xl flex-shrink-0">1</span>
-                                        <div>
-                                            <h3 className="font-bold text-sm md:text-lg text-white mb-0.5 md:mb-1">仲間へのリスペクト</h3>
-                                            <p className="text-xs md:text-sm text-[#B5BAC1]">全てのメンバーに対して敬意を払い、建設的なコミュニケーションを心がけましょう。</p>
-                                        </div>
-                                    </div>
-                                    {/* ... */}
-                                    <div className="flex gap-2 md:gap-3">
-                                        <span className="w-8 h-8 md:w-10 md:h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-base md:text-xl flex-shrink-0">2</span>
-                                        <div>
-                                            <h3 className="font-bold text-sm md:text-lg text-white mb-0.5 md:mb-1">スパム・勧誘禁止</h3>
-                                            <p className="text-xs md:text-sm text-[#B5BAC1]">許可のない宣伝行為や、無関係なサイトへの誘導は厳禁です。</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2 md:gap-3">
-                                        <span className="w-8 h-8 md:w-10 md:h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-base md:text-xl flex-shrink-0">3</span>
-                                        <div>
-                                            <h3 className="font-bold text-sm md:text-lg text-white mb-0.5 md:mb-1">売れた人を祝おう！</h3>
-                                            <p className="text-xs md:text-sm text-[#B5BAC1]">仲間の成功を自分のことのように喜び、ポジティブな雰囲気を作りましょう。</p>
-                                        </div>
-                                    </div>
+                                <div>
+                                    <h1 className="text-lg md:text-2xl font-bold text-white">LunaFlow Communityへようこそ</h1>
+                                    <p className="text-[#B5BAC1] text-xs md:text-base">ここが、このサーバーの始まりです。</p>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Fixed Footer for Action Button */}
-                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-[#2B2D31] border-t border-[#1F2023] z-30">
-                            <div className="max-w-3xl mx-auto space-y-3">
-                                <p className="font-bold text-white text-sm md:text-base text-center">
-                                    確認してお約束できる人は、【✅】を押してください。<br />
-                                    <span className="text-[#B5BAC1] font-normal text-xs">次の【はじめに②】が解放されます✨</span>
-                                </p>
-
-                                <button
-                                    onClick={handleConfirmRules}
-                                    disabled={isRulesAgreed}
-                                    className={`
-                                        w-full flex items-center justify-center gap-2 px-6 py-4 rounded text-white font-bold transition-all text-base
-                                        ${isRulesAgreed
-                                            ? "bg-[#23A559] cursor-default opacity-80"
-                                            : "bg-[#5865F2] hover:bg-[#4752C4] shadow-md hover:shadow-lg active:scale-95"
-                                        }
-                                    `}
-                                >
-                                    <div className={`w-6 h-6 border-2 border-white rounded flex items-center justify-center ${isRulesAgreed ? "bg-white text-[#23A559]" : ""}`}>
-                                        {isRulesAgreed && <Check className="w-4 h-4" />}
+                            <div className="space-y-4 md:space-y-6 text-[#DBDEE1]">
+                                {/* ... List items ... */}
+                                <div className="flex gap-2 md:gap-3">
+                                    <span className="w-8 h-8 md:w-10 md:h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-base md:text-xl flex-shrink-0">1</span>
+                                    <div>
+                                        <h3 className="font-bold text-sm md:text-lg text-white mb-0.5 md:mb-1">仲間へのリスペクト</h3>
+                                        <p className="text-xs md:text-sm text-[#B5BAC1]">全てのメンバーに対して敬意を払い、建設的なコミュニケーションを心がけましょう。</p>
                                     </div>
-                                    {isRulesAgreed ? "確認済み" : "ルールを確認しました"}
-                                </button>
+                                </div>
+                                <div className="flex gap-2 md:gap-3">
+                                    <span className="w-8 h-8 md:w-10 md:h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-base md:text-xl flex-shrink-0">2</span>
+                                    <div>
+                                        <h3 className="font-bold text-sm md:text-lg text-white mb-0.5 md:mb-1">スパム・勧誘禁止</h3>
+                                        <p className="text-xs md:text-sm text-[#B5BAC1]">許可のない宣伝行為や、無関係なサイトへの誘導は厳禁です。</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 md:gap-3">
+                                    <span className="w-8 h-8 md:w-10 md:h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-base md:text-xl flex-shrink-0">3</span>
+                                    <div>
+                                        <h3 className="font-bold text-sm md:text-lg text-white mb-0.5 md:mb-1">売れた人を祝おう！</h3>
+                                        <p className="text-xs md:text-sm text-[#B5BAC1]">仲間の成功を自分のことのように喜び、ポジティブな雰囲気を作りましょう。</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                ) : (
-                    <>
-                        {/* Hero Section for Channel (Welcome) */}
-                        <div className="mb-4 mt-4 space-y-2 border-b border-[#3F4147] pb-4">
-                            <div className="w-[68px] h-[68px] rounded-full bg-[#41434A] flex items-center justify-center mb-2">
-                                <Hash className="w-10 h-10 text-white" />
-                            </div>
-                            <h1 className="text-[32px] font-bold text-white">#{channelName}へようこそ！</h1>
-                            <p className="text-[#B5BAC1] text-base">ここが <span className="font-medium text-white">#{channelName}</span> の始まりです。</p>
-                        </div>
 
-                        {/* Intro Content */}
-                        {introContent && (
-                            <div className="mb-6 mx-4 p-6 bg-[#2B2D31] rounded-md border border-[#1F2023] shadow-sm">
-                                <div className="prose prose-invert max-w-none prose-p:text-[#DBDEE1] prose-headings:text-white prose-a:text-[#00A8FC] prose-strong:text-white">
-                                    <ReactMarkdown>{introContent}</ReactMarkdown>
+                    {/* Footer - Part of Flex Column (Not Absolute) */}
+                    <div className="flex-shrink-0 p-4 bg-[#2B2D31] border-t border-[#1F2023] z-30 pb-[safe-area-inset-bottom]">
+                        <div className="max-w-3xl mx-auto space-y-3">
+                            <p className="font-bold text-white text-sm md:text-base text-center">
+                                確認してお約束できる人は、【✅】を押してください。<br />
+                                <span className="text-[#B5BAC1] font-normal text-xs">次の【はじめに②】が解放されます✨</span>
+                            </p>
+
+                            <button
+                                onClick={handleConfirmRules}
+                                disabled={isRulesAgreed}
+                                className={`
+                                    w-full flex items-center justify-center gap-2 px-6 py-4 rounded text-white font-bold transition-all text-base
+                                    ${isRulesAgreed
+                                        ? "bg-[#23A559] cursor-default opacity-80"
+                                        : "bg-[#5865F2] hover:bg-[#4752C4] shadow-md hover:shadow-lg active:scale-95"
+                                    }
+                                `}
+                            >
+                                <div className={`w-6 h-6 border-2 border-white rounded flex items-center justify-center ${isRulesAgreed ? "bg-white text-[#23A559]" : ""}`}>
+                                    {isRulesAgreed && <Check className="w-4 h-4" />}
                                 </div>
+                                {isRulesAgreed ? "確認済み" : "ルールを確認しました"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                // STANDARD CHAT LAYOUT
+                <div
+                    className="flex-1 overflow-y-auto px-4 pb-32 space-y-[0.1rem] scrollbar-thin scrollbar-thumb-[#1A1B1E] scrollbar-track-[#2E3338] touch-pan-y"
+                    style={{ WebkitOverflowScrolling: 'touch' }}
+                >
+                    {/* Hero Section for Channel (Welcome) */}
+                    <div className="mb-4 mt-4 space-y-2 border-b border-[#3F4147] pb-4">
+                        <div className="w-[68px] h-[68px] rounded-full bg-[#41434A] flex items-center justify-center mb-2">
+                            <Hash className="w-10 h-10 text-white" />
+                        </div>
+                        <h1 className="text-[32px] font-bold text-white">#{channelName}へようこそ！</h1>
+                        <p className="text-[#B5BAC1] text-base">ここが <span className="font-medium text-white">#{channelName}</span> の始まりです。</p>
+                    </div>
+
+                    {/* Intro Content */}
+                    {introContent && (
+                        <div className="mb-6 mx-4 p-6 bg-[#2B2D31] rounded-md border border-[#1F2023] shadow-sm">
+                            <div className="prose prose-invert max-w-none prose-p:text-[#DBDEE1] prose-headings:text-white prose-a:text-[#00A8FC] prose-strong:text-white">
+                                <ReactMarkdown>{introContent}</ReactMarkdown>
                             </div>
-                        )}
+                        </div>
+                    )}
 
-                        {messages.map((msg, index) => {
-                            const isSameUser = index > 0 && messages[index - 1].userId === msg.userId;
-                            const messageUser = msg.userId === currentUser.id ? currentUser : MOCK_USERS.find(u => u.id === msg.userId);
-                            const displayName = messageUser?.communityNickname || messageUser?.name || "Unknown User";
+                    {messages.map((msg, index) => {
+                        const isSameUser = index > 0 && messages[index - 1].userId === msg.userId;
+                        const messageUser = msg.userId === currentUser.id ? currentUser : MOCK_USERS.find(u => u.id === msg.userId);
+                        const displayName = messageUser?.communityNickname || messageUser?.name || "Unknown User";
 
-                            return (
-                                <div key={msg.id} className={`group flex pr-4 pl-[72px] py-0.5 relative hover:bg-[#2E3035] ${!isSameUser ? "mt-[17px]" : ""}`}>
+                        return (
+                            <div key={msg.id} className={`group flex pr-4 pl-[72px] py-0.5 relative hover:bg-[#2E3035] ${!isSameUser ? "mt-[17px]" : ""}`}>
+                                {!isSameUser && (
+                                    <div className="absolute left-4 top-0.5 w-[40px] h-[40px] rounded-full bg-indigo-500 overflow-hidden mt-0.5 select-none text-white flex items-center justify-center font-bold text-lg">
+                                        {displayName.charAt(0)}
+                                    </div>
+                                )}
+
+                                <div className="flex flex-col flex-1 min-w-0">
                                     {!isSameUser && (
-                                        <div className="absolute left-4 top-0.5 w-[40px] h-[40px] rounded-full bg-indigo-500 overflow-hidden mt-0.5 select-none text-white flex items-center justify-center font-bold text-lg">
-                                            {displayName.charAt(0)}
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <span className="font-medium text-base text-[#F2F3F5] hover:underline cursor-pointer">
+                                                {displayName}
+                                            </span>
+                                            <span className="text-[12px] text-[#949BA4] font-medium ml-1">
+                                                {new Date(msg.createdAt).toLocaleString()}
+                                            </span>
                                         </div>
                                     )}
-
-                                    <div className="flex flex-col flex-1 min-w-0">
-                                        {!isSameUser && (
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <span className="font-medium text-base text-[#F2F3F5] hover:underline cursor-pointer">
-                                                    {displayName}
-                                                </span>
-                                                <span className="text-[12px] text-[#949BA4] font-medium ml-1">
-                                                    {new Date(msg.createdAt).toLocaleString()}
-                                                </span>
-                                            </div>
-                                        )}
-                                        <div className={`text-[#DBDEE1] leading-[1.375rem] whitespace-pre-wrap text-base font-normal`}>
-                                            <ReactMarkdown
-                                                components={{
-                                                    img: (props: any) => <img {...props} className="max-w-sm rounded-lg my-2 border border-[#1F2023]" />
-                                                }}
-                                            >
-                                                {msg.content}
-                                            </ReactMarkdown>
-                                        </div>
-                                    </div>
-
-                                    {/* Actions */}
-                                    <div className="absolute right-4 top-0 bg-[#313338] shadow-sm rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-[#2E3035] flex gap-1">
-                                        <button
-                                            onClick={() => handleReply(msg)}
-                                            className="p-1 text-[#B5BAC1] hover:text-indigo-400 transition-colors"
-                                            title="返信"
+                                    <div className={`text-[#DBDEE1] leading-[1.375rem] whitespace-pre-wrap text-base font-normal`}>
+                                        <ReactMarkdown
+                                            components={{
+                                                img: (props: any) => <img {...props} className="max-w-sm rounded-lg my-2 border border-[#1F2023]" />
+                                            }}
                                         >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-reply"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
-                                        </button>
-                                        {currentUser.role === 'admin' && (
-                                            <button
-                                                onClick={() => handleDelete(msg.id)}
-                                                className="p-1 text-[#B5BAC1] hover:text-[#F23F42] transition-colors"
-                                                title="メッセージを削除"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        )}
+                                            {msg.content}
+                                        </ReactMarkdown>
                                     </div>
                                 </div>
-                            );
-                        })}
-                        <div ref={messagesEndRef} className="h-4" />
-                    </>
-                )}
-            </div>
+
+                                {/* Actions */}
+                                <div className="absolute right-4 top-0 bg-[#313338] shadow-sm rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-[#2E3035] flex gap-1">
+                                    <button
+                                        onClick={() => handleReply(msg)}
+                                        className="p-1 text-[#B5BAC1] hover:text-indigo-400 transition-colors"
+                                        title="返信"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-reply"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
+                                    </button>
+                                    {currentUser.role === 'admin' && (
+                                        <button
+                                            onClick={() => handleDelete(msg.id)}
+                                            className="p-1 text-[#B5BAC1] hover:text-[#F23F42] transition-colors"
+                                            title="メッセージを削除"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                    <div ref={messagesEndRef} className="h-4" />
+                </div>
+            )}
 
             {/* Input Area */}
             {!isRulesChannel && (
