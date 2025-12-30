@@ -62,9 +62,10 @@ export function ChannelList({ channels, user, currentChannelId }: ChannelListPro
     return (
         <>
             <div className={`
-                fixed inset-y-0 left-0 z-40 w-60 bg-[#2B2D31] text-[#949BA4] flex flex-col h-full transition-transform
-                md:relative md:translate-x-0 md:pointer-events-auto
-                ${isMobileMenuOpen ? "translate-x-0 pointer-events-auto shadow-2xl" : "-translate-x-full pointer-events-none"}
+                fixed inset-y-0 left-0 z-[150] w-64 bg-[#2B2D31] text-[#949BA4] flex flex-col transition-transform duration-300 ease-in-out border-r border-[#1F2023]
+                md:relative md:translate-x-0 md:pointer-events-auto md:z-0 md:w-60 md:top-0
+                top-[60px] h-[calc(100vh-60px)]
+                ${isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
             `}>
                 {/* Header: Server Name */}
                 <div className="h-12 border-b border-[#1F2023] hover:bg-[#35373C] transition-colors cursor-pointer flex items-center px-4 shadow-sm flex-shrink-0">
@@ -150,7 +151,7 @@ export function ChannelList({ channels, user, currentChannelId }: ChannelListPro
 
             {isMobileMenuOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-30 md:hidden"
+                    className="fixed inset-0 bg-black/50 z-[140] md:hidden"
                     onClick={() => setIsMobileMenuOpen(false)}
                 />
             )}
