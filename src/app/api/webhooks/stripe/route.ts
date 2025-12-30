@@ -223,31 +223,31 @@ export async function POST(req: Request) {
                                 <p>Luna Flow 運営事務局</p>
                             `
                     });
+
                     if (emailError) console.error("Resend Error:", emailError);
                 } catch (e: any) {
                     console.error("Email Only Error (Non-fatal):", e);
                     // Don't throw here, allowing transaction to complete
                 }
-            }
+                // 2. Log Purchase
+                if (targetUserId) {
+                    const { error: purchaseError } = await supabaseAdmin
+                        .from('purchases')
+                        .insert({
+                            user_id: targetUserId,
+                            stripe_session_id: session.id,
+                            amount: session.amount_total || 0,
+                            currency: session.currency || 'jpy',
+                            status: 'succeeded'
+                        });
 
-            // 2. Log Purchase
-            if (targetUserId) {
-                const { error: purchaseError } = await supabaseAdmin
-                    .from('purchases')
-                    .insert({
-                        user_id: targetUserId,
-                        stripe_session_id: session.id,
-                        amount: session.amount_total || 0,
-                        currency: session.currency || 'jpy',
-                        status: 'succeeded'
-                    });
-
-                if (purchaseError) {
-                    console.error("Purchase Insert Error:", purchaseError);
-                    // Don't throw, critical part (user creation) is done
+                    if (purchaseError) {
+                        console.error("Purchase Insert Error:", purchaseError);
+                    }
                 }
-            }
-        } // Close checkout.session.completed
+            } // Close else for auth fallback (if targetUserId was null initially)
+
+        } // Close if (event.type === 'checkout.session.completed')
 
         return NextResponse.json({ received: true });
 
