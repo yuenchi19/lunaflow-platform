@@ -181,6 +181,7 @@ export default function Header() {
                         <PlayCircle size={16} />
                         学習
                     </Link>
+                    {user && <NotificationBell userId={user.id} />}
                     <button className={styles.menuButton} onClick={() => setIsMobileMenuOpen(true)}>
                         <Menu size={24} />
                     </button>
@@ -197,9 +198,7 @@ export default function Header() {
                                 </button>
                             </div>
                             <nav className={styles.drawerNav}>
-                                <Link href="/" className={styles.drawerNavLink} onClick={() => setIsMobileMenuOpen(false)}>
-                                    コース一覧
-                                </Link>
+                                {/* Course List Removed */}
                                 {user ? (
                                     <>
                                         <Link href="/student/dashboard" className={styles.drawerNavLink} onClick={() => setIsMobileMenuOpen(false)}>
