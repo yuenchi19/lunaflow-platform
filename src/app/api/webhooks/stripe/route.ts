@@ -77,33 +77,53 @@ export async function POST(req: Request) {
             }
 
             if (targetUserId) {
+                // Check existing role before updating
+                const { data: existingUser } = await supabaseAdmin
+                    .from('User')
+                    .select('role')
+                    .eq('id', targetUserId)
+                    .single();
+
+                const currentRole = existingUser?.role || 'student';
+                // Only update role to 'student' if current role is NOT admin/staff
+                const newRole = (currentRole === 'admin' || currentRole === 'staff') ? currentRole : 'student';
+
                 // Update Existing User
                 const { error: updateError } = await supabaseAdmin.from('User').update({
                     name: customerDetails?.name,
                     zipCode: customerDetails?.address?.postal_code, // camelCase
-                    role: 'student',
+                    role: newRole,
                     plan: 'premium',
-                    // stripeCustomerId: session.customer as string, // Column missing in schema, skipping
+                    // stripeCustomerId: session.customer as string, 
                     updatedAt: new Date().toISOString() // camelCase
                 }).eq('id', targetUserId);
 
                 if (updateError) {
-                    // Log but don't crash
                     console.error(`Profile Update Error: ${updateError.message}`);
                 } else {
                     console.log("[Webhook] Existing User profile updated.");
-
-                    // Sync Metadata as well (Safety net)
+                    // Sync Metadata (Safety net) - only if not admin to be safe? 
+                    // Or Just update plan, keep role safe.
                     await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
-                        user_metadata: { plan: 'premium', role: 'student' }
+                        user_metadata: { plan: 'premium', role: newRole }
                     });
                 }
             } else {
-                // User doesn't exist -> Create Auth User + Public User
-                console.log(`[Webhook] User not found for ${email}. Creating new account...`);
+                // Check if Auth User exists (even if public User doesn't)
+                const { data: { users: existingAuthUsers }, error: authLookupError } = await supabaseAdmin.auth.admin.listUsers();
+                // listUsers is heavy, better to use getUserByEmail? 
+                // Admin API doesn't have getUserByEmail easily exposed in type definition sometimes, 
+                // but usually createClient(..., { auth: { autoRefreshToken: false } }).auth.admin.getUserByEmail(email) works.
+                // Let's rely on listUsers filter for now or try/catch createUser.
 
+                // Better approach: Try to create. If fails with "User already registered", then GET user.
+
+                console.log(`[Webhook] User not found in Public Table for ${email}. Checking Auth...`);
+
+                let authUserId = null;
                 const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
 
+                // 1. Try Create
                 const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                     email: email!,
                     password: tempPassword,
@@ -115,20 +135,43 @@ export async function POST(req: Request) {
                     }
                 });
 
-                if (createError) {
+                if (newUser?.user) {
+                    authUserId = newUser.user.id;
+                    console.log(`[Webhook] New Auth User created! ID: ${authUserId}`);
+
+                    // Send Email ONLY for new users
+                    // ... (Email logic) ...
+                } else if (createError && createError.message.includes("already registered")) {
+                    console.log("[Webhook] Auth User already exists. Linking...");
+                    // 2. Fallback: Find the existing auth user
+                    // Since specific API might be vague, let's list users with filter? 
+                    // Or just use the error? We need the ID.
+                    // supabaseAdmin.auth.admin.listUsers() isn't ideal for High Scale, but for now:
+
+                    // Attempt to fetch user by email (Available in recent Supabase JS)
+                    // @ts-ignore
+                    const { data: existingAuthUser } = await supabaseAdmin.auth.admin.listUsers();
+                    // Filter locally (Inefficient but robust if API method missing)
+                    const found = existingAuthUser?.users.find(u => u.email === email);
+
+                    if (found) {
+                        authUserId = found.id;
+                    } else {
+                        console.error("[Webhook] User reported existing but not found in list.");
+                        throw new Error("Auth Sync Error");
+                    }
+                } else {
                     console.error("[Webhook] Failed to create auth user:", createError);
-                    throw new Error(`User Creation Error: ${createError.message}`);
+                    throw new Error(`User Creation Error: ${createError?.message}`);
                 }
 
-                if (newUser.user) {
-                    targetUserId = newUser.user.id;
-                    console.log(`[Webhook] Auth User created! ID: ${targetUserId}`);
-
-                    // Insert into 'User' table to sync public profile
+                if (authUserId) {
+                    targetUserId = authUserId;
+                    // Insert into 'User' table
                     const { error: profileInsertError } = await supabaseAdmin
                         .from('User')
                         .insert({
-                            id: targetUserId, // Link to Auth ID
+                            id: targetUserId,
                             email: email!,
                             name: customerDetails?.name || email!.split('@')[0],
                             role: 'student',
@@ -139,24 +182,24 @@ export async function POST(req: Request) {
 
                     if (profileInsertError) {
                         console.error("[Webhook] Failed to create public User profile:", profileInsertError);
-                        // This is critical, but we shouldn't throw if we want the email to send? 
-                        // No, if profile fails, app might break. Let's log heavily.
                     } else {
-                        console.log(`[Webhook] Public User profile created!`);
+                        console.log(`[Webhook] Public User profile created/restored!`);
                     }
+                }
 
-                    // Real Email Sending with Resend
-                    const { Resend } = await import('resend');
-                    if (!process.env.RESEND_API_KEY) throw new Error("Missing RESEND_API_KEY");
 
-                    const resend = new Resend(process.env.RESEND_API_KEY);
+                // Real Email Sending with Resend
+                const { Resend } = await import('resend');
+                if (!process.env.RESEND_API_KEY) throw new Error("Missing RESEND_API_KEY");
 
-                    try {
-                        const { data: emailData, error: emailError } = await resend.emails.send({
-                            from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
-                            to: email!,
-                            subject: '【重要】Luna Flowへようこそ！アカウント登録が完了しました ✨',
-                            html: `
+                const resend = new Resend(process.env.RESEND_API_KEY);
+
+                try {
+                    const { data: emailData, error: emailError } = await resend.emails.send({
+                        from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+                        to: email!,
+                        subject: '【重要】Luna Flowへようこそ！アカウント登録が完了しました ✨',
+                        html: `
                                 <p>${customerDetails?.name || 'お客様'} 様</p>
                                 <p>Luna Flowへの入会誠にありがとうございます。<br>
                                 お客様のアカウント作成が完了いたしました！</p>
@@ -179,41 +222,41 @@ export async function POST(req: Request) {
 
                                 <p>Luna Flow 運営事務局</p>
                             `
-                        });
-                        if (emailError) console.error("Resend Error:", emailError);
-                    } catch (e: any) {
-                        console.error("Email Only Error (Non-fatal):", e);
-                        // Don't throw here, allowing transaction to complete
-                    }
-                }
-            } // Close else
-
-            // 2. Log Purchase
-            if (targetUserId) {
-                const { error: purchaseError } = await supabaseAdmin
-                    .from('purchases')
-                    .insert({
-                        user_id: targetUserId,
-                        stripe_session_id: session.id,
-                        amount: session.amount_total || 0,
-                        currency: session.currency || 'jpy',
-                        status: 'succeeded'
                     });
-
-                if (purchaseError) {
-                    console.error("Purchase Insert Error:", purchaseError);
-                    // Don't throw, critical part (user creation) is done
+                    if (emailError) console.error("Resend Error:", emailError);
+                } catch (e: any) {
+                    console.error("Email Only Error (Non-fatal):", e);
+                    // Don't throw here, allowing transaction to complete
                 }
             }
-        } // Close checkout.session.completed
+        }
+    } // Close else
 
-        return NextResponse.json({ received: true });
+        // 2. Log Purchase
+        if (targetUserId) {
+        const { error: purchaseError } = await supabaseAdmin
+            .from('purchases')
+            .insert({
+                user_id: targetUserId,
+                stripe_session_id: session.id,
+                amount: session.amount_total || 0,
+                currency: session.currency || 'jpy',
+                status: 'succeeded'
+            });
 
-    } catch (err: any) {
-        console.error("Handler Logic Error:", err);
-        return NextResponse.json({
-            error: `Handler Check Failed`,
-            details: err.message
-        }, { status: 500 });
+        if (purchaseError) {
+            console.error("Purchase Insert Error:", purchaseError);
+            // Don't throw, critical part (user creation) is done
+        }
     }
+} // Close checkout.session.completed
+
+return NextResponse.json({ received: true });
+
+} catch (err: any) {
+    console.error("Handler Logic Error:", err);
+    return NextResponse.json({
+        error: `Handler Check Failed`,
+        details: err.message
+    }, { status: 500 });
 }

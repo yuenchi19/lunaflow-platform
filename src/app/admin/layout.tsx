@@ -54,12 +54,10 @@ export default function AdminLayout({
                         </nav>
                     </div>
                     <div className={styles.headerActions}>
-                        <button className={styles.supportBtn}>
-                            <span className={styles.supportIcon}>❓</span> お問い合わせ
-                        </button>
-                        <div className={styles.userProfile}>
+
+                        <Link href="/admin/settings" className={styles.userProfile} style={{ cursor: 'pointer' }}>
                             <div className={styles.userIcon}>👤</div>
-                        </div>
+                        </Link>
                     </div>
                 </header>
                 <div className={styles.content}>

@@ -32,7 +32,6 @@ export default function AdminSidebar() {
                 { label: "アフィリエイト", href: "/admin/affiliates", icon: "🤝" },
                 { label: "仕入れ希望", href: "/admin/purchase-requests", icon: "📦" },
                 { label: "感想", href: "/admin/feedback", icon: "💬" },
-                { label: "記事", href: "/admin/articles", icon: "📝" },
                 { label: "お知らせ", href: "/admin/news", icon: "📢" },
             ]
         },

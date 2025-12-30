@@ -25,6 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" translate="no">
+      <head>
+        <link rel="icon" href="https://fav.farm/🎓" />
+      </head>
       <body className={inter.className}>
         <AccessControl>
           <HeaderWrapper />
