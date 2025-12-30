@@ -118,13 +118,18 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
             </header>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto px-4 pb-32 space-y-[0.1rem] scrollbar-thin scrollbar-thumb-[#1A1B1E] scrollbar-track-[#2E3338]">
+            <div
+                className="flex-1 overflow-y-auto px-4 pb-32 space-y-[0.1rem] scrollbar-thin scrollbar-thumb-[#1A1B1E] scrollbar-track-[#2E3338] touch-pan-y"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+            >
 
-                {/* Special Layout for Rules Channel (omitted changes here, keeping existing if possible or re-pasting entire if needed) */}
-                {/* ... (Rules Channel Layout) ... */}
+                {/* Special Layout for Rules Channel */}
                 {isRulesChannel ? (
                     <div className="relative h-full flex flex-col">
-                        <div className="flex-1 overflow-y-auto px-4 pt-4 md:pt-10 pb-32">
+                        <div
+                            className="flex-1 overflow-y-auto px-4 pt-4 md:pt-10 pb-32 touch-pan-y"
+                            style={{ WebkitOverflowScrolling: 'touch' }}
+                        >
                             <div className="max-w-3xl mx-auto p-4 md:p-6 bg-[#2B2D31] rounded-md shadow-lg border border-[#1F2023]">
                                 {/* ... Existing Rules Content ... */}
                                 <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 border-b border-[#3F4147] pb-3 md:pb-4">
