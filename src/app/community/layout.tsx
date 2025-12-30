@@ -27,19 +27,22 @@ export default function CommunityLayout({ children }: { children: React.ReactNod
 
     return (
         <CommunityProvider user={user}>
-            {/* Added pt-[60px] to account for fixed/sticky header overlap */}
-            {/* FIX: Use overscroll-none to prevent body scroll chaining on iOS. Remove h-[100dvh] in favor of inset-0. */}
-            <div className="flex w-full fixed inset-0 overflow-hidden bg-[#313338] pt-[60px] md:pt-[70px] z-0 overscroll-none touch-none">
-                {/* Server List REMOVED as requested */}
-
-                <ChannelList
-                    channels={channels}
-                    user={user}
-                    currentChannelId={currentChannelId}
-                />
-                <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-[#313338] overflow-hidden">
-                    {children}
-                </main>
+            {/* Standard Web Layout: min-h-screen, natural scroll */}
+            <div className="flex flex-col min-h-screen bg-[#313338]">
+                {/* Channel List is usually a sidebar, on mobile it's hidden/drawer. 
+                    On Desktop, we might want it side-by-side. 
+                    Let's keep flex-row for desktop, but column/hidden for mobile.
+                */}
+                <div className="flex flex-1">
+                    <ChannelList
+                        channels={channels}
+                        user={user}
+                        currentChannelId={currentChannelId}
+                    />
+                    <main className="flex-1 flex flex-col min-w-0 bg-[#313338]">
+                        {children}
+                    </main>
+                </div>
             </div>
         </CommunityProvider>
     );

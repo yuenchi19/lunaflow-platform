@@ -98,10 +98,11 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
         }
     };
 
+    // Standard Web Layout: Let the window scroll.
     return (
-        <div className="flex flex-col h-full bg-[#313338] text-[#DBDEE1] overflow-hidden">
-            {/* Header */}
-            <header className="h-12 border-b border-[#26272D] flex items-center px-4 bg-[#313338] shadow-sm justify-between flex-shrink-0 z-30 relative">
+        <div className="flex flex-col min-h-[calc(100vh-64px)] bg-[#313338] text-[#DBDEE1]">
+            {/* Header - Sticky below the Main App Header (approx 60px) */}
+            <header className="sticky top-[60px] md:top-[64px] h-12 border-b border-[#26272D] flex items-center px-4 bg-[#313338] shadow-sm justify-between z-20">
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setIsMobileMenuOpen(true)}
@@ -109,228 +110,189 @@ export function ChatArea({ channelId, currentUser, channelName, introContent }: 
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                     </button>
-                    <Hash className="w-6 h-6 text-[#80848E]" />
-                    <h1 className="font-bold text-base text-[#F2F3F5]">{channelName}</h1>
+                    <Hash className="w-5 h-5 text-[#80848E]" />
+                    <h1 className="font-bold text-sm md:text-base text-[#F2F3F5]">{channelName}</h1>
                 </div>
                 <div className="flex items-center gap-4 text-[#B5BAC1]">
-                    <Bell className="w-6 h-6 hover:text-[#DBDEE1] cursor-pointer" />
+                    <Bell className="w-5 h-5 hover:text-[#DBDEE1] cursor-pointer" />
                 </div>
             </header>
 
-            {/* Content Area */}
-            {isRulesChannel ? (
-                // RULES CHANNEL LAYOUT (Fixed Flex structure for stability)
-                <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-[#313338]">
-                    <div
-                        className="flex-1 overflow-y-auto px-4 pt-4 md:pt-10 pb-4 touch-pan-y"
-                        style={{ WebkitOverflowScrolling: 'touch' }}
-                    >
-                        <div className="max-w-3xl mx-auto p-4 md:p-6 bg-[#2B2D31] rounded-md shadow-lg border border-[#1F2023]">
-                            {/* ... Existing Rules Content ... */}
-                            <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 border-b border-[#3F4147] pb-3 md:pb-4">
-                                <div className="w-12 h-12 md:w-16 md:h-16 bg-[#5865F2] rounded-full flex items-center justify-center flex-shrink-0">
-                                    <Hash className="w-6 h-6 md:w-8 md:h-8 text-white" />
+            {/* Content Area - Natural Height */}
+            <div className="flex-1 px-4 py-4 pb-32"> {/* pb-32 to clear fixed input/footer */}
+                {isRulesChannel ? (
+                    // RULES LAYOUT (Simplified, Standard Flow)
+                    <div className="max-w-3xl mx-auto space-y-6">
+                        {/* Rules Card */}
+                        <div className="p-4 md:p-6 bg-[#2B2D31] rounded-md shadow-lg border border-[#1F2023]">
+                            <div className="flex items-center gap-3 mb-4 border-b border-[#3F4147] pb-4">
+                                <div className="w-10 h-10 bg-[#5865F2] rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Hash className="w-5 h-5 text-white" />
                                 </div>
                                 <div>
-                                    <h1 className="text-lg md:text-2xl font-bold text-white">LunaFlow Communityへようこそ</h1>
-                                    <p className="text-[#B5BAC1] text-xs md:text-base">ここが、このサーバーの始まりです。</p>
+                                    <h1 className="text-lg font-bold text-white">LunaFlow Communityへようこそ</h1>
+                                    <p className="text-[#B5BAC1] text-xs">ここが、このサーバーの始まりです。</p>
                                 </div>
                             </div>
-
-                            <div className="space-y-4 md:space-y-6 text-[#DBDEE1]">
-                                {/* ... List items ... */}
-                                <div className="flex gap-2 md:gap-3">
-                                    <span className="w-8 h-8 md:w-10 md:h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-base md:text-xl flex-shrink-0">1</span>
+                            <div className="space-y-4 text-[#DBDEE1]">
+                                <div className="flex gap-2">
+                                    <span className="w-6 h-6 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">1</span>
                                     <div>
-                                        <h3 className="font-bold text-sm md:text-lg text-white mb-0.5 md:mb-1">仲間へのリスペクト</h3>
-                                        <p className="text-xs md:text-sm text-[#B5BAC1]">全てのメンバーに対して敬意を払い、建設的なコミュニケーションを心がけましょう。</p>
+                                        <h3 className="font-bold text-sm text-white mb-1">仲間へのリスペクト</h3>
+                                        <p className="text-xs text-[#B5BAC1]">全てのメンバーに対して敬意を払い、建設的なコミュニケーションを心がけましょう。</p>
                                     </div>
                                 </div>
-                                <div className="flex gap-2 md:gap-3">
-                                    <span className="w-8 h-8 md:w-10 md:h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-base md:text-xl flex-shrink-0">2</span>
+                                <div className="flex gap-2">
+                                    <span className="w-6 h-6 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">2</span>
                                     <div>
-                                        <h3 className="font-bold text-sm md:text-lg text-white mb-0.5 md:mb-1">スパム・勧誘禁止</h3>
-                                        <p className="text-xs md:text-sm text-[#B5BAC1]">許可のない宣伝行為や、無関係なサイトへの誘導は厳禁です。</p>
+                                        <h3 className="font-bold text-sm text-white mb-1">スパム・勧誘禁止</h3>
+                                        <p className="text-xs text-[#B5BAC1]">許可のない宣伝行為や、無関係なサイトへの誘導は厳禁です。</p>
                                     </div>
                                 </div>
-                                <div className="flex gap-2 md:gap-3">
-                                    <span className="w-8 h-8 md:w-10 md:h-10 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-base md:text-xl flex-shrink-0">3</span>
+                                <div className="flex gap-2">
+                                    <span className="w-6 h-6 bg-[#5865F2] rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">3</span>
                                     <div>
-                                        <h3 className="font-bold text-sm md:text-lg text-white mb-0.5 md:mb-1">売れた人を祝おう！</h3>
-                                        <p className="text-xs md:text-sm text-[#B5BAC1]">仲間の成功を自分のことのように喜び、ポジティブな雰囲気を作りましょう。</p>
+                                        <h3 className="font-bold text-sm text-white mb-1">売れた人を祝おう！</h3>
+                                        <p className="text-xs text-[#B5BAC1]">仲間の成功を自分のことのように喜び、ポジティブな雰囲気を作りましょう。</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Footer - Part of Flex Column (Not Absolute) */}
-                    <div className="flex-shrink-0 p-4 bg-[#2B2D31] border-t border-[#1F2023] z-30 pb-[safe-area-inset-bottom]">
-                        <div className="max-w-3xl mx-auto space-y-3">
-                            <p className="font-bold text-white text-sm md:text-base text-center">
-                                確認してお約束できる人は、【✅】を押してください。<br />
-                                <span className="text-[#B5BAC1] font-normal text-xs">次の【はじめに②】が解放されます✨</span>
-                            </p>
-
-                            <button
-                                onClick={handleConfirmRules}
-                                disabled={isRulesAgreed}
-                                className={`
-                                    w-full flex items-center justify-center gap-2 px-6 py-4 rounded text-white font-bold transition-all text-base
-                                    ${isRulesAgreed
-                                        ? "bg-[#23A559] cursor-default opacity-80"
-                                        : "bg-[#5865F2] hover:bg-[#4752C4] shadow-md hover:shadow-lg active:scale-95"
-                                    }
-                                `}
-                            >
-                                <div className={`w-6 h-6 border-2 border-white rounded flex items-center justify-center ${isRulesAgreed ? "bg-white text-[#23A559]" : ""}`}>
-                                    {isRulesAgreed && <Check className="w-4 h-4" />}
-                                </div>
-                                {isRulesAgreed ? "確認済み" : "ルールを確認しました"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            ) : (
-                // STANDARD CHAT LAYOUT
-                <div
-                    className="flex-1 overflow-y-auto px-4 pb-32 space-y-[0.1rem] scrollbar-thin scrollbar-thumb-[#1A1B1E] scrollbar-track-[#2E3338] touch-pan-y"
-                    style={{ WebkitOverflowScrolling: 'touch' }}
-                >
-                    {/* Hero Section for Channel (Welcome) */}
-                    <div className="mb-4 mt-4 space-y-2 border-b border-[#3F4147] pb-4">
-                        <div className="w-[68px] h-[68px] rounded-full bg-[#41434A] flex items-center justify-center mb-2">
-                            <Hash className="w-10 h-10 text-white" />
-                        </div>
-                        <h1 className="text-[32px] font-bold text-white">#{channelName}へようこそ！</h1>
-                        <p className="text-[#B5BAC1] text-base">ここが <span className="font-medium text-white">#{channelName}</span> の始まりです。</p>
-                    </div>
-
-                    {/* Intro Content */}
-                    {introContent && (
-                        <div className="mb-6 mx-4 p-6 bg-[#2B2D31] rounded-md border border-[#1F2023] shadow-sm">
-                            <div className="prose prose-invert max-w-none prose-p:text-[#DBDEE1] prose-headings:text-white prose-a:text-[#00A8FC] prose-strong:text-white">
-                                <ReactMarkdown>{introContent}</ReactMarkdown>
+                        {/* Action Area (Static in flow or Fixed bottom?) User wants usable. Fixed bottom is standard for actions. */}
+                        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#2B2D31] border-t border-[#1F2023] z-30 pb-[safe-area-inset-bottom]">
+                            <div className="max-w-3xl mx-auto space-y-2">
+                                <p className="font-bold text-white text-sm text-center">
+                                    確認してお約束できる人は、【✅】を押してください。<br />
+                                    <span className="text-[#B5BAC1] font-normal text-xs">次の【はじめに②】が解放されます✨</span>
+                                </p>
+                                <button
+                                    onClick={handleConfirmRules}
+                                    disabled={isRulesAgreed}
+                                    className={`
+                                        w-full flex items-center justify-center gap-2 px-6 py-3 rounded text-white font-bold transition-all text-sm
+                                        ${isRulesAgreed
+                                            ? "bg-[#23A559] cursor-default opacity-80"
+                                            : "bg-[#5865F2] hover:bg-[#4752C4] shadow-md active:scale-95"
+                                        }
+                                    `}
+                                >
+                                    <div className={`w-5 h-5 border-2 border-white rounded flex items-center justify-center ${isRulesAgreed ? "bg-white text-[#23A559]" : ""}`}>
+                                        {isRulesAgreed && <Check className="w-3 h-3" />}
+                                    </div>
+                                    {isRulesAgreed ? "確認済み" : "ルールを確認しました"}
+                                </button>
                             </div>
                         </div>
-                    )}
+                    </div>
+                ) : (
+                    // CHAT LAYOUT
+                    <div className="max-w-4xl mx-auto">
+                        {/* Hero */}
+                        <div className="mb-4 mt-2 space-y-1 border-b border-[#3F4147] pb-4">
+                            <div className="w-12 h-12 rounded-full bg-[#41434A] flex items-center justify-center mb-2">
+                                <Hash className="w-6 h-6 text-white" />
+                            </div>
+                            <h1 className="text-xl font-bold text-white">#{channelName}へようこそ！</h1>
+                            <p className="text-[#B5BAC1] text-sm">ここが <span className="font-medium text-white">#{channelName}</span> の始まりです。</p>
+                        </div>
 
-                    {messages.map((msg, index) => {
-                        const isSameUser = index > 0 && messages[index - 1].userId === msg.userId;
-                        const messageUser = msg.userId === currentUser.id ? currentUser : MOCK_USERS.find(u => u.id === msg.userId);
-                        const displayName = messageUser?.communityNickname || messageUser?.name || "Unknown User";
+                        {/* Intro */}
+                        {introContent && (
+                            <div className="mb-4 p-4 bg-[#2B2D31] rounded-md border border-[#1F2023]">
+                                <div className="prose prose-invert max-w-none prose-p:text-[#DBDEE1] prose-headings:text-white prose-a:text-[#00A8FC] prose-sm">
+                                    <ReactMarkdown>{introContent}</ReactMarkdown>
+                                </div>
+                            </div>
+                        )}
 
-                        return (
-                            <div key={msg.id} className={`group flex pr-4 pl-[72px] py-0.5 relative hover:bg-[#2E3035] ${!isSameUser ? "mt-[17px]" : ""}`}>
-                                {!isSameUser && (
-                                    <div className="absolute left-4 top-0.5 w-[40px] h-[40px] rounded-full bg-indigo-500 overflow-hidden mt-0.5 select-none text-white flex items-center justify-center font-bold text-lg">
-                                        {displayName.charAt(0)}
-                                    </div>
-                                )}
+                        {messages.map((msg, index) => {
+                            const isSameUser = index > 0 && messages[index - 1].userId === msg.userId;
+                            const messageUser = msg.userId === currentUser.id ? currentUser : MOCK_USERS.find(u => u.id === msg.userId);
+                            const displayName = messageUser?.communityNickname || messageUser?.name || "Unknown User";
 
-                                <div className="flex flex-col flex-1 min-w-0">
+                            return (
+                                <div key={msg.id} className={`group flex pr-2 pl-[50px] py-0.5 relative hover:bg-[#2E3035] ${!isSameUser ? "mt-3" : ""}`}>
                                     {!isSameUser && (
-                                        <div className="flex items-center gap-2 mb-0.5">
-                                            <span className="font-medium text-base text-[#F2F3F5] hover:underline cursor-pointer">
-                                                {displayName}
-                                            </span>
-                                            <span className="text-[12px] text-[#949BA4] font-medium ml-1">
-                                                {new Date(msg.createdAt).toLocaleString()}
-                                            </span>
+                                        <div className="absolute left-1 top-0.5 w-[32px] h-[32px] rounded-full bg-indigo-500 overflow-hidden mt-0.5 select-none text-white flex items-center justify-center font-bold text-sm">
+                                            {displayName.charAt(0)}
                                         </div>
                                     )}
-                                    <div className={`text-[#DBDEE1] leading-[1.375rem] whitespace-pre-wrap text-base font-normal`}>
-                                        <ReactMarkdown
-                                            components={{
-                                                img: (props: any) => <img {...props} className="max-w-sm rounded-lg my-2 border border-[#1F2023]" />
-                                            }}
-                                        >
-                                            {msg.content}
-                                        </ReactMarkdown>
+
+                                    <div className="flex flex-col flex-1 min-w-0">
+                                        {!isSameUser && (
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <span className="font-medium text-sm text-[#F2F3F5] hover:underline cursor-pointer">
+                                                    {displayName}
+                                                </span>
+                                                <span className="text-[10px] text-[#949BA4] font-medium ml-1">
+                                                    {new Date(msg.createdAt).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div className={`text-[#DBDEE1] leading-relaxed whitespace-pre-wrap text-sm font-normal`}>
+                                            <ReactMarkdown
+                                                components={{
+                                                    img: (props: any) => <img {...props} className="max-w-sm rounded my-1 border border-[#1F2023]" />
+                                                }}
+                                            >
+                                                {msg.content}
+                                            </ReactMarkdown>
+                                        </div>
+                                    </div>
+
+                                    {/* Action Buttons (Hidden on mobile usually? make opaque on touch?) - Keep logic */}
+                                    <div className="absolute right-2 top-0 bg-[#313338] shadow-sm rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-[#2E3035] flex gap-1">
+                                        <button onClick={() => handleReply(msg)} className="p-1 text-[#B5BAC1]"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-reply"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg></button>
+                                        {currentUser.role === 'admin' && (<button onClick={() => handleDelete(msg.id)} className="p-1 text-[#B5BAC1] hover:text-red-500"><Trash2 className="w-3 h-3" /></button>)}
                                     </div>
                                 </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
 
-                                {/* Actions */}
-                                <div className="absolute right-4 top-0 bg-[#313338] shadow-sm rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-[#2E3035] flex gap-1">
-                                    <button
-                                        onClick={() => handleReply(msg)}
-                                        className="p-1 text-[#B5BAC1] hover:text-indigo-400 transition-colors"
-                                        title="返信"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-reply"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
-                                    </button>
-                                    {currentUser.role === 'admin' && (
-                                        <button
-                                            onClick={() => handleDelete(msg.id)}
-                                            className="p-1 text-[#B5BAC1] hover:text-[#F23F42] transition-colors"
-                                            title="メッセージを削除"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
-                    <div ref={messagesEndRef} className="h-4" />
-                </div>
-            )}
-
-            {/* Input Area */}
+            {/* Input Area - Fixed Bottom for Standard Chat Feel */}
             {!isRulesChannel && (
-                <div className="px-4 pb-6 bg-[#313338] flex-shrink-0">
-                    {/* Removed Old Plan Restriction for light plan in specific channel, now strict check if needed or just allow basic */}
-                    {currentUser.plan === 'light' ? (
-                        <div className="bg-[#383A40] rounded-lg px-4 py-4 text-center text-[#B5BAC1] text-sm">
-                            🔒 ライトプランの方はメッセージの投稿ができません（閲覧のみ可能です）
-                        </div>
-                    ) : (
-                        <div className="bg-[#383A40] rounded-lg px-4 py-2.5 flex flex-col gap-2 relative">
-                            {/* Reply Context */}
-                            {replyTo && (
-                                <div className="flex items-center justify-between text-xs text-[#B5BAC1] bg-[#2B2D31] p-2 rounded mb-1">
-                                    <span>Replying to User...</span>
-                                    <button onClick={() => setReplyTo(null)} className="hover:text-white">✕</button>
-                                </div>
-                            )}
-
-                            <div className="flex items-start gap-3 w-full">
-                                {/* Image Upload Button */}
-                                <button
-                                    className="text-[#B5BAC1] hover:text-[#F2F3F5] p-1 h-fit mt-0.5 transition-colors flex-shrink-0"
-                                    onClick={() => fileInputRef.current?.click()}
-                                >
-                                    <div className="bg-[#B5BAC1] text-[#383A40] w-6 h-6 rounded-full flex items-center justify-center hover:text-white transition-colors">
-                                        <Plus className="w-4 h-4 font-bold" />
-                                    </div>
-                                </button>
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={handleImageUpload}
-                                />
-
-                                <textarea
-                                    className="flex-1 bg-transparent border-none outline-none text-[#DBDEE1] placeholder-[#949BA4] resize-none min-h-[44px] text-base py-1 scrollbar-thin scrollbar-thumb-[#202225]"
-                                    placeholder={`#${channelName} へメッセージを送信`}
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter" && !e.shiftKey) {
-                                            e.preventDefault();
-                                            handleSend();
-                                        }
-                                    }}
-                                    rows={1}
-                                    style={{ overflow: 'hidden' }}
-                                />
-
-                                {/* Removed Gift/Smile, keeping Send button implicit or minimalistic */}
+                <div className="fixed bottom-0 left-0 right-0 px-2 md:px-4 py-2 bg-[#313338] border-t border-[#26272D] z-30 pb-[safe-area-inset-bottom]">
+                    <div className="max-w-4xl mx-auto">
+                        {currentUser.plan === 'light' ? (
+                            <div className="bg-[#383A40] rounded px-4 py-2 text-center text-[#B5BAC1] text-xs">
+                                🔒 ライトプランの方はメッセージの投稿ができません
                             </div>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="bg-[#383A40] rounded-lg px-3 py-2 flex flex-col gap-2 relative">
+                                {replyTo && (
+                                    <div className="flex items-center justify-between text-xs text-[#B5BAC1] bg-[#2B2D31] p-1.5 rounded mb-1">
+                                        <span>Replying...</span>
+                                        <button onClick={() => setReplyTo(null)} className="hover:text-white">✕</button>
+                                    </div>
+                                )}
+                                <div className="flex items-end gap-2 w-full">
+                                    <button className="text-[#B5BAC1] p-1" onClick={() => fileInputRef.current?.click()}>
+                                        <div className="bg-[#B5BAC1] text-[#383A40] w-5 h-5 rounded-full flex items-center justify-center">
+                                            <Plus className="w-3 h-3 font-bold" />
+                                        </div>
+                                    </button>
+                                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+
+                                    <textarea
+                                        className="flex-1 bg-transparent border-none outline-none text-[#DBDEE1] placeholder-[#949BA4] resize-none text-sm py-1 max-h-[100px]"
+                                        placeholder={`#${channelName} へ送信`}
+                                        value={inputValue}
+                                        onChange={(e) => setInputValue(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                                        rows={1}
+                                    />
+                                    {/* Send Button for Mobile? Usually Enter is hard. Add explicit send icon? */}
+                                    <button onClick={handleSend} className="p-1 text-[#B5BAC1] hover:text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
