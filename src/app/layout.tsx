@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "LunaFlow - Online Education Platform",
   description: "Learn new skills with our immersive video courses.",
+  other: {
+    google: "notranslate",
+  },
 };
 
 import { AccessControl } from "@/components/AccessControl";
@@ -21,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="ja" translate="no">
       <body className={inter.className}>
         <AccessControl>
           <HeaderWrapper />
