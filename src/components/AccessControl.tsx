@@ -24,25 +24,12 @@ export function AccessControl({ children }: { children: React.ReactNode }) {
             }
 
             try {
-                // 1. Check Auth Session
-                const { data: { user: authUser } } = await supabase.auth.getUser();
+                // 2. Fetch Status via API (Bypasses RLS issues)
+                const res = await fetch('/api/user/status');
+                const data = await res.json();
 
-                if (!authUser) {
-                    setIsBlocked(true); // Should be handled by middleware, but safe fallback
-                    setIsLoading(false);
-                    return;
-                }
-
-                // 2. Fetch Profile from 'User' table
-                const { data: profile, error } = await supabase
-                    .from('User')
-                    .select('plan, role, subscriptionStatus')
-                    .eq('id', authUser.id)
-                    .single();
-
-                if (error || !profile) {
-                    // Profile missing or error -> Block
-                    console.error("Profile fetch error:", error);
+                if (!res.ok || !data.authenticated) {
+                    console.error("Auth check failed:", data);
                     setIsBlocked(true);
                     setIsLoading(false);
                     return;
@@ -50,15 +37,15 @@ export function AccessControl({ children }: { children: React.ReactNode }) {
 
                 // 3. Check Status
                 // Admin always allowed
-                if (profile.role === 'admin') {
+                if (data.role === 'admin') {
                     setIsBlocked(false);
                     setIsLoading(false);
                     return;
                 }
 
-                // Plan Check (Premium/Standard allowed, or active subscription status)
-                const isPaidPlan = profile.plan === 'premium' || profile.plan === 'standard';
-                const isSubscriptionActive = profile.subscriptionStatus === 'active';
+                // Plan Check
+                const isPaidPlan = data.plan === 'premium' || data.plan === 'standard';
+                const isSubscriptionActive = data.subscriptionStatus === 'active';
 
                 if (isPaidPlan || isSubscriptionActive) {
                     setIsBlocked(false);

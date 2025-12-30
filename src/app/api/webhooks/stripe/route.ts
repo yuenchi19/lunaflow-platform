@@ -88,10 +88,15 @@ export async function POST(req: Request) {
                 }).eq('id', targetUserId);
 
                 if (updateError) {
-                    // Log but don't crash, as the user exists
+                    // Log but don't crash
                     console.error(`Profile Update Error: ${updateError.message}`);
                 } else {
                     console.log("[Webhook] Existing User profile updated.");
+
+                    // Sync Metadata as well (Safety net)
+                    await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+                        user_metadata: { plan: 'premium', role: 'student' }
+                    });
                 }
             } else {
                 // User doesn't exist -> Create Auth User + Public User
