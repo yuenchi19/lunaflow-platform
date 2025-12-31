@@ -7,19 +7,26 @@ import { SentEmail } from '@/types';
 export default function EmailHistoryPage() {
     const [activeTab, setActiveTab] = useState<'waiting' | 'sent' | 'failed'>('waiting');
     const [emails, setEmails] = useState<SentEmail[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const savedEmails = localStorage.getItem('luna_emails');
-        if (savedEmails) {
+        const fetchEmails = async () => {
             try {
-                setEmails(JSON.parse(savedEmails));
-            } catch (e) {
-                console.error("Failed to parse emails from localStorage", e);
-                setEmails([]);
+                const res = await fetch('/api/admin/emails');
+                if (res.ok) {
+                    const data = await res.json();
+                    setEmails(data);
+                    // Default to 'sent' tab if we have sent emails, as backend usually just sends immediately
+                    setActiveTab('sent');
+                }
+            } catch (error) {
+                console.error("Failed to fetch emails", error);
+            } finally {
+                setLoading(false);
             }
-        } else {
-            setEmails([]);
-        }
+        };
+
+        fetchEmails();
     }, []);
 
     const filteredEmails = emails.filter(email => email.status === activeTab);
@@ -53,7 +60,9 @@ export default function EmailHistoryPage() {
                 </div>
             </div>
 
-            {filteredEmails.length > 0 ? (
+            {loading ? (
+                <div className={styles.emptyState}>読み込み中...</div>
+            ) : filteredEmails.length > 0 ? (
                 <div className={styles.tableWrapper}>
                     <table className={styles.table}>
                         <thead>
@@ -72,7 +81,9 @@ export default function EmailHistoryPage() {
                                     <td className={`${styles.td} ${styles.subject}`}>
                                         {email.subject}
                                     </td>
-                                    <td className={styles.td}>{email.sentAt}</td>
+                                    <td className={styles.td}>
+                                        {new Date(email.sentAt).toLocaleString('ja-JP')}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

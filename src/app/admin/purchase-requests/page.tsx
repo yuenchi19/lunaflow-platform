@@ -1,76 +1,93 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, Search, Filter, CheckCircle, Clock } from "lucide-react";
+import { Download, Search, CheckCircle, Clock } from "lucide-react";
 
-import { getUsers, updateUser, savePayment } from "@/lib/data";
-import { PurchaseRequest, Payment } from "@/types";
+interface AdminPurchaseRequest {
+    id: string;
+    userId: string;
+    amount: number;
+    plan: string;
+    status: string;
+    stripeInvoiceId: string | null;
+    createdAt: string;
+    updatedAt: string;
+    note: string | null;
+    scheduledDate: string | null;
+    user: {
+        name: string | null;
+        email: string;
+        zipCode: string | null;
+        address: string | null;
+    };
+}
 
 export default function PurchaseRequestsPage() {
-    const [requests, setRequests] = useState<PurchaseRequest[]>([]);
+    const [requests, setRequests] = useState<AdminPurchaseRequest[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
+    const [loading, setLoading] = useState(true);
+
+    const fetchRequests = async () => {
+        try {
+            const res = await fetch('/api/admin/purchase-requests');
+            if (res.ok) {
+                const data = await res.json();
+                setRequests(data);
+            } else {
+                console.error("Failed to fetch requests");
+            }
+        } catch (error) {
+            console.error("Error fetching requests:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const storedRequests = localStorage.getItem("mock_purchase_requests");
-        if (storedRequests) {
-            setRequests(JSON.parse(storedRequests));
-        }
+        fetchRequests();
     }, []);
 
-    const toggleStatus = (id: string) => {
-        const targetReq = requests.find(r => r.id === id);
-        if (!targetReq) return;
+    const toggleStatus = async (id: string, currentStatus: string) => {
+        const newStatus = currentStatus === "pending" ? "completed" : "pending";
 
-        const newStatus = targetReq.status === "pending" ? "completed" : "pending";
-
-        // Logic: specific automation when marking as Completed
         if (newStatus === 'completed') {
             const confirmed = confirm("このリクエストを完了にしますか？\n完了にすると、該当する受講生の「おまかせ仕入れ」実績に加算されます。");
             if (!confirmed) return;
-
-            // Find user
-            const users = getUsers();
-            const user = users.find(u => u.email === targetReq.email); // Match by Email for now
-
-            if (user) {
-                // Parse amount (remove "円" or commas if any, though existing mock might be string "30000")
-                const amountVal = typeof targetReq.amount === 'string'
-                    ? parseInt((targetReq.amount as string).replace(/[^0-9]/g, ''))
-                    : targetReq.amount;
-
-                if (!isNaN(amountVal)) {
-                    // 1. Update User Total
-                    const newTotal = (user.lifetimePurchaseTotal || 0) + amountVal;
-                    updateUser({ ...user, lifetimePurchaseTotal: newTotal });
-
-                    // 2. Add Payment Record
-                    const newPayment: Payment = {
-                        id: `pay_req_${targetReq.id}_${Date.now()}`,
-                        userId: user.id,
-                        date: new Date().toISOString().split('T')[0],
-                        amount: amountVal,
-                        method: 'other', // Purchase Request
-                        status: 'succeeded'
-                    };
-                    savePayment(newPayment);
-                    alert(`${user.name}様の仕入れ実績に ${amountVal.toLocaleString()}円 を反映しました。`);
-                }
-            } else {
-                alert("該当するメールアドレスの受講生が見つかりませんでした。実績への反映はスキップされました。");
-            }
         }
 
-        const updatedRequests = requests.map(req =>
-            req.id === id ? { ...req, status: newStatus as "pending" | "completed" } : req
-        );
-        setRequests(updatedRequests);
-        localStorage.setItem("mock_purchase_requests", JSON.stringify(updatedRequests));
+        try {
+            const res = await fetch(`/api/admin/purchase-requests/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus }),
+            });
+
+            if (res.ok) {
+                // Optimistic update or refetch
+                fetchRequests(); // Refetch to be sure, or map local
+                if (newStatus === 'completed') {
+                    alert("ステータスを更新しました。");
+                }
+            } else {
+                alert("更新に失敗しました。");
+            }
+        } catch (error) {
+            console.error("Error updating status:", error);
+            alert("通信エラーが発生しました。");
+        }
     };
 
-    const filteredRequests = requests.filter(req =>
-        req.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        req.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredRequests = requests.filter(req => {
+        if (!req.user) return false;
+        const name = req.user.name || "";
+        const email = req.user.email || "";
+        return name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            email.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+
+    if (loading) {
+        return <div className="p-8 text-center text-slate-500">読み込み中...</div>;
+    }
 
     return (
         <div className="p-8">
@@ -142,32 +159,32 @@ export default function PurchaseRequestsPage() {
                                         </span>
                                     </td>
                                     <td className="p-4 text-sm text-slate-500">
-                                        {req.date}
+                                        {new Date(req.createdAt).toLocaleDateString('ja-JP')}
                                     </td>
                                     <td className="p-4">
-                                        <div className="font-bold text-slate-800 text-sm">{req.name}</div>
+                                        <div className="font-bold text-slate-800 text-sm">{req.user?.name || "未設定"}</div>
                                         <div className="text-xs text-slate-500 mt-0.5">{req.plan}</div>
                                     </td>
                                     <td className="p-4">
-                                        <div className="font-bold text-slate-800 text-sm">{req.amount}円</div>
-                                        <div className="text-xs text-slate-500 mt-0.5">{req.payment}</div>
+                                        <div className="font-bold text-slate-800 text-sm">{req.amount.toLocaleString()}円</div>
+                                        <div className="text-xs text-slate-500 mt-0.5">請求書払い</div>{/* Fixed as invoice for now */}
                                     </td>
                                     <td className="p-4 text-sm text-slate-600 max-w-xs">
-                                        <div className="font-mono text-xs text-slate-400 mb-0.5">{req.postalCode}</div>
-                                        <div className="line-clamp-2" title={req.prefecture + req.address}>
-                                            {req.prefecture}{req.address}
+                                        <div className="font-mono text-xs text-slate-400 mb-0.5">{req.user?.zipCode || "-"}</div>
+                                        <div className="line-clamp-2" title={(req.user?.address || "")}>
+                                            {req.user?.address || "-"}
                                         </div>
-                                        <div className="mt-1 text-xs text-slate-400">{req.email}</div>
+                                        <div className="mt-1 text-xs text-slate-400">{req.user?.email}</div>
                                     </td>
                                     <td className="p-4 text-sm text-slate-600">
-                                        {req.carrier}
+                                        - {/* Carrier not in DB yet */}
                                     </td>
-                                    <td className="p-4 text-sm text-slate-500 max-w-xs truncate" title={req.note}>
+                                    <td className="p-4 text-sm text-slate-500 max-w-xs truncate" title={req.note || ""}>
                                         {req.note || "-"}
                                     </td>
                                     <td className="p-4 text-right">
                                         <button
-                                            onClick={() => toggleStatus(req.id)}
+                                            onClick={() => toggleStatus(req.id, req.status)}
                                             className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${req.status === 'pending'
                                                 ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
                                                 : 'border-slate-200 text-slate-400 hover:bg-slate-50'
