@@ -6,7 +6,7 @@ const prismaClientSingleton = () => {
     return new PrismaClient({
         datasources: {
             db: {
-                url: process.env.DATABASE_URL_OVERRIDE || 'postgresql://postgres:UverLove2026@db.fksvpyrvrzxmhhvetqrx.supabase.co:6543/postgres?pgbouncer=true',
+                url: process.env.DATABASE_URL_OVERRIDE || 'postgresql://postgres.fksvpyrvrzxmhhvetqrx:UverLove2026@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true',
             },
         },
     });
