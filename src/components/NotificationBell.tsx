@@ -96,7 +96,7 @@ export function NotificationBell({ userId }: { userId?: string }) {
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={toggleOpen}
-                className="relative p-2 text-gray-400 hover:text-white transition-colors"
+                className="relative p-2 transition-opacity opacity-70 hover:opacity-100"
                 aria-label="Notifications"
             >
                 <Bell className="w-5 h-5" />
