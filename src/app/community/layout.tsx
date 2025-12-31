@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { CommunityProvider, useCommunity } from "@/components/community/CommunityContext"; // Import useCommunity
 import { User } from "@/types";
 import { Menu } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export default function CommunityLayout({ children }: { children: React.ReactNode }) {
     // Determine current channel from URL path
@@ -57,14 +58,19 @@ function CommunityLayoutInner({
     return (
         <div className="flex flex-col min-h-screen bg-[#313338]">
             {/* Mobile Header with Hamburger */}
-            <div className="md:hidden bg-[#313338] p-4 flex items-center border-b border-[#1E1F22]">
-                <button
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="text-slate-200 hover:text-white"
-                >
-                    <Menu size={28} />
-                </button>
-                <span className="ml-4 font-bold text-white text-lg">Community</span>
+            <div className="md:hidden bg-[#313338] p-4 flex items-center justify-between border-b border-[#1E1F22]">
+                <div className="flex items-center">
+                    <button
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        className="text-slate-200 hover:text-white"
+                    >
+                        <Menu size={28} />
+                    </button>
+                    <span className="ml-4 font-bold text-white text-lg">Community</span>
+                </div>
+                <div className="flex items-center">
+                    <NotificationBell userId={user.id} />
+                </div>
             </div>
 
             <div className="flex flex-1 relative">

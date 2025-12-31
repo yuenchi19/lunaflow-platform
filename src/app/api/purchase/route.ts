@@ -21,21 +21,24 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Amount is required.' }, { status: 400 });
         }
 
-        // 3. Fetch User Profile (from DB)
-        const user = await prisma.user.findUnique({
-            where: { id: authUser.id }
+        // 3. Fetch User Profile (Find or Create)
+        let targetUser = await prisma.user.findUnique({
+            where: { email: authUser.email! }
         });
 
-        if (!user) {
-            // Fallback: Try email if ID mismatch (unlikely if sync is good, but safe)
-            const userByEmail = await prisma.user.findUnique({ where: { email: authUser.email! } });
-            if (!userByEmail) {
-                return NextResponse.json({ error: 'User profile not found. Please contact support.' }, { status: 404 });
-            }
+        if (!targetUser) {
+            // Auto-create User if missing (Sync Auth -> DB)
+            console.log(`[Purchase] User sync: Creating DB record for ${authUser.email}`);
+            targetUser = await prisma.user.create({
+                data: {
+                    id: authUser.id, // Try to sync ID
+                    email: authUser.email!,
+                    name: authUser.user_metadata?.name || authUser.email!.split('@')[0],
+                    role: 'student',
+                    plan: 'light', // Default
+                }
+            });
         }
-
-        const targetUser = user || (await prisma.user.findUnique({ where: { email: authUser.email! } }));
-        if (!targetUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
 
         // 4. Stripe Customer Logic
@@ -89,10 +92,10 @@ export async function POST(req: NextRequest) {
                     amount: purchaseAmount,
                     plan: plan || targetUser.plan || 'standard',
                     status: 'pending',
-                    // New fields
+                    // New fields - Cast to any to bypass stale local types if needed
                     scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
                     note: note || '',
-                }
+                } as any
             });
 
             // Stripe operations

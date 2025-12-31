@@ -1,60 +1,21 @@
-
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Reusing Service Role execution for reliability in Admin context
-// Ideally, use cookies() + createServerComponentClient for RLS, but without knowing RLS policies, 
-// Service Role is the "Hammer" to ensure Admin sees data.
-// We assume this route is protected by Middleware or parent layout checks.
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-        return NextResponse.json({ error: 'Server Config Error' }, { status: 500 });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-        },
-    });
-
     try {
-        // Fetch students
-        // Note: Joining with purchases to calculate totals would be ideal.
-        // For Supabase, we can use foreign key join if set up, or just fetch purchases separately.
-        // Let's try to select purchases too.
-
-        // Check if 'purchases' relation exists. In schema.sql it references profile(id).
-        // Prisma schema also has relation.
-        // Supabase Postgrest syntax:
-
-        const { data: users, error } = await supabase
-            .from('User')
-            .select(`
-                *,
-                PurchaseRequest (
-                    amount,
-                    status
-                )
-            `)
-            .eq('role', 'student')
-            // Reverted strict filter to ensure visibility. 
-            // We'll rely on PurchaseRequest or handle 'active' status logic in map if needed.
-            .order('createdAt', { ascending: false });
-
-        if (error) {
-            console.error('Error fetching students:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
+        // Fetch students using Prisma to bypass RLS and ensures generic visibility
+        const users = await prisma.user.findMany({
+            where: { role: 'student' },
+            include: {
+                purchaseRequests: true,
+            },
+            orderBy: { createdAt: 'desc' }
+        });
 
         // Map to format expected by UI
-        const formattedUsers = users.map((u: any) => {
+        const formattedUsers = users.map((u) => {
             // Calculate Total Purchase
-            const totalPurchase = u.PurchaseRequest?.reduce((acc: number, p: any) => {
+            const totalPurchase = u.purchaseRequests?.reduce((acc: number, p: any) => {
                 if (p.status === 'succeeded' || p.status === 'paid' || p.status === 'completed') {
                     return acc + (p.amount || 0);
                 }
@@ -67,18 +28,24 @@ export async function GET() {
                 email: u.email,
                 role: u.role,
                 plan: u.plan,
-                subscriptionStatus: 'active', // Placeholder until logic checks Stripe Sub
+                subscriptionStatus: 'active', // Force active for visibility as requested
                 communityNickname: u.communityNickname,
-                registrationDate: u.createdAt, // camelCase
+                registrationDate: u.createdAt,
                 lifetimePurchaseTotal: totalPurchase,
                 address: u.address,
-                phoneNumber: u.phoneNumber // camelCase
+                // Prisma user model might not have phoneNumber in schema? 
+                // Schema has: zipCode, address. No phone? 
+                // Schema.prisma: id, name, email, role, plan, affiliateCode, referredBy, communityNickname, zipCode, address, payoutPreference, createdAt, updatedAt.
+                // NO PHONE in schema. 
+                // API was mapping `u.phoneNumber`.
+                phoneNumber: ""
             };
         });
 
         return NextResponse.json(formattedUsers);
 
     } catch (e: any) {
+        console.error("Admin Student API Error:", e);
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
 }

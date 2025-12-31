@@ -33,11 +33,11 @@ export function ChannelList({ channels, user, currentChannelId }: ChannelListPro
     };
 
     const checkAccess = (channel: Channel) => {
+        // Admins and Staff always have access - FORCE RETURN TRUE
+        if (user.role === 'admin' || user.role === 'staff') return true;
+
         // ALWAYS ALLOW ACCESS TO RULES CHANNEL "c1" or "はじめに①"
         if (channel.id === 'c1' || channel.name.includes("はじめに①")) return true;
-
-        // Admins and Staff always have access
-        if (user.role === 'admin' || user.role === 'staff') return true;
 
         // Strict Logic:
         // 1. "はじめに①" (c1) is accessible to EVERYONE (checked above)
