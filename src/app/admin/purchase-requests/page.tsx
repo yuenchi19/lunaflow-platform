@@ -170,9 +170,9 @@ export default function PurchaseRequestsPage() {
                                         <div className="font-bold text-slate-800 text-sm">{req.amount.toLocaleString()}円</div>
                                         <div className="text-xs text-slate-500 mt-0.5">請求書払い</div>{/* Fixed as invoice for now */}
                                     </td>
-                                    <td className="p-4 text-sm text-slate-600 max-w-xs">
+                                    <td className="p-4 text-sm text-slate-600">
                                         <div className="font-mono text-xs text-slate-400 mb-0.5">{req.user?.zipCode || "-"}</div>
-                                        <div className="line-clamp-2" title={(req.user?.address || "")}>
+                                        <div className="whitespace-pre-wrap" title={(req.user?.address || "")}>
                                             {req.user?.address || "-"}
                                         </div>
                                         <div className="mt-1 text-xs text-slate-400">{req.user?.email}</div>
