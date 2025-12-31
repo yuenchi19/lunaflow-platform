@@ -13,6 +13,7 @@ interface AdminPurchaseRequest {
     createdAt: string;
     updatedAt: string;
     note: string | null;
+    carrier: string | null;
     scheduledDate: string | null;
     user: {
         name: string | null;
@@ -177,7 +178,10 @@ export default function PurchaseRequestsPage() {
                                         <div className="mt-1 text-xs text-slate-400">{req.user?.email}</div>
                                     </td>
                                     <td className="p-4 text-sm text-slate-600">
-                                        - {/* Carrier not in DB yet */}
+                                        {req.carrier === 'jp' ? "日本郵便" :
+                                            req.carrier === 'ym' ? "ヤマト運輸" :
+                                                req.carrier === 'sg' ? "佐川急便" :
+                                                    req.carrier || "-"}
                                     </td>
                                     <td className="p-4 text-sm text-slate-500 max-w-xs truncate" title={req.note || ""}>
                                         {req.note || "-"}

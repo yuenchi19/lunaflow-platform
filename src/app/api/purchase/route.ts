@@ -1,162 +1,121 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe-server';
-import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
 export async function POST(req: NextRequest) {
     try {
-        // 1. Authenticate User
         const supabase = createClient();
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !authUser) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // 2. Parse Input
         const body = await req.json();
-        const { amount, scheduledDate, note, plan } = body; // plan from hidden field or default
+        const { amount, scheduledDate, note, plan, carrier } = body; // carrier added
 
-        if (!amount) {
-            return NextResponse.json({ error: 'Amount is required.' }, { status: 400 });
-        }
-
-        // 3. Fetch User Profile (Find or Create)
-        let targetUser = await prisma.user.findUnique({
-            where: { email: authUser.email! }
+        const user = await prisma.user.findUnique({
+            where: { email: authUser.email! }, // Use email as strict identifier
         });
 
-        if (!targetUser) {
-            // Auto-create User if missing (Sync Auth -> DB)
-            console.log(`[Purchase] User sync: Creating DB record for ${authUser.email}`);
-            targetUser = await prisma.user.create({
-                data: {
-                    id: authUser.id, // Try to sync ID
-                    email: authUser.email!,
-                    name: authUser.user_metadata?.name || authUser.email!.split('@')[0],
-                    role: 'student',
-                    plan: 'light', // Default
-                }
-            });
+        if (!user) {
+            return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
+        // --- Address Sync Logic (Stripe -> User) ---
+        // If user has no address, try to fetch from Stripe Customer and save to User
+        if (!user.address || !user.zipCode) {
+            // Find customer by email
+            const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+            if (customers.data.length > 0) {
+                const customer = customers.data[0];
+                if (customer.address) {
+                    const newAddress = [customer.address.line1, customer.address.line2, customer.address.city, customer.address.state].filter(Boolean).join(" ");
+                    const newZip = customer.address.postal_code || "";
 
-        // 4. Stripe Customer Logic
-        const customers = await stripe.customers.list({ email: targetUser.email, limit: 1 });
-        let customerId;
-
-        if (customers.data.length > 0) {
-            customerId = customers.data[0].id;
-        } else {
-            const newCustomer = await stripe.customers.create({
-                email: targetUser.email,
-                name: targetUser.name || '',
-                metadata: {
-                    userId: targetUser.id,
-                }
-            });
-            customerId = newCustomer.id;
-        }
-
-        const purchaseAmount = parseInt(amount);
-        let offsetAmount = 0;
-        let invoiceAmount = purchaseAmount;
-        let invoiceId = "";
-
-        // 5. Transaction
-        await prisma.$transaction(async (tx) => {
-            // Re-fetch balance inside tx
-            const balanceResult = await tx.rewardTransaction.aggregate({
-                _sum: { amount: true },
-                where: { userId: targetUser.id }
-            });
-            const availableBalance = balanceResult._sum.amount || 0;
-
-            const shouldUseOffset = targetUser.payoutPreference !== 'bank_transfer';
-
-            if (availableBalance > 0 && shouldUseOffset) {
-                if (availableBalance >= purchaseAmount) {
-                    offsetAmount = purchaseAmount;
-                } else {
-                    offsetAmount = availableBalance;
+                    if (newAddress) {
+                        await prisma.user.update({
+                            where: { id: user.id },
+                            data: {
+                                address: newAddress,
+                                zipCode: newZip
+                            }
+                        });
+                        console.log(`Synced address for user ${user.id} from Stripe.`);
+                    }
                 }
             }
-            invoiceAmount = purchaseAmount - offsetAmount;
+        }
 
-            // Create Purchase Request
-            // Use new fields: scheduledDate, note
-            // Ensure types match Schema (DateTime for scheduledDate)
-            const purchaseReq = await tx.purchaseRequest.create({
-                data: {
-                    userId: targetUser.id,
-                    amount: purchaseAmount,
-                    plan: plan || targetUser.plan || 'standard',
-                    status: 'pending',
-                    // New fields - Cast to any to bypass stale local types if needed
-                    scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
-                    note: note || '',
-                } as any
-            });
+        // Create Purchase Request
+        const purchaseRequest = await prisma.purchaseRequest.create({
+            data: {
+                userId: user.id,
+                amount: typeof amount === 'string' ? parseInt(amount.replace(/[^0-9]/g, '')) : amount,
+                plan: plan || user.plan,
+                status: "pending",
+                note: note,
+                scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
+                carrier: carrier // Save carrier
+            }
+        });
 
-            // Stripe operations
+        // Create Stripe Invoice
+        let invoiceId = null;
+        try {
+            // 1. Get or Create Customer
+            let customerId = "";
+            const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+            if (customers.data.length > 0) {
+                customerId = customers.data[0].id;
+            } else {
+                const newCustomer = await stripe.customers.create({
+                    email: user.email,
+                    name: user.name || "",
+                });
+                customerId = newCustomer.id;
+            }
+
+            // 2. Create Invoice Item
             await stripe.invoiceItems.create({
                 customer: customerId,
-                amount: purchaseAmount,
-                currency: 'jpy',
-                description: `仕入れ希望: ${purchaseReq.plan}プラン - ${note || '備考なし'}`,
+                amount: typeof amount === 'string' ? parseInt(amount.replace(/[^0-9]/g, '')) : amount,
+                currency: "jpy",
+                description: `仕入れ購入申請 (${new Date().toLocaleDateString()}) - ${note || ''}`,
             });
 
-            if (offsetAmount > 0) {
-                await stripe.invoiceItems.create({
-                    customer: customerId,
-                    amount: -offsetAmount,
-                    currency: 'jpy',
-                    description: `アフィリエイト報酬充当`,
-                });
-            }
-
+            // 3. Create Invoice
             const invoice = await stripe.invoices.create({
                 customer: customerId,
                 auto_advance: true, // Auto-finalize
-                collection_method: 'send_invoice',
-                days_until_due: 7,
-                metadata: {
-                    purchaseRequestId: purchaseReq.id // Link back
-                }
+                collection_method: 'send_invoice', // Default to email
+                days_until_due: 7, // 7 days payment terms
+            });
+            invoiceId = invoice.id;
+
+            // Update Request with Invoice ID
+            await prisma.purchaseRequest.update({
+                where: { id: purchaseRequest.id },
+                data: { stripeInvoiceId: invoiceId }
             });
 
-            // The invoice might not be finalized immediately if 'send_invoice', 
-            // but `auto_advance` helps. Often we finalize explicitly to be sure.
-            if (invoice.status !== 'open' && invoice.status !== 'paid') {
+            // Send Invoice Email (optional, Stripe does this if auto_advance is true)
+            if (invoice.status === 'draft') {
                 await stripe.invoices.finalizeInvoice(invoice.id);
             }
 
-            // Update Purchase with Invoice ID
-            await tx.purchaseRequest.update({
-                where: { id: purchaseReq.id },
-                data: { stripeInvoiceId: invoice.id }
-            });
+        } catch (stripeError) {
+            console.error("Stripe Invoice Error:", stripeError);
+            // Continue even if invoice fails, but log it. Request is saved.
+        }
 
-            // Deduct Balance
-            if (offsetAmount > 0) {
-                await tx.rewardTransaction.create({
-                    data: {
-                        userId: targetUser.id,
-                        amount: -offsetAmount,
-                        type: 'offset_purchase',
-                        description: `仕入れ代金充当`,
-                        purchaseRequestId: purchaseReq.id
-                    }
-                });
-            }
-
-            invoiceId = invoice.id;
-        });
-
-        return NextResponse.json({ success: true, invoiceId, offsetAmount });
+        return NextResponse.json({ success: true, purchaseRequest });
 
     } catch (error: any) {
-        console.error('Purchase API Error:', error);
-        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+        console.error("Purchase API Error:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

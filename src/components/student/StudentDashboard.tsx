@@ -43,6 +43,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         amount: "",
         scheduledDate: "",
         note: "",
+        carrier: "",
         plan: user.plan || "standard"
     });
 
@@ -67,8 +68,11 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         else if (user.plan === 'premium') target = 30000;
         setPurchaseTarget(target);
 
+        // Fetch total from API instead of localStorage potentially? For now keep legacy local calc as backup or replace if API available
+        // Ideally we should have an API to get this total. Assuming current legacy behavior is acceptable for display only.
         if (typeof window !== 'undefined') {
             const requests = JSON.parse(localStorage.getItem("mock_purchase_requests") || "[]");
+            // ... (keep existing localStorage read for total calculation for now to minimize disruption, or fetch from server later)
             const currentMonth = new Date().getMonth();
             const currentYear = new Date().getFullYear();
 
@@ -84,6 +88,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     }, [user.plan, isPurchaseModalOpen]);
 
     useEffect(() => {
+        // ... (keep existing lifetime total logic or switch to API)
         if (typeof window !== 'undefined') {
             const requests = JSON.parse(localStorage.getItem("mock_purchase_requests") || "[]");
             const total = requests.reduce((sum: number, req: any) => sum + (parseInt(req.amount) || 0), 0);
@@ -98,7 +103,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         setAffiliateEarnings(earnings);
     }, [user.id]);
 
-    // AI Feedback Notifications and Data
+    // AI Feedback ... (unchanged)
     const [feedbacks, setFeedbacks] = useState<import("@/types").ProgressDetail[]>([]);
     const [showFeedbackToast, setShowFeedbackToast] = useState(false);
 
@@ -108,13 +113,10 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         const completedFeedbacks = allProgress.filter(p => p.feedbackStatus === 'completed');
         setFeedbacks(completedFeedbacks);
 
-        // Check for new feedbacks
         const lastSeen = parseInt(localStorage.getItem(`luna_seen_feedback_count_${user.id}`) || "0");
         if (completedFeedbacks.length > lastSeen) {
             setShowFeedbackToast(true);
-            // Update seen count immediately (or on close) - effectively clearing the header badge
             localStorage.setItem(`luna_seen_feedback_count_${user.id}`, completedFeedbacks.length.toString());
-            // Force header update via custom event or just let polling handle it (Header polls independently)
         }
     }, [user.id]);
 
@@ -131,9 +133,11 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
             });
             const data = await response.json();
             if (response.ok) {
+                // Keep local storage sync for client-side display consistency for now
                 const requests = JSON.parse(localStorage.getItem("mock_purchase_requests") || "[]");
                 requests.push({ ...purchaseForm, id: Date.now().toString(), status: "pending", date: new Date().toLocaleString() });
                 localStorage.setItem("mock_purchase_requests", JSON.stringify(requests));
+
                 alert("仕入れ希望を受け付けました。ご登録のメールアドレスに請求書を送付いたしました。");
                 setIsPurchaseModalOpen(false);
             } else {
@@ -153,19 +157,38 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     };
 
     const handleProfileSave = async () => {
-        // Here we would typically call an API to update the DB
-        // For now, update local state
-        const updatedUser = {
-            ...user,
-            name: newName,
-            email: email,
-            address: address,
-            zipCode: zipCode,
-            communityNickname: communityNickname
-        };
-        setUser(updatedUser);
-        setIsProfileModalOpen(false);
-        alert("プロフィール情報を更新しました（デモ）");
+        try {
+            const res = await fetch('/api/user/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: newName,
+                    email: email, // Email update might be restricted by Supabase but sending anyway
+                    address: address,
+                    zipCode: zipCode,
+                    communityNickname: communityNickname
+                }),
+            });
+
+            if (res.ok) {
+                const updatedUser = {
+                    ...user,
+                    name: newName,
+                    email: email,
+                    address: address,
+                    zipCode: zipCode,
+                    communityNickname: communityNickname
+                };
+                setUser(updatedUser);
+                setIsProfileModalOpen(false);
+                alert("プロフィール情報を更新しました。");
+            } else {
+                alert("プロフィールの更新に失敗しました。");
+            }
+        } catch (error) {
+            console.error("Profile save error:", error);
+            alert("通信エラーが発生しました。");
+        }
     };
 
     const handlePasswordChange = async () => {
