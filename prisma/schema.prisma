@@ -1,74 +1,53 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = "postgresql://postgres:UverLove2026@db.fksvpyrvrzxmhhvetqrx.supabase.co:5432/postgres" // HARDCODED: Emergency Fix
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  role          String    @default("student") // student, admin, staff
-  plan          String    @default("light")   // light, standard, premium
-  
-  affiliateCode String?   @unique
-  referredBy    String?   // Code of the referrer
-  
-  communityNickname String?
-  zipCode       String?
-  address       String?
-
-  payoutPreference String @default("offset_purchase") // offset_purchase, bank_transfer
-
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  purchaseRequests  PurchaseRequest[]
+  id                 String              @id @default(cuid())
+  name               String?
+  email              String              @unique
+  role               String              @default("student")
+  plan               String              @default("light")
+  affiliateCode      String?             @unique
+  referredBy         String?
+  communityNickname  String?
+  zipCode            String?
+  address            String?
+  payoutPreference   String              @default("offset_purchase")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  purchaseRequests   PurchaseRequest[]
   rewardTransactions RewardTransaction[]
 }
 
 model PurchaseRequest {
-  id        String   @id @default(cuid())
-  userId    String
-  amount    Int
-  plan      String
-  status    String   @default("pending") // pending, paid, cancelled
-  
-  // Stripe Invoice ID
-  stripeInvoiceId String?
-
-  // New Fields for Purchase Form
-  scheduledDate DateTime?
-  note          String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user      User     @relation(fields: [userId], references: [id])
-  
-  // Relation to transactions
+  id                 String              @id @default(cuid())
+  userId             String
+  amount             Int
+  plan               String
+  status             String              @default("pending")
+  stripeInvoiceId    String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  note               String?
+  scheduledDate      DateTime?
+  user               User                @relation(fields: [userId], references: [id])
   rewardTransactions RewardTransaction[]
 }
 
 model RewardTransaction {
-  id        String   @id @default(cuid())
-  userId    String
-  amount    Int      // Positive = Earning, Negative = Usage/Payout
-  type      String   // earning, offset_purchase, bank_transfer, bank_fee
-  
-  description String?
-  
-  // Link to a purchase request if this tx is an offset usage
+  id                String           @id @default(cuid())
+  userId            String
+  amount            Int
+  type              String
+  description       String?
   purchaseRequestId String?
-  
-  createdAt DateTime @default(now())
-  
-  user      User     @relation(fields: [userId], references: [id])
-  purchaseRequest PurchaseRequest? @relation(fields: [purchaseRequestId], references: [id])
+  createdAt         DateTime         @default(now())
+  purchaseRequest   PurchaseRequest? @relation(fields: [purchaseRequestId], references: [id])
+  user              User             @relation(fields: [userId], references: [id])
 }
