@@ -595,6 +595,29 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                         </p>
                         <form onSubmit={handlePurchaseSubmit} className="space-y-6">
 
+                            {/* Carrier Selection */}
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 block mb-2">配送業者 (Carrier)</label>
+                                <select
+                                    name="carrier"
+                                    value={purchaseForm.carrier}
+                                    onChange={handlePurchaseChange}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800"
+                                    required
+                                >
+                                    <option value="">選択してください</option>
+                                    <option value="jp">日本郵便</option>
+                                    <option value="ym">ヤマト運輸</option>
+                                    <option value="sg">佐川急便</option>
+                                </select>
+                                <div className="mt-2 text-right">
+                                    <Link href="/shipping-costs" target="_blank" className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center justify-end gap-1">
+                                        <ExternalLink className="w-3 h-3" />
+                                        送料はこちらで確認
+                                    </Link>
+                                </div>
+                            </div>
+
                             {/* Amount */}
                             <div>
                                 <label className="text-xs font-bold text-slate-500 block mb-2">希望購入金額 (円)</label>
