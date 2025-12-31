@@ -5,7 +5,12 @@ export async function GET() {
     try {
         // Fetch students using Prisma to bypass RLS and ensures generic visibility
         const users = await prisma.user.findMany({
-            where: { role: 'student' },
+            where: {
+                OR: [
+                    { role: 'student' },
+                    { plan: { in: ['standard', 'premium'] } }
+                ]
+            },
             include: {
                 purchaseRequests: true,
             },
