@@ -51,3 +51,13 @@ model RewardTransaction {
   purchaseRequest   PurchaseRequest? @relation(fields: [purchaseRequestId], references: [id])
   user              User             @relation(fields: [userId], references: [id])
 }
+
+model SentEmail {
+  id             String   @id @default(cuid())
+  recipientName  String
+  recipientEmail String
+  subject        String
+  content        String
+  sentAt         DateTime @default(now())
+  status         String
+}
