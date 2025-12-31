@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
-import { MOCK_USERS, getStudentPayments, getStudentProgressDetail, getUserById, savePayment, updateUser } from '@/lib/data';
+import { MOCK_USERS, savePayment, updateUser } from '@/lib/data';
 import { calculateStudentStatus } from '@/lib/utils';
 import { User, Payment, ProgressDetail } from '@/types';
 
@@ -24,24 +24,35 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
     });
 
     useEffect(() => {
-        // Mock fetch
-        const found = getUserById(params.id);
-        if (found) {
-            setStudent(found);
-            setEditForm({
-                name: found.name,
-                email: found.email,
-                communityNickname: found.communityNickname || "",
-                plan: found.plan
-            });
+        const fetchStudentData = async () => {
+            try {
+                const res = await fetch(`/api/admin/students/${params.id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setStudent(data.user);
+                    setEditForm({
+                        name: data.user.name || "",
+                        email: data.user.email || "",
+                        communityNickname: data.user.communityNickname || "",
+                        plan: data.user.plan || "light"
+                    });
 
-            // Fetch Payments & Sort DESC by date
-            const allPayments = getStudentPayments(found.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            // Requirement: Limit to latest 3 succeeded/valid history items for display
-            setPayments(allPayments.filter(p => p.status === 'succeeded').slice(0, 3));
+                    // Payments
+                    setPayments(data.payments || []);
 
-            // Fetch Progress
-            setProgressLogs(getStudentProgressDetail(found.id));
+                    // Progress
+                    setProgressLogs(data.progressLogs || []);
+                } else {
+                    console.error("Failed to fetch student");
+                    // Optionally set error state
+                }
+            } catch (error) {
+                console.error("Error fetching student details:", error);
+            }
+        };
+
+        if (params.id) {
+            fetchStudentData();
         }
     }, [params.id]);
 
@@ -61,11 +72,9 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
 
     const handleDownloadCSV = () => {
         if (!student) return;
-        // Re-fetch full list for CSV so the download is complete
-        const fullPayments = getStudentPayments(student.id);
-
+        // Use current loaded payments for CSV
         const headers = ["日付", "金額", "方法", "ステータス"];
-        const rows = fullPayments.map(p => [
+        const rows = payments.map(p => [
             p.date,
             p.amount.toString(),
             p.method,
@@ -121,13 +130,21 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
         updateUser(updatedUser);
         setStudent(updatedUser); // Update local state immediately
 
-        // Refresh Payments
-        const allPayments = getStudentPayments(student.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setPayments(allPayments.filter(p => p.status === 'succeeded').slice(0, 3)); // Refresh list
+        // Refresh Payments (Local Update)
+        const newPaymentObj: Payment = {
+            id: payment.id,
+            userId: payment.userId,
+            date: payment.date,
+            amount: payment.amount,
+            method: payment.method,
+            status: payment.status
+        };
+        const updatedPayments = [newPaymentObj, ...payments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setPayments(updatedPayments.slice(0, 3));
 
         setIsAddingPayment(false);
         setNewPayment({ ...newPayment, amount: "" });
-        alert("購入履歴を追加しました");
+        alert("購入履歴を追加しました (サーバー非同期/ローカルのみ反映)");
     };
 
     if (!student) return <div className={styles.loading}>読み込み中...</div>;
