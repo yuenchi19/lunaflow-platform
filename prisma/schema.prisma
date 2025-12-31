@@ -43,6 +43,10 @@ model PurchaseRequest {
   // Stripe Invoice ID
   stripeInvoiceId String?
 
+  // New Fields for Purchase Form
+  scheduledDate DateTime?
+  note          String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

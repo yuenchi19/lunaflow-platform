@@ -40,17 +40,10 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     const [registrationDate, setRegistrationDate] = useState<Date>(new Date());
 
     const [purchaseForm, setPurchaseForm] = useState({
-        email: "",
-        name: "",
-        postalCode: "",
-        prefecture: "",
-        address: "",
-        phone: "",
-        plan: "Standard",
         amount: "",
-        carrier: "郵便局",
-        payment: "銀行振込",
-        note: ""
+        scheduledDate: "",
+        note: "",
+        plan: user.plan || "standard"
     });
 
     const [currentMonthPurchaseTotal, setCurrentMonthPurchaseTotal] = useState(0);
@@ -571,40 +564,58 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
             {/* keeping other modals unchanged but included in logic - truncated for brevity but would be included in real overwrite */}
             {isPurchaseModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-2xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+                    <div className="bg-white rounded-2xl w-full max-w-lg p-8 shadow-2xl">
                         <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">仕入れ希望フォーム</h3>
+                        <p className="text-xs text-slate-500 mb-6">
+                            ご登録済みの会員情報（お名前、住所等）を使用して申請します。<br />
+                            希望金額、決済予定日、備考を入力してください。
+                        </p>
                         <form onSubmit={handlePurchaseSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 block mb-2">メールアドレス</label>
-                                    <input type="email" name="email" value={purchaseForm.email} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" required />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 block mb-2">お名前</label>
-                                    <input type="text" name="name" value={purchaseForm.name} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" required />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 block mb-2">電話番号</label>
-                                    <input type="tel" name="phone" value={purchaseForm.phone} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" required />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 block mb-2">郵便番号</label>
-                                    <input type="text" name="postalCode" value={purchaseForm.postalCode} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" required />
-                                </div>
-                            </div>
+
+                            {/* Amount */}
                             <div>
-                                <label className="text-xs font-bold text-slate-500 block mb-2">住所</label>
-                                <input type="text" name="address" value={purchaseForm.address} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" required />
+                                <label className="text-xs font-bold text-slate-500 block mb-2">希望購入金額 (円)</label>
+                                <input
+                                    type="number"
+                                    name="amount"
+                                    value={purchaseForm.amount}
+                                    onChange={handlePurchaseChange}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-lg font-bold"
+                                    placeholder="例: 300000"
+                                    required
+                                />
                             </div>
+
+                            {/* Scheduled Date */}
                             <div>
-                                <label className="text-xs font-bold text-slate-500 block mb-2">希望購入金額</label>
-                                <input type="text" name="amount" value={purchaseForm.amount} onChange={handlePurchaseChange} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" placeholder="例: 300000" required />
+                                <label className="text-xs font-bold text-slate-500 block mb-2">決済予定日</label>
+                                <input
+                                    type="date"
+                                    name="scheduledDate"
+                                    value={purchaseForm.scheduledDate}
+                                    onChange={handlePurchaseChange}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2"
+                                    required
+                                />
                             </div>
+
+                            {/* Note */}
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 block mb-2">備考</label>
+                                <textarea
+                                    name="note"
+                                    value={purchaseForm.note}
+                                    onChange={handlePurchaseChange}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 min-h-[100px]"
+                                    placeholder="管理者への連絡事項があればご記入ください"
+                                />
+                            </div>
+
                             <div className="flex gap-4 mt-8 pt-4 border-t border-slate-100">
                                 <button type="button" onClick={() => setIsPurchaseModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 font-bold rounded-lg hover:bg-slate-200 transition-colors">キャンセル</button>
-                                <button type="submit" className="flex-1 py-3 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors">送信</button>
+                                <button type="submit" disabled={isSubmitting} className="flex-1 py-3 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50">
+                                    {isSubmitting ? '送信中...' : '送信'}
+                                </button>
                             </div>
                         </form>
                     </div>
