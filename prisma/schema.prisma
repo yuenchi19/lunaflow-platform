@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = "postgresql://postgres:UverLove2026@db.fksvpyrvrzxmhhvetqrx.supabase.co:5432/postgres" // HARDCODED: Emergency Fix
+  url      = "postgresql://postgres:UverLove2026@db.fksvpyrvrzxmhhvetqrx.supabase.co:6543/postgres?pgbouncer=true" // HARDCODED: Emergency Fix (Pooler)
 }
 
 model User {
