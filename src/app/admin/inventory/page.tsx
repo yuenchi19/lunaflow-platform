@@ -11,8 +11,8 @@ interface InventoryItem {
     category?: string;
     costPrice: number;
     images: string[];
-    status: 'IN_STOCK' | 'ASSIGNED' | 'SOLD';
-    assignedToUser?: { name: string };
+    status: 'IN_STOCK' | 'ASSIGNED' | 'SOLD' | 'SHIPPED' | 'RETURNED';
+    assignedToUser?: { id: string; name: string; email?: string };
     createdAt: string;
 }
 
@@ -20,6 +20,68 @@ export default function AdminInventoryPage() {
     const [items, setItems] = useState<InventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
+
+    const [modalOpen, setModalOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<{ id: string, name: string, email: string }[]>([]);
+    const [selectedUser, setSelectedUser] = useState<{ id: string, name: string } | null>(null);
+    const [assignNote, setAssignNote] = useState('');
+
+    // Status Actions
+    const handleOpenAssignModal = (item: InventoryItem) => {
+        setSelectedItem(item);
+        setSearchQuery('');
+        setSearchResults([]);
+        setSelectedUser(null);
+        setAssignNote(item.status === 'SHIPPED' ? 'Processing Return' : '');
+        setModalOpen(true);
+    };
+
+    const handleSearchUsers = async (q: string) => {
+        setSearchQuery(q);
+        if (q.length < 2) {
+            setSearchResults([]);
+            return;
+        }
+        try {
+            const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(q)}`);
+            if (res.ok) {
+                const data = await res.json();
+                setSearchResults(data);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleUpdateStatus = async (newStatus: string, userId?: string) => {
+        if (!selectedItem) return;
+
+        try {
+            const res = await fetch(`/api/admin/inventory/${selectedItem.id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: newStatus,
+                    assignedToUserId: userId || null,
+                    note: assignNote
+                })
+            });
+
+            if (res.ok) {
+                alert("Updated successfully");
+                setModalOpen(false);
+                fetchItems(); // Refresh
+            } else {
+                const err = await res.json();
+                alert("Error: " + err.error);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Failed to update");
+        }
+    };
 
     useEffect(() => {
         fetchItems();
@@ -43,11 +105,12 @@ export default function AdminInventoryPage() {
         if (filter === 'all') return true;
         if (filter === 'in_stock') return item.status === 'IN_STOCK';
         if (filter === 'assigned') return item.status === 'ASSIGNED';
+        if (filter === 'shipped') return item.status === 'SHIPPED';
         return true;
     });
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
+        <div className="p-8 max-w-7xl mx-auto min-h-screen">
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
@@ -68,24 +131,18 @@ export default function AdminInventoryPage() {
             </div>
 
             {/* Filters */}
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex gap-4">
-                <button
-                    onClick={() => setFilter('all')}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${filter === 'all' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                >
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex gap-4 overflow-x-auto">
+                <button onClick={() => setFilter('all')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${filter === 'all' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                     すべて ({items.length})
                 </button>
-                <button
-                    onClick={() => setFilter('in_stock')}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${filter === 'in_stock' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
-                >
+                <button onClick={() => setFilter('in_stock')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${filter === 'in_stock' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>
                     在庫あり ({items.filter(i => i.status === 'IN_STOCK').length})
                 </button>
-                <button
-                    onClick={() => setFilter('assigned')}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${filter === 'assigned' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}
-                >
+                <button onClick={() => setFilter('assigned')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${filter === 'assigned' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}>
                     割当済み ({items.filter(i => i.status === 'ASSIGNED').length})
+                </button>
+                <button onClick={() => setFilter('shipped')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${filter === 'shipped' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'}`}>
+                    発送済み ({items.filter(i => i.status === 'SHIPPED').length})
                 </button>
             </div>
 
@@ -131,10 +188,12 @@ export default function AdminInventoryPage() {
                                     <td className="px-6 py-4 text-center">
                                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${item.status === 'IN_STOCK' ? 'bg-emerald-100 text-emerald-700' :
                                             item.status === 'ASSIGNED' ? 'bg-amber-100 text-amber-700' :
-                                                'bg-slate-100 text-slate-700'
+                                                item.status === 'SHIPPED' ? 'bg-indigo-100 text-indigo-700' :
+                                                    'bg-slate-100 text-slate-700'
                                             }`}>
                                             {item.status === 'IN_STOCK' ? '在庫あり' :
-                                                item.status === 'ASSIGNED' ? '割当済' : item.status}
+                                                item.status === 'ASSIGNED' ? '割当済' :
+                                                    item.status === 'SHIPPED' ? '発送済' : item.status}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
@@ -153,12 +212,40 @@ export default function AdminInventoryPage() {
                                         {new Date(item.createdAt).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                        <Link
-                                            href={`/admin/inventory/${item.id}`}
-                                            className="text-indigo-600 hover:text-indigo-800 text-xs font-bold border border-indigo-200 px-2 py-1 rounded inline-block"
-                                        >
-                                            詳細
-                                        </Link>
+                                        <div className="flex items-center justify-end gap-2">
+                                            {/* Action Button */}
+                                            {item.status === 'IN_STOCK' && (
+                                                <button
+                                                    onClick={() => handleOpenAssignModal(item)}
+                                                    className="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-emerald-700 whitespace-nowrap"
+                                                >
+                                                    割り当て
+                                                </button>
+                                            )}
+                                            {item.status === 'ASSIGNED' && (
+                                                <button
+                                                    onClick={() => handleOpenAssignModal(item)}
+                                                    className="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1.5 rounded hover:bg-slate-200 whitespace-nowrap"
+                                                >
+                                                    状態変更
+                                                </button>
+                                            )}
+                                            {item.status === 'SHIPPED' && (
+                                                <button
+                                                    onClick={() => handleOpenAssignModal(item)}
+                                                    className="bg-rose-50 text-rose-600 text-xs font-bold px-3 py-1.5 rounded hover:bg-rose-100 whitespace-nowrap"
+                                                >
+                                                    返品処理
+                                                </button>
+                                            )}
+
+                                            <Link
+                                                href={`/admin/inventory/${item.id}`}
+                                                className="text-indigo-600 hover:text-indigo-800 text-xs font-bold border border-indigo-200 px-2.5 py-1.5 rounded whitespace-nowrap"
+                                            >
+                                                詳細
+                                            </Link>
+                                        </div>
                                     </td>
                                 </tr>
                             ))
@@ -166,6 +253,136 @@ export default function AdminInventoryPage() {
                     </tbody>
                 </table>
             </div>
+
+            {/* Assignment Modal */}
+            {modalOpen && selectedItem && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <h3 className="font-bold text-slate-800">在庫の操作: {selectedItem.brand}</h3>
+                            <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <span className="text-xl">×</span>
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+
+                            {/* Scenario 1: IN_STOCK - User Selection */}
+                            {(selectedItem.status === 'IN_STOCK' || (selectedItem.status === 'ASSIGNED' && !selectedItem.assignedToUser)) && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">割り当てる生徒を検索</label>
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                value={searchQuery}
+                                                onChange={e => handleSearchUsers(e.target.value)}
+                                                placeholder="名前 または メールアドレス"
+                                                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                            />
+                                        </div>
+                                        {searchResults.length > 0 && (
+                                            <div className="mt-2 border border-slate-100 rounded-lg max-h-40 overflow-y-auto shadow-sm">
+                                                {searchResults.map(u => (
+                                                    <button
+                                                        key={u.id}
+                                                        onClick={() => { setSelectedUser(u); setSearchQuery(u.name); setSearchResults([]); }}
+                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 flex justify-between items-center group"
+                                                    >
+                                                        <span className="font-bold text-slate-700">{u.name}</span>
+                                                        <span className="text-xs text-slate-400 group-hover:text-indigo-400">{u.email}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {selectedUser && (
+                                        <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-lg flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-xs">{selectedUser.name[0]}</div>
+                                            <div className="flex-1">
+                                                <div className="text-sm font-bold text-indigo-900">{selectedUser.name}</div>
+                                                <div className="text-xs text-indigo-600">に割り当てます</div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <button
+                                        disabled={!selectedUser}
+                                        onClick={() => selectedUser && handleUpdateStatus('ASSIGNED', selectedUser.id)}
+                                        className="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        割り当てを確定する
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Scenario 2: ASSIGNED - Change Status or User */}
+                            {selectedItem.status === 'ASSIGNED' && selectedItem.assignedToUser && (
+                                <div className="space-y-4">
+                                    <div className="bg-slate-50 p-4 rounded-lg flex items-center gap-3 mb-4">
+                                        <span className="text-2xl">📦</span>
+                                        <div>
+                                            <div className="text-xs text-slate-500 font-bold uppercase">現在の割当</div>
+                                            <div className="font-bold text-slate-800">{selectedItem.assignedToUser.name}</div>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => handleUpdateStatus('SHIPPED')}
+                                        className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2"
+                                    >
+                                        <span>🚚</span> 発送済みにする
+                                    </button>
+
+                                    <div className="relative flex py-2 items-center">
+                                        <div className="flex-grow border-t border-slate-200"></div>
+                                        <span className="flex-shrink-0 mx-4 text-slate-300 text-xs font-bold">OR</span>
+                                        <div className="flex-grow border-t border-slate-200"></div>
+                                    </div>
+
+                                    {/* Reassign (Simple version: Cancel assignment first) */}
+                                    <button
+                                        onClick={() => handleUpdateStatus('IN_STOCK')}
+                                        className="w-full bg-white border border-slate-200 text-slate-600 font-bold py-2 rounded-lg hover:bg-slate-50 text-sm"
+                                    >
+                                        割当を解除する (在庫に戻す)
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Scenario 3: SHIPPED - Return Only */}
+                            {selectedItem.status === 'SHIPPED' && (
+                                <div className="space-y-4">
+                                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-lg">
+                                        <h4 className="font-bold text-rose-800 text-sm mb-1">返品・キャンセル処理</h4>
+                                        <p className="text-xs text-rose-600 mb-3">
+                                            発送済み商品の割当変更はできません。一度「返品」または「在庫」に戻す必要があります。
+                                        </p>
+
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleUpdateStatus('RETURNED')}
+                                                className="flex-1 bg-rose-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-rose-700"
+                                            >
+                                                返品として処理
+                                            </button>
+                                            <button
+                                                onClick={() => handleUpdateStatus('IN_STOCK')}
+                                                className="flex-1 bg-white border border-rose-200 text-rose-600 font-bold py-2 rounded-lg text-sm hover:bg-rose-50"
+                                            >
+                                                在庫に戻す
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

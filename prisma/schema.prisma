@@ -32,8 +32,10 @@ model User {
 enum ItemStatus {
   IN_STOCK
   ASSIGNED
+  SHIPPED
   RECEIVED
   SOLD
+  RETURNED
 }
 
 model InventoryItem {
