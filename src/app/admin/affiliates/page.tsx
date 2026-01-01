@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { getAllAffiliateStats } from "@/lib/data";
+import { useState, useEffect } from "react";
+// import { getAllAffiliateStats } from "@/lib/data";
 import { User, AffiliateEarnings } from "@/types";
 
 interface AffiliateUser extends User {
@@ -9,15 +9,35 @@ interface AffiliateUser extends User {
 }
 
 export default function AdminAffiliatesPage() {
-    const { affiliates: initialAffiliates, totalPendingPayout: initialTotal } = getAllAffiliateStats();
+    const [affiliates, setAffiliates] = useState<AffiliateUser[]>([]);
+    const [totalPayout, setTotalPayout] = useState(0);
 
-    // For now we just use the initial load, state is enough for a quick mock interaction
-    const [affiliates, setAffiliates] = useState<AffiliateUser[]>(initialAffiliates);
-    const [totalPayout, setTotalPayout] = useState(initialTotal);
+    const [loading, setLoading] = useState(true);
 
-    const handleMarkAsPaid = (userId: string) => {
-        if (confirm("このユーザーの未払い分を支払い済みにしますか？")) {
-            // Mock logic: allow UI update to show 0
+    useEffect(() => {
+        const fetchAffiliates = async () => {
+            try {
+                const res = await fetch('/api/admin/affiliates');
+                if (res.ok) {
+                    const data = await res.json();
+                    setAffiliates(data);
+
+                    // Calculate total payout from data
+                    const total = data.reduce((sum: number, u: AffiliateUser) => sum + u.earnings.monthlyEarnings, 0);
+                    setTotalPayout(total);
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAffiliates();
+    }, []);
+
+    const handleMarkAsPaid = async (userId: string) => {
+        if (confirm("このユーザーの未払い分を支払い済みにしますか？（未実装の実処理 - UIのみ更新）")) {
+            // NOTE: In real world, we should call an API to create a 'Payout' RewardTransaction
             setAffiliates(prev => prev.map(a => {
                 if (a.id === userId) {
                     return {
@@ -28,15 +48,15 @@ export default function AdminAffiliatesPage() {
                 return a;
             }));
 
-            // Re-calc total
-            // Since we can't easily reduce state inside the map immediately without complex logic, 
-            // let's just cheat for the mock and re-calculate from the new state in next render or just subtract locally
-            const user = affiliates.find(u => u.id === userId);
-            if (user) {
-                setTotalPayout(prev => prev - user.earnings.monthlyEarnings);
-            }
+            // Re-calc total local
+            setTotalPayout(prev => {
+                const user = affiliates.find(u => u.id === userId);
+                return user ? prev - user.earnings.monthlyEarnings : prev;
+            });
         }
     };
+
+    if (loading) return <div className="p-8">読み込み中...</div>;
 
     return (
         <div className="p-8 bg-[#FDFCFB] min-h-screen">

@@ -19,10 +19,68 @@ model User {
   zipCode            String?
   address            String?
   payoutPreference   String              @default("offset_purchase")
+  isLedgerEnabled    Boolean             @default(false)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   purchaseRequests   PurchaseRequest[]
   rewardTransactions RewardTransaction[]
+  ledgerEntries      LedgerEntry[]
+  inventoryAssignments InventoryItem[]
+}
+
+enum ItemStatus {
+  IN_STOCK
+  ASSIGNED
+  RECEIVED
+  SOLD
+}
+
+model InventoryItem {
+  id              String   @id @default(cuid())
+  adminId         String   // The admin who registered it
+  
+  brand           String
+  name            String?
+  category        String?
+  costPrice       Int
+  images          String[]
+  
+  status          ItemStatus @default(IN_STOCK)
+  
+  // Assignment
+  assignedToUser   User?   @relation(fields: [assignedToUserId], references: [id])
+  assignedToUserId String?
+  
+  purchaseRequest   PurchaseRequest? @relation(fields: [purchaseRequestId], references: [id])
+  purchaseRequestId String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model LedgerEntry {
+  id              String   @id @default(cuid())
+  user            User     @relation(fields: [userId], references: [id])
+  userId          String
+  
+  originItemId    String?  // Link to InventoryItem.id
+  
+  brand           String
+  purchaseDate    DateTime
+  purchasePrice   Int
+  images          String[]
+  
+  // Sales Data
+  sellDate        DateTime?
+  sellPrice       Int?
+  shippingCost    Int?
+  platformFee     Int?
+  profit          Int?
+  
+  status          ItemStatus @default(ASSIGNED)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model PurchaseRequest {
@@ -39,6 +97,7 @@ model PurchaseRequest {
   scheduledDate      DateTime?
   user               User                @relation(fields: [userId], references: [id])
   rewardTransactions RewardTransaction[]
+  inventoryItems     InventoryItem[]
 }
 
 model RewardTransaction {

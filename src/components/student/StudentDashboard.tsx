@@ -7,6 +7,7 @@ import { MOCK_USERS, MOCK_COURSES, getAnnouncements, getAffiliateEarnings, getSt
 import { User as UserIcon, Bell, ExternalLink, Book, LogOut, Settings, PlayCircle, Clock, TrendingUp, Lock, MessageSquare, X } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import LockOverlay from "../LockOverlay";
 
 interface StudentDashboardProps {
     initialUser?: User | null;
@@ -49,6 +50,24 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
     const [currentMonthPurchaseTotal, setCurrentMonthPurchaseTotal] = useState(0);
     const [purchaseTarget, setPurchaseTarget] = useState(0);
+
+    const [rewardsBalance, setRewardsBalance] = useState(0);
+    const [useReward, setUseReward] = useState(false);
+
+    useEffect(() => {
+        const fetchRewards = async () => {
+            try {
+                const res = await fetch('/api/user/rewards');
+                if (res.ok) {
+                    const data = await res.json();
+                    setRewardsBalance(data.balance || 0);
+                }
+            } catch (e) {
+                console.error("Failed to fetch rewards", e);
+            }
+        };
+        fetchRewards();
+    }, [user.id]);
 
     // Initialize State from User Prop or Storage
     useEffect(() => {
@@ -103,7 +122,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         setAffiliateEarnings(earnings);
     }, [user.id]);
 
-    // AI Feedback ... (unchanged)
+    // AI Feedback
     const [feedbacks, setFeedbacks] = useState<import("@/types").ProgressDetail[]>([]);
     const [showFeedbackToast, setShowFeedbackToast] = useState(false);
 
@@ -126,10 +145,15 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         e.preventDefault();
         setIsSubmitting(true);
         try {
+            const bodyData = {
+                ...purchaseForm,
+                useReward: useReward // Added flag
+            };
+
             const response = await fetch('/api/purchase', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(purchaseForm),
+                body: JSON.stringify(bodyData),
             });
             const data = await response.json();
             if (response.ok) {
@@ -140,6 +164,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
                 alert("仕入れ希望を受け付けました。ご登録のメールアドレスに請求書を送付いたしました。");
                 setIsPurchaseModalOpen(false);
+                setUseReward(false); // Reset
             } else {
                 alert(`エラーが発生しました: ${data.error}`);
             }
@@ -237,40 +262,42 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     );
 
     const renderPurchaseTracker = () => (
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 shadow-sm p-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-5">
-                <TrendingUp className="w-24 h-24 text-indigo-900" />
-            </div>
-            <h3 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
-                <span className="bg-indigo-100 p-1 rounded-md text-indigo-600">📊</span>
-                今月のおまかせ仕入れ状況
-            </h3>
-            <div className="relative z-10 space-y-4">
-                <div>
-                    <div className="flex justify-between text-xs font-bold text-indigo-800 mb-1">
-                        <span>今月の目標</span>
-                        <span>{Math.round((currentMonthPurchaseTotal / (purchaseTarget || 1)) * 100)}% 達成</span>
-                    </div>
-                    <div className="w-full bg-white h-2.5 rounded-full overflow-hidden border border-indigo-100">
-                        <div
-                            className="bg-indigo-500 h-full rounded-full transition-all duration-1000"
-                            style={{ width: `${Math.min((currentMonthPurchaseTotal / (purchaseTarget || 1)) * 100, 100)}%` }}
-                        ></div>
-                    </div>
-                    <div className="flex justify-between text-[10px] text-slate-500 mt-1">
-                        <span>現在: ¥{currentMonthPurchaseTotal.toLocaleString()}</span>
-                        <span>目標: ¥{purchaseTarget.toLocaleString()}</span>
-                    </div>
+        <LockOverlay isLocked={!user.isLedgerEnabled} title="仕入れ機能はロックされています" message="規定のカリキュラムを完了し、管理者承認を受けると利用可能になります。">
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 shadow-sm p-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-5">
+                    <TrendingUp className="w-24 h-24 text-indigo-900" />
                 </div>
-                <button
-                    onClick={() => setIsPurchaseModalOpen(true)}
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
-                >
-                    <ExternalLink className="w-4 h-4" />
-                    仕入れ希望フォーム
-                </button>
+                <h3 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
+                    <span className="bg-indigo-100 p-1 rounded-md text-indigo-600">📊</span>
+                    今月のおまかせ仕入れ状況
+                </h3>
+                <div className="relative z-10 space-y-4">
+                    <div>
+                        <div className="flex justify-between text-xs font-bold text-indigo-800 mb-1">
+                            <span>今月の目標</span>
+                            <span>{Math.round((currentMonthPurchaseTotal / (purchaseTarget || 1)) * 100)}% 達成</span>
+                        </div>
+                        <div className="w-full bg-white h-2.5 rounded-full overflow-hidden border border-indigo-100">
+                            <div
+                                className="bg-indigo-500 h-full rounded-full transition-all duration-1000"
+                                style={{ width: `${Math.min((currentMonthPurchaseTotal / (purchaseTarget || 1)) * 100, 100)}%` }}
+                            ></div>
+                        </div>
+                        <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                            <span>現在: ¥{currentMonthPurchaseTotal.toLocaleString()}</span>
+                            <span>目標: ¥{purchaseTarget.toLocaleString()}</span>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setIsPurchaseModalOpen(true)}
+                        className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                    >
+                        <ExternalLink className="w-4 h-4" />
+                        仕入れ希望フォーム
+                    </button>
+                </div>
             </div>
-        </div>
+        </LockOverlay>
     );
 
     const renderAffiliateCard = () => (
@@ -317,6 +344,35 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 </div>
             )}
         </div>
+    );
+
+    const renderLedgerWidget = () => (
+        <LockOverlay isLocked={!user.isLedgerEnabled} title="デジタル台帳はロックされています" message="管理者による機能開放をお待ちください。">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                        <span className="bg-emerald-100 text-emerald-600 p-1.5 rounded-lg"><Book className="w-4 h-4" /></span>
+                        デジタル商品管理台帳 (在庫/売上)
+                    </h3>
+                    <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-full">Coming Soon</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="bg-slate-50 p-3 rounded-lg text-center">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">在庫数</p>
+                        <p className="text-lg font-bold text-slate-700">-</p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-lg text-center">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">今月の利益</p>
+                        <p className="text-lg font-bold text-emerald-600">-</p>
+                    </div>
+                </div>
+
+                <button className="w-full py-2 bg-white border border-slate-200 text-slate-500 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors" disabled>
+                    台帳を開く
+                </button>
+            </div>
+        </LockOverlay>
     );
 
     const renderFeedbacks = () => {
@@ -467,6 +523,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                     {/* Left Sidebar */}
                     <div className="lg:col-span-3 space-y-8">
                         {renderProfileCard()}
+                        {renderLedgerWidget()}
                         {renderPurchaseTracker()}
                         {renderAffiliateCard()}
                         {renderQuickMenu()}

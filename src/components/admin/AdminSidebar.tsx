@@ -30,6 +30,7 @@ export default function AdminSidebar() {
                 { label: "スタッフ", href: "/admin/staff", icon: "👥" },
                 { label: "受講生", href: "/admin/students", icon: "🎓" },
                 { label: "アフィリエイト", href: "/admin/affiliates", icon: "🤝" },
+                { label: "在庫管理 (Master)", href: "/admin/inventory", icon: "👜" },
                 { label: "仕入れ希望", href: "/admin/purchase-requests", icon: "📦" },
                 { label: "感想", href: "/admin/feedback", icon: "💬" },
                 { label: "お知らせ", href: "/admin/news", icon: "📢" },

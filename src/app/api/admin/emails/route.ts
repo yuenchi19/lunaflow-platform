@@ -1,34 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
+import { createServerClient } from '@supabase/ssr';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-    try {
-        const supabase = createClient();
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    // Manual Supabase Client creation to avoid build-time "cookies()" error
+    let response = NextResponse.next({ request: { headers: req.headers } });
 
-        if (authError || !authUser) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() {
+                    return req.cookies.getAll();
+                },
+                setAll(cookiesToSet) {
+                    cookiesToSet.forEach(({ name, value, options }) => req.cookies.set(name, value));
+                    cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+                },
+            },
         }
+    );
 
-        // Ideally check for admin role here as well
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
-        const emails = await prisma.sentEmail.findMany({
-            orderBy: {
-                sentAt: 'desc'
-            }
-        });
-
-        // Map to match the frontend expected type if necessary, or just return as is
-        // Frontend expects SentEmail interface
-        // Prisma SentEmail: id, recipientName, recipientEmail, subject, content, sentAt, status
-        // Types SentEmail: id, recipientName, recipientEmail, subject, content, sentAt, status
-        // It matches.
-
-        return NextResponse.json(emails);
-
-    } catch (error: any) {
-        console.error('Admin Emails Fetch Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    if (authError || !authUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const emails = await prisma.sentEmail.findMany({
+        orderBy: {
+            sentAt: 'desc'
+        }
+    });
+
+    return NextResponse.json(emails);
 }
