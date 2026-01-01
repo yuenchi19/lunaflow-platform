@@ -9,76 +9,141 @@ import { uploadInventoryImage } from "@/lib/supabase/storage";
 export default function NewInventoryItemPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    // Main Images
     const [images, setImages] = useState<File[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+    // Damage Images
+    const [damageImages, setDamageImages] = useState<File[]>([]);
+    const [damagePreviewUrls, setDamagePreviewUrls] = useState<string[]>([]);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const damageInputRef = useRef<HTMLInputElement>(null);
 
     const [form, setForm] = useState({
         brand: "",
         name: "",
         category: "",
-        costPrice: ""
+        costPrice: "",
+        condition: "",
+        hasAccessories: false,
+        accessories: [] as string[],
+        note: ""
     });
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Constants
+    const CATEGORIES = [
+        { id: "bag", label: "バッグ" },
+        { id: "wallet_small", label: "財布（小さい）" },
+        { id: "wallet_large", label: "財布（大きい）" },
+        { id: "key_case", label: "キーケース" },
+        { id: "cigarette_case", label: "シガーレットケース" },
+        { id: "other_small", label: "その他小物いれ" },
+        { id: "accessory", label: "アクセサリー" },
+        { id: "apparel_tops", label: "アパレル（トップス）" },
+        { id: "apparel_bottoms", label: "アパレル（ボトムス）" },
+        { id: "apparel_outer", label: "アパレル（アウター）" },
+        { id: "shoes", label: "シューズ" },
+        { id: "watch", label: "時計" },
+        { id: "scarf", label: "スカーフ" },
+        { id: "belt", label: "ベルト" },
+        { id: "perfume", label: "香水" },
+        { id: "tie", label: "ネクタイ" },
+        { id: "other", label: "その他雑貨" }
+    ];
+
+    const CONDITIONS = [
+        { id: "S", label: "S：新品同様" },
+        { id: "A", label: "A：状態良好（リペア不要レベル）" },
+        { id: "B", label: "B：一般的な中古（使用感あり、リペア必要）" },
+        { id: "C", label: "C：小ダメージ（リペア必須）" },
+        { id: "D", label: "D：大ダメージ（困難なリペア）" }
+    ];
+
+    const ACCESSORIES_LIST = [
+        "箱", "保存袋", "ギャランティーカード", "ショルダーストラップ", "レシート", "その他"
+    ];
+
+    // Image Handlers
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'main' | 'damage') => {
         if (e.target.files) {
             const newFiles = Array.from(e.target.files);
-            if (images.length + newFiles.length > 5) {
-                alert("画像は最大5枚まで登録可能です");
-                return;
+            if (type === 'main') {
+                if (images.length + newFiles.length > 5) return alert("メイン画像は最大5枚まで");
+                setImages(prev => [...prev, ...newFiles]);
+                setPreviewUrls(prev => [...prev, ...newFiles.map(f => URL.createObjectURL(f))]);
+            } else {
+                if (damageImages.length + newFiles.length > 5) return alert("ダメージ画像は最大5枚まで");
+                setDamageImages(prev => [...prev, ...newFiles]);
+                setDamagePreviewUrls(prev => [...prev, ...newFiles.map(f => URL.createObjectURL(f))]);
             }
-
-            setImages(prev => [...prev, ...newFiles]);
-
-            // Create Previews
-            const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-            setPreviewUrls(prev => [...prev, ...newPreviews]);
         }
     };
 
-    const removeImage = (index: number) => {
-        setImages(prev => prev.filter((_, i) => i !== index));
-        setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+    const removeImage = (index: number, type: 'main' | 'damage') => {
+        if (type === 'main') {
+            setImages(prev => prev.filter((_, i) => i !== index));
+            setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+        } else {
+            setDamageImages(prev => prev.filter((_, i) => i !== index));
+            setDamagePreviewUrls(prev => prev.filter((_, i) => i !== index));
+        }
     };
+
+    const toggleAccessory = (item: string) => {
+        setForm(prev => {
+            const newAcc = prev.accessories.includes(item)
+                ? prev.accessories.filter(a => a !== item)
+                : [...prev.accessories, item];
+            return { ...prev, accessories: newAcc };
+        });
+    };
+
+    const sellingPrice = form.costPrice ? Math.floor(Number(form.costPrice) * 1.15) : 0;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!form.brand || !form.costPrice) {
-            alert("ブランド名と仕入れ価格は必須です");
+            alert("必須項目を入力してください");
             return;
         }
 
         setLoading(true);
         try {
-            // 1. Upload Images
-            const uploadedUrls: string[] = [];
+            // Upload Images
+            const mainUrls = [];
             for (const file of images) {
                 const url = await uploadInventoryImage(file);
-                if (url) uploadedUrls.push(url);
+                if (url) mainUrls.push(url);
+            }
+            const damageUrls = [];
+            for (const file of damageImages) {
+                const url = await uploadInventoryImage(file);
+                if (url) damageUrls.push(url);
             }
 
-            // 2. Submit Data
             const res = await fetch('/api/admin/inventory', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...form,
-                    images: uploadedUrls
+                    sellingPrice,
+                    images: mainUrls,
+                    damageImages: damageUrls,
+                    hasAccessories: form.accessories.length > 0
                 }),
             });
 
             if (res.ok) {
-                alert("商品を登録しました！");
+                alert("登録完了！");
                 router.push('/admin/inventory');
                 router.refresh();
             } else {
-                const data = await res.json();
-                alert(`エラー: ${data.error}`);
+                const d = await res.json();
+                alert(`エラー: ${d.error}`);
             }
-
-        } catch (error) {
-            console.error("Submit Error:", error);
-            alert("通信エラーが発生しました");
+        } catch (e) {
+            console.error(e);
+            alert("通信エラー");
         } finally {
             setLoading(false);
         }
@@ -86,7 +151,7 @@ export default function NewInventoryItemPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-3xl mx-auto">
                 <Link href="/admin/inventory" className="text-slate-500 hover:text-indigo-600 flex items-center gap-2 mb-6 text-sm font-bold">
                     <ArrowLeft className="w-4 h-4" />
                     在庫一覧に戻る
@@ -98,123 +163,112 @@ export default function NewInventoryItemPage() {
                             <PackageIcon className="w-5 h-5 text-indigo-600" />
                             新規商品登録
                         </h1>
-                        <p className="text-xs text-slate-500 mt-1">マスター在庫として登録します</p>
+                        <p className="text-xs text-slate-500 mt-1">詳細情報を入力して在庫を登録します</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="p-6 space-y-8">
 
-                        {/* Image Upload Area */}
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-3">商品画像 (最大5枚)</label>
-
-                            <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mb-4">
-                                {previewUrls.map((url, idx) => (
-                                    <div key={idx} className="aspect-square rounded-lg border border-slate-200 overflow-hidden relative group">
-                                        <img src={url} alt={`preview-${idx}`} className="w-full h-full object-cover" />
-                                        <button
-                                            type="button"
-                                            onClick={() => removeImage(idx)}
-                                            className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors"
-                                        >
-                                            <X className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                ))}
-
-                                {images.length < 5 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="aspect-square rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all gap-2"
-                                    >
-                                        <Camera className="w-6 h-6" />
-                                        <span className="text-[10px] font-bold">追加</span>
-                                    </button>
-                                )}
+                        {/* Images Section */}
+                        <div className="grid md:grid-cols-2 gap-8">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">① メイン写真 <span className="text-red-500">*</span></label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {previewUrls.map((url, i) => (
+                                        <div key={i} className="aspect-square relative group">
+                                            <img src={url} className="w-full h-full object-cover rounded-md border border-slate-200" />
+                                            <button type="button" onClick={() => removeImage(i, 'main')} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1"><X className="w-3 h-3" /></button>
+                                        </div>
+                                    ))}
+                                    {images.length < 5 && (
+                                        <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-md border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:bg-slate-50"><Camera className="w-6 h-6" /></button>
+                                    )}
+                                </div>
+                                <input type="file" ref={fileInputRef} hidden accept="image/*" multiple onChange={e => handleFileSelect(e, 'main')} />
                             </div>
 
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                className="hidden"
-                                accept="image/*"
-                                multiple
-                                onChange={handleFileSelect}
-                            />
-                            <p className="text-[10px] text-slate-400">※写真は自動的に圧縮されます。</p>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">② 傷・ダメージ写真</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {damagePreviewUrls.map((url, i) => (
+                                        <div key={i} className="aspect-square relative group">
+                                            <img src={url} className="w-full h-full object-cover rounded-md border border-slate-200" />
+                                            <button type="button" onClick={() => removeImage(i, 'damage')} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1"><X className="w-3 h-3" /></button>
+                                        </div>
+                                    ))}
+                                    {damageImages.length < 5 && (
+                                        <button type="button" onClick={() => damageInputRef.current?.click()} className="aspect-square rounded-md border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:bg-slate-50"><Camera className="w-6 h-6" /></button>
+                                    )}
+                                </div>
+                                <input type="file" ref={damageInputRef} hidden accept="image/*" multiple onChange={e => handleFileSelect(e, 'damage')} />
+                            </div>
                         </div>
+
+                        <hr className="border-slate-100" />
 
                         {/* Basic Info */}
-                        <div className="space-y-4">
+                        <div className="grid md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">ブランド名 <span className="text-red-500">*</span></label>
-                                <input
-                                    required
-                                    value={form.brand}
-                                    onChange={e => setForm({ ...form, brand: e.target.value })}
-                                    className="w-full border border-slate-200 rounded-lg p-3 text-slate-800 focus:outline-none focus:border-indigo-500 bg-slate-50 focus:bg-white transition-colors font-bold"
-                                    placeholder="例: Chanel"
-                                />
+                                <label className="block text-xs font-bold text-slate-500 mb-2">ブランド名 <span className="text-red-500">*</span></label>
+                                <input required value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })} className="w-full border border-slate-200 rounded p-2.5 font-bold" placeholder="例: Chanel" />
                             </div>
-
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">商品名 / 型番 (任意)</label>
-                                <input
-                                    value={form.name}
-                                    onChange={e => setForm({ ...form, name: e.target.value })}
-                                    className="w-full border border-slate-200 rounded-lg p-3 text-slate-800 focus:outline-none focus:border-indigo-500 bg-slate-50 focus:bg-white transition-colors"
-                                    placeholder="例: マトラッセ チェーンショルダー"
-                                />
+                                <label className="block text-xs font-bold text-slate-500 mb-2">商品名 / 型番</label>
+                                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full border border-slate-200 rounded p-2.5" placeholder="例: マトラッセ" />
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">カテゴリ</label>
-                                    <select
-                                        value={form.category}
-                                        onChange={e => setForm({ ...form, category: e.target.value })}
-                                        className="w-full border border-slate-200 rounded-lg p-3 text-slate-800 focus:outline-none focus:border-indigo-500 bg-slate-50 focus:bg-white transition-colors"
-                                    >
-                                        <option value="">未選択</option>
-                                        <option value="bag">バッグ</option>
-                                        <option value="wallet">財布</option>
-                                        <option value="accessory">小物・アクセ</option>
-                                        <option value="apparel">アパレル</option>
-                                        <option value="other">その他</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">仕入れ価格 (円) <span className="text-red-500">*</span></label>
-                                    <input
-                                        required
-                                        type="number"
-                                        value={form.costPrice}
-                                        onChange={e => setForm({ ...form, costPrice: e.target.value })}
-                                        className="w-full border border-slate-200 rounded-lg p-3 text-slate-800 focus:outline-none focus:border-indigo-500 bg-slate-50 focus:bg-white transition-colors font-mono"
-                                        placeholder="0"
-                                    />
-                                </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-2">カテゴリ <span className="text-red-500">*</span></label>
+                                <select required value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full border border-slate-200 rounded p-2.5 bg-white">
+                                    <option value="">選択してください</option>
+                                    {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-2">コンディションランク</label>
+                                <select value={form.condition} onChange={e => setForm({ ...form, condition: e.target.value })} className="w-full border border-slate-200 rounded p-2.5 bg-white">
+                                    <option value="">選択してください</option>
+                                    {CONDITIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                                </select>
                             </div>
                         </div>
 
-                        <div className="pt-6 border-t border-slate-100 flex justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={() => router.back()}
-                                className="px-6 py-3 rounded-lg font-bold text-slate-500 hover:bg-slate-100 transition-colors"
-                            >
-                                キャンセル
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="px-8 py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 flex items-center gap-2 disabled:opacity-70"
-                            >
+                        {/* Accessories */}
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-2">付属品</label>
+                            <div className="flex flex-wrap gap-3">
+                                {ACCESSORIES_LIST.map(item => (
+                                    <label key={item} className={`cursor-pointer px-3 py-1.5 rounded-full border text-sm font-bold transition-all ${form.accessories.includes(item) ? 'bg-indigo-100 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                                        <input type="checkbox" className="hidden" checked={form.accessories.includes(item)} onChange={() => toggleAccessory(item)} />
+                                        {item}
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Price Calculation */}
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid md:grid-cols-2 gap-8 items-center">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-2">仕入れ価格 (円) <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-2.5 text-slate-400">¥</span>
+                                    <input required type="number" value={form.costPrice} onChange={e => setForm({ ...form, costPrice: e.target.value })} className="w-full pl-8 pr-4 py-2 border border-slate-200 rounded text-lg font-bold font-mono" placeholder="0" />
+                                </div>
+                            </div>
+                            <div className="text-right md:text-left">
+                                <label className="block text-xs font-bold text-slate-500 mb-1">販売価格 (自動計算 115%)</label>
+                                <div className="text-2xl font-bold text-indigo-600 font-mono">
+                                    ¥{sellingPrice.toLocaleString()}
+                                </div>
+                                <p className="text-[10px] text-slate-400">※顧客ページにはこの価格が表示されます</p>
+                            </div>
+                        </div>
+
+                        <div className="pt-6 flex justify-end gap-3">
+                            <button type="button" onClick={() => router.back()} className="px-6 py-2 rounded text-slate-500 font-bold hover:bg-slate-100">キャンセル</button>
+                            <button type="submit" disabled={loading} className="px-8 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 shadow-md flex items-center gap-2">
                                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                                {loading ? '登録中...' : '商品を登録'}
+                                {loading ? '登録中...' : '登録する'}
                             </button>
                         </div>
-
                     </form>
                 </div>
             </div>

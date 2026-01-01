@@ -28,6 +28,60 @@ export default function AdminInventoryPage() {
     const [selectedUser, setSelectedUser] = useState<{ id: string, name: string } | null>(null);
     const [assignNote, setAssignNote] = useState('');
 
+    const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+
+    // Bulk Actions
+    const handleToggleSelectKey = (id: string) => {
+        setSelectedItemIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedItemIds(filteredItems.map(i => i.id));
+        } else {
+            setSelectedItemIds([]);
+        }
+    };
+
+    const handleBulkAssign = async () => {
+        if (selectedItemIds.length === 0) return;
+        setSelectedItem(null); // Clear single select
+        setSearchQuery('');
+        setSearchResults([]);
+        setSelectedUser(null);
+        setAssignNote('');
+        setModalOpen(true);
+    };
+
+    const handleExecuteBulkAssign = async (userId: string) => {
+        try {
+            const res = await fetch('/api/admin/inventory/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    itemIds: selectedItemIds,
+                    assignedToUserId: userId
+                })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                alert(data.message);
+                setModalOpen(false);
+                setSelectedItemIds([]);
+                fetchItems();
+            } else {
+                const err = await res.json();
+                alert("Error: " + err.error);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Failed");
+        }
+    };
+
     // Status Actions
     const handleOpenAssignModal = (item: InventoryItem) => {
         setSelectedItem(item);
@@ -110,7 +164,27 @@ export default function AdminInventoryPage() {
     });
 
     return (
-        <div className="p-8 max-w-7xl mx-auto min-h-screen">
+        <div className="p-8 max-w-7xl mx-auto min-h-screen relative">
+            {/* Bulk Action Bar */}
+            {selectedItemIds.length > 0 && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-4 rounded-full shadow-2xl flex items-center gap-6 z-40 animate-in slide-in-from-bottom-4">
+                    <span className="font-bold">{selectedItemIds.length} items selected</span>
+                    <div className="h-6 w-px bg-slate-700"></div>
+                    <button
+                        onClick={handleBulkAssign}
+                        className="bg-indigo-500 hover:bg-indigo-400 text-white font-bold px-4 py-2 rounded-full transition-colors flex items-center gap-2"
+                    >
+                        <span>👤</span> まとめて割り当て
+                    </button>
+                    <button
+                        onClick={() => setSelectedItemIds([])}
+                        className="text-slate-400 hover:text-white"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            )}
+
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
@@ -151,6 +225,9 @@ export default function AdminInventoryPage() {
                 <table className="w-full text-left border-collapse">
                     <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-bold">
                         <tr>
+                            <th className="px-6 py-4 w-10">
+                                <input type="checkbox" onChange={handleSelectAll} className="w-4 h-4 rounded border-slate-300" />
+                            </th>
                             <th className="px-6 py-4">商品情報</th>
                             <th className="px-6 py-4">カテゴリ</th>
                             <th className="px-6 py-4 text-right">仕入れ価格</th>
@@ -162,12 +239,20 @@ export default function AdminInventoryPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
                         {loading ? (
-                            <tr><td colSpan={7} className="text-center py-10 text-slate-400">読み込み中...</td></tr>
+                            <tr><td colSpan={8} className="text-center py-10 text-slate-400">読み込み中...</td></tr>
                         ) : filteredItems.length === 0 ? (
-                            <tr><td colSpan={7} className="text-center py-10 text-slate-400">データがありません</td></tr>
+                            <tr><td colSpan={8} className="text-center py-10 text-slate-400">データがありません</td></tr>
                         ) : (
                             filteredItems.map(item => (
-                                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                                <tr key={item.id} className={`hover:bg-slate-50 transition-colors ${selectedItemIds.includes(item.id) ? 'bg-indigo-50/50' : ''}`}>
+                                    <td className="px-6 py-4">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedItemIds.includes(item.id)}
+                                            onChange={() => handleToggleSelectKey(item.id)}
+                                            className="w-4 h-4 rounded border-slate-300"
+                                        />
+                                    </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-12 h-12 bg-slate-100 rounded-lg flex-shrink-0 overflow-hidden border border-slate-200">
@@ -255,11 +340,13 @@ export default function AdminInventoryPage() {
             </div>
 
             {/* Assignment Modal */}
-            {modalOpen && selectedItem && (
+            {modalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
                         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                            <h3 className="font-bold text-slate-800">在庫の操作: {selectedItem.brand}</h3>
+                            <h3 className="font-bold text-slate-800">
+                                {selectedItem ? `在庫の操作: ${selectedItem.brand}` : `一括操作: ${selectedItemIds.length}件を割り当て`}
+                            </h3>
                             <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                                 <span className="text-xl">×</span>
                             </button>
@@ -267,8 +354,8 @@ export default function AdminInventoryPage() {
 
                         <div className="p-6 space-y-6">
 
-                            {/* Scenario 1: IN_STOCK - User Selection */}
-                            {(selectedItem.status === 'IN_STOCK' || (selectedItem.status === 'ASSIGNED' && !selectedItem.assignedToUser)) && (
+                            {/* BULK or SINGLE IN_STOCK */}
+                            {(!selectedItem || selectedItem.status === 'IN_STOCK' || (selectedItem.status === 'ASSIGNED' && !selectedItem.assignedToUser)) && (
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 mb-1">割り当てる生徒を検索</label>
@@ -310,7 +397,14 @@ export default function AdminInventoryPage() {
 
                                     <button
                                         disabled={!selectedUser}
-                                        onClick={() => selectedUser && handleUpdateStatus('ASSIGNED', selectedUser.id)}
+                                        onClick={() => {
+                                            if (!selectedUser) return;
+                                            if (selectedItem) {
+                                                handleUpdateStatus('ASSIGNED', selectedUser.id);
+                                            } else {
+                                                handleExecuteBulkAssign(selectedUser.id);
+                                            }
+                                        }}
                                         className="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         割り当てを確定する
@@ -318,8 +412,8 @@ export default function AdminInventoryPage() {
                                 </div>
                             )}
 
-                            {/* Scenario 2: ASSIGNED - Change Status or User */}
-                            {selectedItem.status === 'ASSIGNED' && selectedItem.assignedToUser && (
+                            {/* SINGLE: ASSIGNED - Change Status or User */}
+                            {selectedItem && selectedItem.status === 'ASSIGNED' && selectedItem.assignedToUser && (
                                 <div className="space-y-4">
                                     <div className="bg-slate-50 p-4 rounded-lg flex items-center gap-3 mb-4">
                                         <span className="text-2xl">📦</span>
@@ -352,8 +446,8 @@ export default function AdminInventoryPage() {
                                 </div>
                             )}
 
-                            {/* Scenario 3: SHIPPED - Return Only */}
-                            {selectedItem.status === 'SHIPPED' && (
+                            {/* SINGLE: SHIPPED - Return Only */}
+                            {selectedItem && selectedItem.status === 'SHIPPED' && (
                                 <div className="space-y-4">
                                     <div className="bg-rose-50 border border-rose-100 p-4 rounded-lg">
                                         <h4 className="font-bold text-rose-800 text-sm mb-1">返品・キャンセル処理</h4>
