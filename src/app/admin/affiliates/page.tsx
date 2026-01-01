@@ -104,7 +104,7 @@ export default function AdminAffiliatesPage() {
                     <thead>
                         <tr className="bg-slate-50 border-b border-slate-200">
                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">パートナー</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">紹介コード</th>
+                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">紹介コード/リンク</th>
                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">直紹介</th>
                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">2次紹介</th>
                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">今月の報酬額</th>
@@ -128,9 +128,26 @@ export default function AdminAffiliatesPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <code className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-xs font-bold border border-amber-100 font-mono">
-                                            {affiliate.affiliateCode}
-                                        </code>
+                                        {affiliate.affiliateCode ? (
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    <code className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-xs font-bold border border-amber-100 font-mono">
+                                                        {affiliate.affiliateCode}
+                                                    </code>
+                                                    <button
+                                                        onClick={() => navigator.clipboard.writeText(`${window.location.origin}/register?ref=${affiliate.affiliateCode}`)}
+                                                        className="text-xs text-indigo-600 hover:text-indigo-800 underline"
+                                                    >
+                                                        Copy Link
+                                                    </button>
+                                                </div>
+                                                <span className="text-[10px] text-slate-400 break-all">
+                                                    {typeof window !== 'undefined' ? `${window.location.origin}/register?ref=${affiliate.affiliateCode}` : 'Wait for client...'}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-xs text-slate-400">コード未発行</span>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <span className="text-sm font-bold text-slate-600">{affiliate.earnings.directReferrals}名</span>

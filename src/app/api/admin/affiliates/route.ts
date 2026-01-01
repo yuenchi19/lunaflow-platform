@@ -31,9 +31,11 @@ export async function GET() {
         });
 
         // 2. Identify Affiliates (Standard/Premium only)
+        // User request: Show them even if earnings 0.
+        // Also we want to ensure they appear even if they don't have a code strictly yet? (Usually they should).
+        // If they don't have a code, we'll just show empty code or handle it in UI.
         const affiliates = allUsers.filter(u =>
             (u.plan === 'standard' || u.plan === 'premium') &&
-            !!u.affiliateCode && // Must have a code
             !u.email.endsWith('@example.com') // Exclude mock users
         );
 

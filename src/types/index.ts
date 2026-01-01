@@ -196,3 +196,24 @@ export interface PurchaseRequest {
     status: "pending" | "completed";
     date: string;
 }
+
+export interface InventoryItem {
+    id: string;
+    adminId: string;
+    brand: string;
+    name?: string;
+    category?: string;
+    costPrice: number;
+    sellingPrice?: number;
+    images: string[];
+    damageImages: string[];
+    status: 'IN_STOCK' | 'ASSIGNED' | 'RECEIVED' | 'SOLD';
+    condition?: string;
+    hasAccessories: boolean;
+    accessories: string[];
+    note?: string;
+    assignedToUserId?: string;
+    assignedToUser?: { name: string; email: string };
+    createdAt: string;
+    updatedAt: string;
+}

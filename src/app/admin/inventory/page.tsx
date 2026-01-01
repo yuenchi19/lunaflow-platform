@@ -130,8 +130,8 @@ export default function AdminInventoryPage() {
                                     <td className="px-6 py-4 text-right font-mono">¥{item.costPrice.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-center">
                                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${item.status === 'IN_STOCK' ? 'bg-emerald-100 text-emerald-700' :
-                                                item.status === 'ASSIGNED' ? 'bg-amber-100 text-amber-700' :
-                                                    'bg-slate-100 text-slate-700'
+                                            item.status === 'ASSIGNED' ? 'bg-amber-100 text-amber-700' :
+                                                'bg-slate-100 text-slate-700'
                                             }`}>
                                             {item.status === 'IN_STOCK' ? '在庫あり' :
                                                 item.status === 'ASSIGNED' ? '割当済' : item.status}
@@ -153,9 +153,12 @@ export default function AdminInventoryPage() {
                                         {new Date(item.createdAt).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                        <button className="text-indigo-600 hover:text-indigo-800 text-xs font-bold border border-indigo-200 px-2 py-1 rounded">
+                                        <Link
+                                            href={`/admin/inventory/${item.id}`}
+                                            className="text-indigo-600 hover:text-indigo-800 text-xs font-bold border border-indigo-200 px-2 py-1 rounded inline-block"
+                                        >
                                             詳細
-                                        </button>
+                                        </Link>
                                     </td>
                                 </tr>
                             ))

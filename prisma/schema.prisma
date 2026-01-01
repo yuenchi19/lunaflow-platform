@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = "postgresql://postgres.fksvpyrvrzxmhhvetqrx:UverLove2026@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true" // HARDCODED: IPv4 Pooler Fix
+  provider  = "postgresql"
+  url       = "postgresql://postgres.fksvpyrvrzxmhhvetqrx:UverLove2026@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true" // HARDCODED: IPv4 Pooler Fix
+  directUrl = "postgresql://postgres:UverLove2026@db.fksvpyrvrzxmhhvetqrx.supabase.co:5432/postgres"
 }
 
 model User {
@@ -43,10 +44,18 @@ model InventoryItem {
   name            String?
   category        String?
   costPrice       Int
-  images          String[]
+  sellingPrice    Int?     // Calculated as costPrice * 1.15 usually
+  images          String[] // Main photos
+  damageImages    String[] // Damage/Defect photos
   
   status          ItemStatus @default(IN_STOCK)
-  
+
+  // Product Details
+  condition       String?  // S, A, B, C, D
+  hasAccessories  Boolean  @default(false)
+  accessories     String[] // Box, Dust Bag, Card, etc.
+  note            String?  // Other comments
+
   // Assignment
   assignedToUser   User?   @relation(fields: [assignedToUserId], references: [id])
   assignedToUserId String?
