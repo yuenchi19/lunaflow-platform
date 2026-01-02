@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
-import { storage } from '@/app/lib/storage';
+// import { storage } from '@/app/lib/storage'; // Removed
 
 interface Course {
     id: string;
@@ -11,7 +11,48 @@ interface Course {
     label?: string;
     categoryCount: number;
     studentCount: number;
+    minTier?: number; // Added
 }
+
+// ... imports ...
+
+// ... inside CreateCourseModal ...
+{/* Public Range (Tier) */ }
+<div>
+    <div className={styles.formLabel}>
+        公開範囲（プラン） <span className={styles.requiredBadge}>必須</span>
+    </div>
+    <select
+        name="minTier"
+        className={styles.input}
+        defaultValue="1"
+        required
+    >
+        <option value="1">ライトプラン以上 (全員)</option>
+        <option value="2">スタンダードプラン以上</option>
+        <option value="3">プレミアムプランのみ</option>
+    </select>
+</div>
+
+// ... handleCreateCourse update needed implicitly by form submit handling `minTier`
+
+// ... inside CreateCourseModal handleSubmit ...
+const formData = new FormData(e.target as HTMLFormElement);
+onSubmit({
+    title: formData.get('title'),
+    label: formData.get('label'),
+    minTier: formData.get('minTier'), // Capture minTier
+});
+
+// ... inside SortableCourseItem ...
+<div className={styles.badges}>
+    <span className={styles.badgeId}>コースID: {course.id}</span>
+    {course.label && <span className={styles.badgeLabel}>{course.label}</span>}
+    {/* Tier Badge */}
+    <span className={`${styles.badgeLabel} ${course.minTier === 3 ? 'bg-amber-100 text-amber-800' : course.minTier === 2 ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-800'}`}>
+        {course.minTier === 3 ? 'プレミアム限定' : course.minTier === 2 ? 'スタンダード以上' : 'ライト以上'}
+    </span>
+</div>
 
 import {
     DndContext,
@@ -31,6 +72,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+
 export default function CoursesPage() {
     const [courses, setCourses] = useState<Course[]>([]);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -38,6 +80,7 @@ export default function CoursesPage() {
     const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -50,97 +93,82 @@ export default function CoursesPage() {
         })
     );
 
-    useEffect(() => {
-        setCourses(storage.getCourses());
-    }, []);
-
-    const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
-        if (over && active.id !== over.id) {
-            setCourses((items) => {
-                const oldIndex = items.findIndex(i => i.id === active.id);
-                const newIndex = items.findIndex(i => i.id === over.id);
-                const updated = arrayMove(items, oldIndex, newIndex);
-                storage.saveCourses(updated);
-                return updated;
-            });
+    const fetchCourses = async () => {
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/admin/courses');
+            if (res.ok) {
+                const data = await res.json();
+                setCourses(data);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    const handleCreateCourse = (newCourse: any) => {
-        const mockCourse: Course = {
-            id: Math.random().toString(36).substr(2, 9),
-            title: newCourse.title,
-            label: newCourse.label || undefined,
-            categoryCount: 0,
-            studentCount: 0
-        };
-        const updated = [...courses, mockCourse];
-        setCourses(updated);
-        storage.saveCourses(updated);
-        setToastMessage("コースが作成されました");
-        setTimeout(() => setToastMessage(null), 3000);
-        setIsCreateModalOpen(false);
+    useEffect(() => {
+        fetchCourses();
+    }, []);
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            const oldIndex = courses.findIndex(i => i.id === active.id);
+            const newIndex = courses.findIndex(i => i.id === over.id);
+
+            const newOrder = arrayMove(courses, oldIndex, newIndex);
+
+            // Optimistic update
+            setCourses(newOrder);
+
+            // TODO: Implement API reorder sync
+            // await fetch('/api/admin/courses/reorder', { method: 'POST', body: JSON.stringify(newOrder.map((c, i) => ({ id: c.id, order: i }))) });
+        }
     };
 
-    const handleDeleteCourse = (id: string) => {
+    const handleCreateCourse = async (newCourse: any) => {
+        try {
+            const res = await fetch('/api/admin/courses', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newCourse)
+            });
+
+            if (res.ok) {
+                const created = await res.json();
+                // setCourses([...courses, created]); // Order might vary, better refetch or append
+                fetchCourses(); // Refetch to get correct state
+                setToastMessage("コースが作成されました");
+                setTimeout(() => setToastMessage(null), 3000);
+                setIsCreateModalOpen(false);
+            }
+        } catch (error) {
+            alert('作成に失敗しました');
+        }
+    };
+
+    const handleDeleteCourse = async (id: string) => {
         if (!confirm('このコースを削除してもよろしいですか？\n紐づくカテゴリやブロックも削除されます。')) return;
 
-        const updated = courses.filter(c => c.id !== id);
-        setCourses(updated);
-        storage.saveCourses(updated);
-
-        // Cleanup storage for categories (Optional but good for hygiene)
-        // localStorage.removeItem(`categories_${id}`); 
-        // Note: Deep cleanup of blocks would require iterating categories, which is complex without a backend.
-        // For localStorage mock, just removing the course entry is usually sufficient for the UI.
-
-        setToastMessage("コースが削除されました");
-        setTimeout(() => setToastMessage(null), 3000);
-        setOpenMenuId(null);
+        try {
+            const res = await fetch(`/api/admin/courses/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                setCourses(courses.filter(c => c.id !== id));
+                setToastMessage("コースが削除されました");
+                setTimeout(() => setToastMessage(null), 3000);
+                setOpenMenuId(null);
+            }
+        } catch (error) {
+            alert('削除に失敗しました');
+        }
     };
 
+    // TODO: Implement Duplicate in Backend
     const handleDuplicateCourse = (course: Course) => {
-        if (!confirm(`「${course.title}」を複製しますか？`)) return;
-
-        const newId = Math.random().toString(36).substr(2, 9);
-        const newCourse: Course = {
-            ...course,
-            id: newId,
-            title: `${course.title} (コピー)`,
-            studentCount: 0 // Reset student count
-        };
-
-        // Deep Copy Categories & Blocks
-        const sourceCategories = storage.getCategories(course.id);
-        const newCategories = sourceCategories.map((cat: any) => {
-            const newCatId = Math.random().toString(36).substr(2, 9);
-
-            // Copy Blocks for this Category
-            const sourceBlocks = storage.getBlocks(cat.id);
-            const newBlocks = sourceBlocks.map((block: any) => ({
-                ...block,
-                id: Math.random().toString(36).substr(2, 9)
-            }));
-            storage.saveBlocks(newCatId, newBlocks);
-
-            return {
-                ...cat,
-                id: newCatId,
-                courseId: newId,
-                // blockCount remains same
-            };
-        });
-        storage.saveCategories(newId, newCategories);
-
-        // Update Course List
-        const updated = [...courses, newCourse];
-        setCourses(updated);
-        storage.saveCourses(updated);
-
-        setToastMessage("コースを複製しました");
-        setTimeout(() => setToastMessage(null), 3000);
-        setOpenMenuId(null);
+        alert('複製機能は現在メンテナンス中です。');
+        // if (!confirm(`「${course.title}」を複製しますか？`)) return;
     };
 
     return (
@@ -166,36 +194,45 @@ export default function CoursesPage() {
             </div>
 
             {/* Course List */}
-            <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-            >
-                <div className={styles.courseList}>
-                    <SortableContext
-                        items={courses.map(c => c.id)}
-                        strategy={verticalListSortingStrategy}
-                    >
-                        {courses.map(course => (
-                            <SortableCourseItem
-                                key={course.id}
-                                course={course}
-                                openMenuId={openMenuId}
-                                setOpenMenuId={setOpenMenuId}
-                                handleDuplicateCourse={handleDuplicateCourse}
-                                handleDeleteCourse={handleDeleteCourse}
-                                setIsTopVideoModalOpen={setIsTopVideoModalOpen}
-                            />
-                        ))}
-                    </SortableContext>
+            {isLoading ? (
+                <div className="p-8 text-center text-slate-500">読み込み中...</div>
+            ) : (
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <div className={styles.courseList}>
+                        <SortableContext
+                            items={courses.map(c => c.id)}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            {courses.map(course => (
+                                <SortableCourseItem
+                                    key={course.id}
+                                    course={course}
+                                    openMenuId={openMenuId}
+                                    setOpenMenuId={setOpenMenuId}
+                                    handleDuplicateCourse={handleDuplicateCourse}
+                                    handleDeleteCourse={handleDeleteCourse}
+                                    setIsTopVideoModalOpen={setIsTopVideoModalOpen}
+                                />
+                            ))}
+                        </SortableContext>
 
-                    {courses.length > 0 && (
-                        <div className={styles.infoBox}>
-                            コースをドラッグすると順番を入れ替えることができます。
-                        </div>
-                    )}
-                </div>
-            </DndContext>
+                        {courses.length > 0 && (
+                            <div className={styles.infoBox}>
+                                コースをドラッグすると順番を入れ替えることができます。
+                            </div>
+                        )}
+                        {courses.length === 0 && (
+                            <div className="text-center py-10 text-slate-400">
+                                コースがありません。新規作成してください。
+                            </div>
+                        )}
+                    </div>
+                </DndContext>
+            )}
 
             {/* Modals */}
             {isCreateModalOpen && <CreateCourseModal onClose={() => setIsCreateModalOpen(false)} onSubmit={handleCreateCourse} />}
@@ -203,6 +240,7 @@ export default function CoursesPage() {
         </div>
     );
 }
+
 
 function SortableCourseItem({ course, openMenuId, setOpenMenuId, handleDeleteCourse, handleDuplicateCourse, setIsTopVideoModalOpen }: any) {
     const {
@@ -227,6 +265,9 @@ function SortableCourseItem({ course, openMenuId, setOpenMenuId, handleDeleteCou
                 <div className={styles.badges}>
                     <span className={styles.badgeId}>コースID: {course.id}</span>
                     {course.label && <span className={styles.badgeLabel}>{course.label}</span>}
+                    <span className={`${styles.badgeLabel} bg-slate-100 text-slate-600`}>
+                        {course.minTier === 3 ? '👑 プレミアム限定' : course.minTier === 2 ? '⭐ スタンダード以上' : '🟢 ライト以上'}
+                    </span>
                 </div>
                 <div className={styles.metrics}>
                     <div className={styles.metricItem}>
@@ -324,6 +365,7 @@ function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
         onSubmit({
             title: formData.get('title'),
             label: formData.get('label'),
+            minTier: formData.get('minTier'),
         });
     };
 
@@ -400,6 +442,23 @@ function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
                                 className={styles.input}
                                 placeholder="例）基礎編、○○向け、重要度：高"
                             />
+                        </div>
+
+                        {/* Public Range (Tier) */}
+                        <div>
+                            <div className={styles.formLabel}>
+                                公開範囲（プラン） <span className={styles.requiredBadge}>必須</span>
+                            </div>
+                            <select
+                                name="minTier"
+                                className={styles.input}
+                                defaultValue="1"
+                                required
+                            >
+                                <option value="1">ライトプラン以上 (全員)</option>
+                                <option value="2">スタンダードプラン以上</option>
+                                <option value="3">プレミアムプランのみ</option>
+                            </select>
                         </div>
                     </div>
 

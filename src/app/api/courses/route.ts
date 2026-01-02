@@ -1,0 +1,83 @@
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { createServerClient } from '@supabase/ssr';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: NextRequest) {
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() {
+                    return req.cookies.getAll();
+                },
+                setAll(cookiesToSet) {
+                    // No-op
+                },
+            },
+        }
+    );
+
+    try {
+        // 1. Get Auth User
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+
+        let userTier = 1; // Default: Light/Guest
+
+        if (authUser && !authError) {
+            // 2. Get DB User to check Plan
+            const user = await prisma.user.findUnique({
+                where: { email: authUser.email! },
+                select: { plan: true }
+            });
+
+            if (user && user.plan) {
+                switch (user.plan.toLowerCase()) {
+                    case 'premium':
+                        userTier = 3;
+                        break;
+                    case 'standard':
+                        userTier = 2;
+                        break;
+                    case 'light':
+                    default:
+                        userTier = 1;
+                        break;
+                }
+            }
+        }
+
+        // 3. Filter Courses
+        const courses = await prisma.course.findMany({
+            where: {
+                published: true,
+                minTier: {
+                    lte: userTier
+                }
+            },
+            orderBy: { order: 'asc' },
+            include: {
+                _count: {
+                    select: { categories: true }
+                }
+            }
+        });
+
+        const formatted = courses.map(c => ({
+            id: c.id,
+            title: c.title,
+            description: c.description,
+            thumbnailUrl: c.thumbnailUrl,
+            categoryCount: c._count.categories,
+            minTier: c.minTier // Optional: pass to frontend so it knows why it sees it?
+        }));
+
+        return NextResponse.json(formatted);
+    } catch (error) {
+        console.error("Courses API Error:", error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+}

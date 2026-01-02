@@ -1,16 +1,17 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
-import { storage } from '@/app/lib/storage';
 
 interface Category {
     id: string;
     title: string;
-    isPublic: boolean;
+    published: boolean;
     blockCount: number;
+    blocks?: any[];
 }
 
 import {
@@ -31,61 +32,116 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+
 export default function CourseDetailPage({ params }: { params: { id: string } }) {
     const router = useRouter();
     const [categories, setCategories] = useState<Category[]>([]);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isCourseEditModalOpen, setIsCourseEditModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [newCategoryTitle, setNewCategoryTitle] = useState('');
     const [course, setCourse] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Course Edit State
+    const [editCourseData, setEditCourseData] = useState({ title: '', label: '', minTier: 1 });
 
     const sensors = useSensors(
-        useSensor(PointerSensor),
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
         useSensor(KeyboardSensor, {
             coordinateGetter: sortableKeyboardCoordinates,
         })
     );
 
-    useEffect(() => {
-        const courses = storage.getCourses();
-        setCourse(courses.find((c: any) => c.id === params.id));
-        setCategories(storage.getCategories(params.id));
-    }, [params.id]);
-
-    const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
-        if (over && active.id !== over.id) {
-            setCategories((items: Category[]) => {
-                const oldIndex = items.findIndex((i: Category) => i.id === active.id);
-                const newIndex = items.findIndex((i: Category) => i.id === over.id);
-                const updated = arrayMove(items, oldIndex, newIndex);
-                storage.saveCategories(params.id, updated);
-                return updated;
-            });
+    const fetchCourseData = async () => {
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/admin/courses/${params.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setCourse(data);
+                if (data.categories) {
+                    setCategories(data.categories.map((c: any) => ({
+                        id: c.id,
+                        title: c.title,
+                        published: c.published,
+                        blockCount: c.blocks ? c.blocks.length : 0
+                    })));
+                } else {
+                    setCategories([]);
+                }
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    const togglePublic = (id: string) => {
-        const updated = categories.map((cat: Category) =>
-            cat.id === id ? { ...cat, isPublic: !cat.isPublic } : cat
-        );
-        setCategories(updated);
-        storage.saveCategories(params.id, updated);
+    useEffect(() => {
+        fetchCourseData();
+    }, [params.id]);
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            const oldIndex = categories.findIndex(i => i.id === active.id);
+            const newIndex = categories.findIndex(i => i.id === over.id);
+
+            const newOrder = arrayMove(categories, oldIndex, newIndex);
+
+            // Optimistic update
+            setCategories(newOrder);
+
+            // API Sync
+            try {
+                await fetch('/api/admin/categories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'reorder',
+                        items: newOrder.map((c, i) => ({ id: c.id, order: i + 1 }))
+                    })
+                });
+            } catch (e) {
+                console.error("Reorder failed", e);
+            }
+        }
     };
 
-    const deleteCategory = (id: string) => {
-        if (confirm('このカテゴリを削除してもよろしいですか？')) {
-            const updated = categories.filter((cat: Category) => cat.id !== id);
-            setCategories(updated);
-            storage.saveCategories(params.id, updated);
+    const togglePublic = async (id: string) => {
+        const cat = categories.find(c => c.id === id);
+        if (!cat) return;
+        const newStatus = !cat.published;
 
-            // Update course's category count
-            const courses = storage.getCourses();
-            const updatedCourses = courses.map((c: any) =>
-                c.id === params.id ? { ...c, categoryCount: updated.length } : c
-            );
-            storage.saveCourses(updatedCourses);
+        // Optimistic
+        setCategories(categories.map(c => c.id === id ? { ...c, published: newStatus } : c));
+
+        try {
+            await fetch(`/api/admin/categories/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ published: newStatus })
+            });
+        } catch (e) {
+            alert('更新に失敗しました');
+            fetchCourseData(); // Revert
+        }
+    };
+
+    const deleteCategory = async (id: string) => {
+        if (!confirm('このカテゴリを削除してもよろしいですか？')) return;
+
+        // Optimistic
+        setCategories(categories.filter(c => c.id !== id));
+
+        try {
+            await fetch(`/api/admin/categories/${id}`, { method: 'DELETE' });
+            fetchCourseData();
+        } catch (e) {
+            alert('削除に失敗しました');
+            fetchCourseData();
         }
     };
 
@@ -95,44 +151,79 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
         setIsEditModalOpen(true);
     };
 
-    const handleSaveEdit = () => {
+    const handleSaveEdit = async () => {
         if (editingCategory) {
-            const updated = categories.map((cat: Category) =>
-                cat.id === editingCategory.id ? { ...cat, title: newCategoryTitle } : cat
-            );
-            setCategories(updated);
-            storage.saveCategories(params.id, updated);
-            setIsEditModalOpen(false);
-            setEditingCategory(null);
+            try {
+                const res = await fetch(`/api/admin/categories/${editingCategory.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: newCategoryTitle })
+                });
+
+                if (res.ok) {
+                    setCategories(categories.map(cat =>
+                        cat.id === editingCategory.id ? { ...cat, title: newCategoryTitle } : cat
+                    ));
+                    setIsEditModalOpen(false);
+                    setEditingCategory(null);
+                }
+            } catch (e) {
+                alert('保存に失敗しました');
+            }
         }
     };
 
-    const handleCreateCategory = () => {
-        const newCat: Category = {
-            id: `cat${Date.now()}`,
-            title: newCategoryTitle || '新しいカテゴリ',
-            isPublic: false,
-            blockCount: 0
-        };
-        const updated = [...categories, newCat];
-        setCategories(updated);
-        storage.saveCategories(params.id, updated);
+    const handleCreateCategory = async () => {
+        try {
+            const res = await fetch('/api/admin/categories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    courseId: params.id,
+                    title: newCategoryTitle || '新しいカテゴリ'
+                })
+            });
 
-        // Update course's category count
-        const courses = storage.getCourses();
-        const updatedCourses = courses.map((c: any) =>
-            c.id === params.id ? { ...c, categoryCount: updated.length } : c
-        );
-        storage.saveCourses(updatedCourses);
+            if (res.ok) {
+                fetchCourseData();
+                setIsCreateModalOpen(false);
+                setNewCategoryTitle('');
+            }
+        } catch (e) {
+            alert('作成に失敗しました');
+        }
+    };
 
-        setIsCreateModalOpen(false);
-        setNewCategoryTitle('');
+    const openCourseEdit = () => {
+        if (course) {
+            setEditCourseData({
+                title: course.title,
+                label: course.label || '',
+                minTier: course.minTier || 1
+            });
+            setIsCourseEditModalOpen(true);
+        }
+    };
+
+    const handleSaveCourse = async () => {
+        try {
+            const res = await fetch(`/api/admin/courses/${params.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editCourseData)
+            });
+            if (res.ok) {
+                const updated = await res.json();
+                setCourse(updated);
+                setIsCourseEditModalOpen(false);
+            }
+        } catch (e) {
+            alert('コース情報の保存に失敗しました');
+        }
     };
 
     return (
         <div className={styles.container}>
-            {/* Plan Alert Removed */}
-
             <div className={styles.breadcrumb}>
                 <div className={styles.breadcrumbLink}>
                     <Link href="/admin/courses">コース一覧</Link> / {course?.title || 'コース詳細'}
@@ -144,7 +235,17 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
 
             {/* Course Metrics Header */}
             <div className={styles.courseHeader}>
-                <h1 className={styles.courseTitle}>{course?.title || 'コース詳細'}</h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <h1 className={styles.courseTitle}>{course?.title || 'コース詳細'}</h1>
+                    <button className={styles.editLinkBtn} onClick={openCourseEdit}>
+                        <span className={styles.editIcon}>⚙️</span> 設定変更
+                    </button>
+                    {course?.minTier && (
+                        <span className={`px-2 py-1 rounded text-sm ${course.minTier === 3 ? 'bg-amber-100 text-amber-800' : course.minTier === 2 ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-800'}`}>
+                            {course.minTier === 3 ? 'Premium' : course.minTier === 2 ? 'Standard+' : 'Light+'}
+                        </span>
+                    )}
+                </div>
 
                 <div className={styles.metricsGrid}>
                     <div className={styles.metricCard}>
@@ -152,59 +253,40 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
                         <div className={styles.metricValue}>
                             <span className={styles.bigNum}>{categories.length}</span>
                             <span className={styles.subNum}>
-                                公開数: <b>{categories.filter(c => c.isPublic).length}</b> 非公開数: <b>{categories.filter(c => !c.isPublic).length}</b>
+                                公開数: <b>{categories.filter(c => c.published).length}</b> 非公開数: <b>{categories.filter(c => !c.published).length}</b>
                             </span>
                         </div>
                     </div>
-
-                    <div className={styles.metricCard}>
-                        <div className={styles.metricLabel}>受講設定</div>
-                        <div className={styles.metricItem}>
-                            <span className={styles.smallLabel}>受講期限</span>
-                            <span className={styles.smallValue}>90日</span>
-                        </div>
-                    </div>
-
-                    <div className={styles.metricCard}>
-                        <div className={styles.metricLabel}>スケジュール設定</div>
-                        <div className={styles.metricItem}>
-                            <span className={styles.smallValue}>強制する</span>
-                        </div>
-                    </div>
-
-                    <div className={styles.metricCard}>
-                        <div className={styles.metricLabel}>受講完了後開放コース</div>
-                        <div className={styles.metricItem}>
-                            <span className={styles.smallValue}>-</span>
-                        </div>
-                    </div>
+                    {/* Other metrics placeholders if needed */}
                 </div>
             </div>
 
             {/* Category List */}
-            <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-            >
-                <div className={styles.categoryList}>
-                    <SortableContext
-                        items={categories.map(c => c.id)}
-                        strategy={verticalListSortingStrategy}
-                    >
-                        {categories.map((category) => (
-                            <SortableCategoryItem
-                                key={category.id}
-                                category={category}
-                                params={params}
-                                togglePublic={togglePublic}
-                                deleteCategory={deleteCategory}
-                                handleEditClick={handleEditClick}
-                            />
-                        ))}
-                    </SortableContext>
-                </div>
-            </DndContext>
+            {isLoading ? <div>Loading...</div> : (
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <div className={styles.categoryList}>
+                        <SortableContext
+                            items={categories.map(c => c.id)}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            {categories.map((category) => (
+                                <SortableCategoryItem
+                                    key={category.id}
+                                    category={category}
+                                    params={params}
+                                    togglePublic={togglePublic}
+                                    deleteCategory={deleteCategory}
+                                    handleEditClick={handleEditClick}
+                                />
+                            ))}
+                        </SortableContext>
+                    </div>
+                </DndContext>
+            )}
 
             {/* Add Category Button */}
             <div className={styles.bottomAction}>
@@ -251,6 +333,49 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
                     </div>
                 </div>
             )}
+
+            {/* Edit Course Settings Modal */}
+            {isCourseEditModalOpen && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modal}>
+                        <h3>コース設定変更</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                            <div>
+                                <label className={styles.formLabel}>コース名</label>
+                                <input
+                                    className={styles.modalInput}
+                                    value={editCourseData.title}
+                                    onChange={e => setEditCourseData({ ...editCourseData, title: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className={styles.formLabel}>ラベル</label>
+                                <input
+                                    className={styles.modalInput}
+                                    value={editCourseData.label}
+                                    onChange={e => setEditCourseData({ ...editCourseData, label: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className={styles.formLabel}>公開範囲 (Tier)</label>
+                                <select
+                                    className={styles.modalInput}
+                                    value={editCourseData.minTier}
+                                    onChange={e => setEditCourseData({ ...editCourseData, minTier: parseInt(e.target.value) })}
+                                >
+                                    <option value={1}>Tier 1 (Light+)</option>
+                                    <option value={2}>Tier 2 (Standard+)</option>
+                                    <option value={3}>Tier 3 (Premium)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className={styles.modalActions}>
+                            <button onClick={() => setIsCourseEditModalOpen(false)}>キャンセル</button>
+                            <button className={styles.saveBtn} onClick={handleSaveCourse}>保存</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -290,13 +415,13 @@ function SortableCategoryItem({ category, params, togglePublic, deleteCategory, 
                             <label className={styles.switch}>
                                 <input
                                     type="checkbox"
-                                    checked={category.isPublic}
+                                    checked={category.published}
                                     onChange={() => togglePublic(category.id)}
                                 />
                                 <span className={styles.slider}></span>
                             </label>
                             <span className={styles.toggleLabel}>
-                                {category.isPublic ? '公開中' : '非公開'}
+                                {category.published ? '公開中' : '非公開'}
                             </span>
                         </div>
                         <button className={styles.deleteBtn} onClick={() => deleteCategory(category.id)}>

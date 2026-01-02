@@ -187,6 +187,8 @@ export interface ProgressDetail {
     feedbackStatus?: 'pending' | 'completed';
     feedbackContent?: string;
     feedbackAt?: string; // scheduled or actual feedback time
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface PurchaseRequest {

@@ -1,8 +1,6 @@
-"use client";
-
 import { useState, useEffect } from "react";
-import { getCategories, getBlocks, getTargetDates, saveTargetDate, MOCK_COURSES, MOCK_USERS } from "@/lib/data";
-import { storage } from "@/app/lib/storage"; // Added
+import { getTargetDates, saveTargetDate, MOCK_USERS } from "@/lib/data";
+import { storage } from "@/app/lib/storage";
 import { Category, Block, Course, User } from "@/types";
 import { Calendar, BookOpen, MessageSquare, PlayCircle, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import Link from "next/link";
@@ -11,27 +9,37 @@ interface CourseDashboardProps {
     courseId: string;
 }
 
+
 export default function CourseDashboard({ courseId }: CourseDashboardProps) {
     const [activeTab, setActiveTab] = useState<'course' | 'plan' | 'feedback'>('course');
-    const [course, setCourse] = useState<Course | null>(null);
-    const [categories, setCategories] = useState<Category[]>([]);
+    const [course, setCourse] = useState<any | null>(null); // Use any for now or update Course type to include categories
     const [targetDates, setTargetDates] = useState<Record<string, string>>({});
     const [user] = useState<User>(MOCK_USERS[0]); // Mock student
-    const [completedBlockIds, setCompletedBlockIds] = useState<string[]>([]); // Added state
+    const [completedBlockIds, setCompletedBlockIds] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const c = MOCK_COURSES.find(c => c.id === courseId);
-        if (c) {
-            setCourse(c);
-            setCategories(getCategories(c.id));
-        }
+        const fetchCourseData = async () => {
+            try {
+                const res = await fetch(`/api/courses/${courseId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setCourse(data);
+                }
+            } catch (e) {
+                console.error("Failed to fetch course", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         setTargetDates(getTargetDates(user.id));
+
         // Load progress
         if (typeof window !== 'undefined') {
             fetch('/api/student/progress')
                 .then(res => res.json())
                 .then(data => {
-                    // data is array of { blockId, status, ... }
                     if (Array.isArray(data)) {
                         const completed = data
                             .filter((item: any) => item.status === 'completed')
@@ -41,9 +49,18 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                 })
                 .catch(err => console.error("Failed to fetch progress", err));
         }
+
+        fetchCourseData();
     }, [courseId, user.id]);
 
-    if (!course) return <div className="p-10 text-center text-slate-500 font-serif italic">Loading course...</div>;
+    if (loading) return <div className="p-10 text-center text-slate-500 font-serif italic">Loading course...</div>;
+    if (!course) return <div className="p-10 text-center text-slate-500 font-serif italic">Course not found.</div>;
+
+    // Helper to get blocks from the nested structure
+    const getBlocksForCategory = (catId: string) => {
+        const cat = course.categories?.find((c: any) => c.id === catId);
+        return cat?.blocks || [];
+    };
 
     return (
         <div className="min-h-screen bg-[#FDFCFB] text-slate-800">
@@ -88,7 +105,7 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
 
                 {activeTab === 'course' && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        {/* Learning Progress Section (Image 1) */}
+                        {/* Learning Progress Section */}
                         <section className="bg-white rounded-xl border border-slate-100 shadow-xl overflow-hidden flex flex-col md:flex-row">
                             <div className="w-full md:w-2/3 bg-slate-900 aspect-video flex items-center justify-center relative group">
                                 <PlayCircle className="w-20 h-20 text-white opacity-80 group-hover:scale-110 group-hover:opacity-100 transition-all cursor-pointer" />
@@ -98,32 +115,38 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                                 <p className="text-slate-600 leading-relaxed text-sm font-bold">
                                     {course.title}へようこそ！<br />まずは動画を確認して感想を記載して受講を開始してください。
                                 </p>
-                                <Link
-                                    href={`/student/course/${course.id}/learn/b1`}
-                                    className="bg-rose-600 text-white px-8 py-3 rounded-md font-bold hover:bg-rose-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                                >
-                                    感想を送ってスタート
-                                </Link>
+                                {/* Link to first block of first category if available */}
+                                {course.categories?.[0]?.blocks?.[0] ? (
+                                    <Link
+                                        href={`/student/course/${course.id}/learn/${course.categories[0].blocks[0].id}`}
+                                        className="bg-rose-600 text-white px-8 py-3 rounded-md font-bold hover:bg-rose-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                    >
+                                        感想を送ってスタート
+                                    </Link>
+                                ) : (
+                                    <button disabled className="bg-slate-300 text-white px-8 py-3 rounded-md font-bold cursor-not-allowed">
+                                        コンテンツ準備中
+                                    </button>
+                                )}
                             </div>
                         </section>
-                        {/* Curriculum Section (Image 1) */}
+
+                        {/* Curriculum Section */}
                         <section className="space-y-4">
                             <h2 className="text-xl font-serif font-bold text-slate-700">カリキュラム</h2>
                             <div className="bg-white rounded-lg border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-50">
-                                {categories.map((cat, idx) => {
-                                    // Calculate completion status for category
-                                    // Since we don't have cat.blocks easily available here without fetching, let's fetch them or assume.
-                                    // In real app, we should fetch blocks for cat. 
-                                    // getCategories returns title/id/img.
-                                    // getBlocks(cat.id) is imported from data.
-                                    const catBlocks = getBlocks(cat.id);
-                                    const isCatCompleted = catBlocks.length > 0 && catBlocks.every(b => completedBlockIds.includes(b.id));
+                                {course.categories?.map((cat: any, idx: number) => {
+                                    const catBlocks = cat.blocks || [];
+                                    const isCatCompleted = catBlocks.length > 0 && catBlocks.every((b: any) => completedBlockIds.includes(b.id));
 
                                     return (
                                         <Link
-                                            href={`/student/course/${course.id}/categories/${cat.id}`}
+                                            href={catBlocks.length > 0 ? `/student/course/${course.id}/categories/${cat.id}` : '#'}
                                             key={cat.id}
                                             className="block p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                                            onClick={(e) => {
+                                                if (catBlocks.length === 0) e.preventDefault();
+                                            }}
                                         >
                                             <div className="flex items-center gap-4">
                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center font-serif text-sm font-bold transition-colors ${isCatCompleted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400 group-hover:bg-rose-100 group-hover:text-rose-600'}`}>
@@ -132,6 +155,7 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                                                 <div>
                                                     <h3 className="font-bold text-slate-700 group-hover:text-rose-800 transition-colors">{cat.title}</h3>
                                                     <p className="text-xs text-slate-400 mt-0.5">完了予定: {targetDates[cat.id] || "未設定"}</p>
+                                                    <p className="text-[10px] text-slate-400">{catBlocks.length} レッスン</p>
                                                 </div>
                                             </div>
                                             <span className={`text-[10px] px-3 py-1 rounded-full font-bold border ${isCatCompleted ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
@@ -147,7 +171,7 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
 
                 {activeTab === 'plan' && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        {/* Banner Alert (Image 2) */}
+                        {/* Banner Alert */}
                         {!Object.keys(targetDates).length && (
                             <div className="bg-rose-50 border border-rose-100 p-4 rounded-md flex items-center justify-between text-rose-800">
                                 <div className="flex items-center gap-2 text-sm font-bold">
@@ -165,14 +189,14 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
 
                         <div className="bg-white rounded-xl border border-slate-100 shadow-lg p-8">
                             <div className="grid grid-cols-1 gap-6">
-                                {categories.map((cat, idx) => {
-                                    const catBlocks = getBlocks(cat.id);
-                                    const isCatCompleted = catBlocks.every(b => completedBlockIds.includes(b.id));
+                                {course.categories?.map((cat: any, idx: number) => {
+                                    const catBlocks = cat.blocks || [];
+                                    const isCatCompleted = catBlocks.length > 0 && catBlocks.every((b: any) => completedBlockIds.includes(b.id));
 
                                     return (
                                         <div key={cat.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-lg bg-white border border-slate-50 hover:border-rose-100 transition-all group">
                                             <div className="flex items-center gap-4">
-                                                <div className="text-slate-300 font-serif text-sm">{idx + 1}/{categories.length}</div>
+                                                <div className="text-slate-300 font-serif text-sm">{idx + 1}/{course.categories.length}</div>
                                                 <div className="font-bold text-lg text-slate-700">{cat.title}</div>
                                                 <div className={`text-[10px] px-2 py-0.5 rounded border uppercase font-bold tracking-tight ${isCatCompleted ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
                                                     {isCatCompleted ? '完了' : '未完了'}

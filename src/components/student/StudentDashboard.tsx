@@ -17,7 +17,7 @@ interface StudentDashboardProps {
 export default function StudentDashboard({ initialUser }: StudentDashboardProps) {
     const supabase = createClient();
     const [user, setUser] = useState<User>(initialUser || MOCK_USERS[0]);
-    const [courses] = useState<Course[]>(MOCK_COURSES);
+    const [courses, setCourses] = useState<Course[]>([]);
     const [announcements] = useState<Announcement[]>(getAnnouncements());
     const [affiliateEarnings, setAffiliateEarnings] = useState({ directReferrals: 0, indirectReferrals: 0, monthlyEarnings: 0 });
 
@@ -54,6 +54,21 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
     const [rewardsBalance, setRewardsBalance] = useState(0);
     const [useReward, setUseReward] = useState(false);
+
+    useEffect(() => {
+        const fetchCourses = async () => {
+            try {
+                const res = await fetch('/api/courses');
+                if (res.ok) {
+                    const data = await res.json();
+                    setCourses(data);
+                }
+            } catch (e) {
+                console.error("Failed to fetch courses", e);
+            }
+        };
+        fetchCourses();
+    }, []);
 
     useEffect(() => {
         const fetchRewards = async () => {

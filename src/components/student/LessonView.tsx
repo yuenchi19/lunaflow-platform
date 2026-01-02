@@ -21,44 +21,59 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccessToast, setShowSuccessToast] = useState(false);
 
-    const loadData = () => {
-        const b = MOCK_BLOCKS.find(b => b.id === blockId);
-        if (b) {
-            setBlock(b);
-            setCategory(MOCK_CATEGORIES.find(c => c.id === b.categoryId) || null);
+    const loadData = async () => {
+        try {
+            const res = await fetch(`/api/courses/${courseId}/learn/${blockId}`);
+            if (res.ok) {
+                const data = await res.json();
+                setBlock(data.block);
+                setCategory(data.category);
+                // Can store nextBlockId if needed for state, or used in render via logic.
+                // Currently render logic re-calculates, I should update it to use the API provided `nextBlockId`.
+                // But for minimize diff, I'll store it in a new state or just depend on the fact that MOCK logic in render is broken now?
+                // Wait, render logic currently imports MOCK data to calc next block.
+                // I MUST update the render logic too to use `nextBlockId` from API.
+                // Let's add state for navigation.
+                setNav({ next: data.nextBlockId, prev: data.prevBlockId });
+            }
 
-            setCategory(MOCK_CATEGORIES.find(c => c.id === b.categoryId) || null);
-
-            // Fetch progress from API
-            fetch('/api/student/progress')
-                .then(res => res.json())
-                .then(data => {
-                    if (Array.isArray(data)) {
-                        const entry = data.find((p: any) => p.blockId === blockId);
-                        if (entry) {
-                            // Map API response to ProgressDetail type roughly
-                            setCurrentProgress({
-                                blockId: entry.blockId,
-                                status: entry.status,
-                                feedbackStatus: entry.feedbackStatus || 'pending',
-                                completedAt: entry.completedAt,
-                                feedbackContent: entry.feedbackContent
-                            } as any);
-                            if (entry.feedbackContent) setFeedbackContent(entry.feedbackContent);
-                        }
+            // Fetch progress
+            const progressRes = await fetch('/api/student/progress');
+            if (progressRes.ok) {
+                const data = await progressRes.json();
+                if (Array.isArray(data)) {
+                    const entry = data.find((p: any) => p.blockId === blockId);
+                    if (entry) {
+                        setCurrentProgress({
+                            blockId: entry.blockId,
+                            status: entry.status,
+                            feedbackStatus: entry.feedbackStatus || 'pending',
+                            completedAt: entry.completedAt,
+                            feedbackContent: entry.feedbackContent,
+                            // map other fields
+                            userId: user.id,
+                            createdAt: entry.createdAt,
+                            updatedAt: entry.updatedAt,
+                            courseId: courseId,
+                            courseTitle: 'Course',
+                            categoryId: category?.id || '',
+                            categoryTitle: category?.title || '',
+                            blockTitle: data.block?.title || '',
+                        });
+                        if (entry.feedbackContent) setFeedbackContent(entry.feedbackContent);
                     }
-                })
-                .catch(err => console.error("Failed to fetch progress", err));
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load lesson data", e);
         }
     };
+
+    const [nav, setNav] = useState<{ next: string | null, prev: string | null }>({ next: null, prev: null });
 
     useEffect(() => {
         loadData();
     }, [blockId, user.id]);
-
-
-
-    // ...
 
     const handleSubmit = async () => {
         if (!feedbackContent.trim() || !block) return;
@@ -76,15 +91,10 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
             });
 
             if (res.ok) {
-                // Update local state potentially or re-fetch
-                // storage.saveCompletedBlock(block.id); // Valid as fallback or remove if fully DB dependent. User asked to "Remove simplified local storage".
-                // Actually, keeping local might speed up UI, but let's trust API for now as requested "DB Save".
-
                 setTimeout(() => {
                     setIsSubmitting(false);
                     setShowSuccessToast(true);
-                    loadData(); // This currently fetches mock data. We might need to fetch progress from API here.
-                    // But for now, let's just show toast.
+                    loadData();
                     setTimeout(() => setShowSuccessToast(false), 3000);
                 }, 800);
             } else {

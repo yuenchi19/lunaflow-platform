@@ -43,6 +43,53 @@ model OneTimeToken {
   createdAt DateTime  @default(now())
 }
 
+
+
+
+model Course {
+  id          String     @id @default(cuid())
+  title       String
+  description String?    @db.Text
+  label       String?
+  thumbnailUrl String?
+  order       Int        @default(0)
+  published   Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  minTier     Int        @default(1) // 1: Light, 2: Standard, 3: Premium
+  categories  Category[]
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  courseId  String
+  title     String
+  order     Int      @default(0)
+  published Boolean  @default(true)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  blocks    Block[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+model Block {
+  id           String   @id @default(cuid())
+  categoryId   String
+  title        String
+  type         String   // 'video', 'text', 'assignment', 'quiz'
+  content      String?  @db.Text
+  videoUrl     String?
+  fileUrl      String?
+  order        Int      @default(0)
+  category     Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  feedbackType String? // 'manual', 'ai'
+  progress     UserProgress[]
+}
+
 model UserProgress {
   id              String    @id @default(cuid())
   userId          String
@@ -53,7 +100,9 @@ model UserProgress {
   feedbackStatus  String? // 'pending', 'completed'
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id])
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  block           Block    @relation(fields: [blockId], references: [id], onDelete: Cascade)
 
   @@unique([userId, blockId])
 }
