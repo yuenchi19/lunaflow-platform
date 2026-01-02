@@ -16,43 +16,7 @@ interface Course {
 
 // ... imports ...
 
-// ... inside CreateCourseModal ...
-{/* Public Range (Tier) */ }
-<div>
-    <div className={styles.formLabel}>
-        公開範囲（プラン） <span className={styles.requiredBadge}>必須</span>
-    </div>
-    <select
-        name="minTier"
-        className={styles.input}
-        defaultValue="1"
-        required
-    >
-        <option value="1">ライトプラン以上 (全員)</option>
-        <option value="2">スタンダードプラン以上</option>
-        <option value="3">プレミアムプランのみ</option>
-    </select>
-</div>
 
-// ... handleCreateCourse update needed implicitly by form submit handling `minTier`
-
-// ... inside CreateCourseModal handleSubmit ...
-const formData = new FormData(e.target as HTMLFormElement);
-onSubmit({
-    title: formData.get('title'),
-    label: formData.get('label'),
-    minTier: formData.get('minTier'), // Capture minTier
-});
-
-// ... inside SortableCourseItem ...
-<div className={styles.badges}>
-    <span className={styles.badgeId}>コースID: {course.id}</span>
-    {course.label && <span className={styles.badgeLabel}>{course.label}</span>}
-    {/* Tier Badge */}
-    <span className={`${styles.badgeLabel} ${course.minTier === 3 ? 'bg-amber-100 text-amber-800' : course.minTier === 2 ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-800'}`}>
-        {course.minTier === 3 ? 'プレミアム限定' : course.minTier === 2 ? 'スタンダード以上' : 'ライト以上'}
-    </span>
-</div>
 
 import {
     DndContext,
