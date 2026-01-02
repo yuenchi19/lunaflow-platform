@@ -292,7 +292,14 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     );
 
     const renderPurchaseTracker = () => (
-        <LockOverlay isLocked={!user.isLedgerEnabled} title="仕入れ機能はロックされています" message="規定のカリキュラムを完了することで、利用可能になります。">
+        <LockOverlay
+            isLocked={!user.isLedgerEnabled}
+            title="仕入れ機能はロックされています"
+            message="規定のカリキュラムを完了することで、利用可能になります。"
+            actionLabel="コースを進める"
+            actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
+            blur="sm"
+        >
             <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 shadow-sm p-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5">
                     <TrendingUp className="w-24 h-24 text-indigo-900" />

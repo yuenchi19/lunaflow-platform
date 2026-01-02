@@ -51,9 +51,9 @@ export default function LockOverlay({ isLocked, title, message, children, action
                             {actionLabel}
                         </button>
                     ) : (
-                        <Link href="/manual" className="text-xs font-bold text-indigo-600 hover:text-indigo-800 underline">
-                            利用条件を確認する &rarr;
-                        </Link>
+                        <p className="text-xs font-bold text-slate-400">
+                            規定のカリキュラムを完了することで、利用可能になります。
+                        </p>
                     )}
                 </div>
             </div>

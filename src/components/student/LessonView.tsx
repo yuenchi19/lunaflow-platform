@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { getBlocks, submitAssignment, getStudentProgressDetail, MOCK_BLOCKS, MOCK_USERS, MOCK_CATEGORIES } from "@/lib/data";
 import { Block, User, Category, ProgressDetail } from "@/types";
 import { PlayCircle, MessageSquare, Send, CheckCircle, ChevronRight, AlertCircle, RotateCcw, Clock } from "lucide-react";
+import { storage } from "@/app/lib/storage"; // Added import
 import Link from "next/link";
 
 interface LessonViewProps {
@@ -38,10 +39,17 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
         loadData();
     }, [blockId, user.id]);
 
+
+
+    // ...
+
     const handleSubmit = async () => {
         if (!feedbackContent.trim() || !block) return;
         setIsSubmitting(true);
         submitAssignment(user.id, block.id, feedbackContent);
+
+        // Save locally for immediate UI updates
+        storage.saveCompletedBlock(block.id);
 
         // Simulate delay
         setTimeout(() => {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getCategories, getBlocks, getTargetDates, saveTargetDate, MOCK_COURSES, MOCK_USERS } from "@/lib/data";
+import { storage } from "@/app/lib/storage"; // Added
 import { Category, Block, Course, User } from "@/types";
 import { Calendar, BookOpen, MessageSquare, PlayCircle, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import Link from "next/link";
@@ -16,6 +17,7 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
     const [categories, setCategories] = useState<Category[]>([]);
     const [targetDates, setTargetDates] = useState<Record<string, string>>({});
     const [user] = useState<User>(MOCK_USERS[0]); // Mock student
+    const [completedBlockIds, setCompletedBlockIds] = useState<string[]>([]); // Added state
 
     useEffect(() => {
         const c = MOCK_COURSES.find(c => c.id === courseId);
@@ -24,6 +26,10 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
             setCategories(getCategories(c.id));
         }
         setTargetDates(getTargetDates(user.id));
+        // Load progress
+        if (typeof window !== 'undefined') {
+            setCompletedBlockIds(storage.getCompletedBlocks(user.id));
+        }
     }, [courseId, user.id]);
 
     if (!course) return <div className="p-10 text-center text-slate-500 font-serif italic">Loading course...</div>;
@@ -89,27 +95,36 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                                 </Link>
                             </div>
                         </section>
-
                         {/* Curriculum Section (Image 1) */}
                         <section className="space-y-4">
                             <h2 className="text-xl font-serif font-bold text-slate-700">カリキュラム</h2>
                             <div className="bg-white rounded-lg border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-50">
-                                {categories.map((cat, idx) => (
-                                    <div key={cat.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center font-serif text-sm font-bold group-hover:bg-rose-100 group-hover:text-rose-600 transition-colors">
-                                                {idx + 1}
+                                {categories.map((cat, idx) => {
+                                    // Calculate completion status for category
+                                    // Since we don't have cat.blocks easily available here without fetching, let's fetch them or assume.
+                                    // In real app, we should fetch blocks for cat. 
+                                    // getCategories returns title/id/img.
+                                    // getBlocks(cat.id) is imported from data.
+                                    const catBlocks = getBlocks(cat.id);
+                                    const isCatCompleted = catBlocks.every(b => completedBlockIds.includes(b.id));
+
+                                    return (
+                                        <div key={cat.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-serif text-sm font-bold transition-colors ${isCatCompleted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400 group-hover:bg-rose-100 group-hover:text-rose-600'}`}>
+                                                    {isCatCompleted ? <CheckCircle className="w-5 h-5" /> : idx + 1}
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-slate-700 group-hover:text-rose-800 transition-colors">{cat.title}</h3>
+                                                    <p className="text-xs text-slate-400 mt-0.5">完了予定: {targetDates[cat.id] || "未設定"}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h3 className="font-bold text-slate-700 group-hover:text-rose-800 transition-colors">{cat.title}</h3>
-                                                <p className="text-xs text-slate-400 mt-0.5">完了予定: {targetDates[cat.id] || "未設定"}</p>
-                                            </div>
+                                            <span className={`text-[10px] px-3 py-1 rounded-full font-bold border ${isCatCompleted ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                                                {isCatCompleted ? '完了' : '未完了'}
+                                            </span>
                                         </div>
-                                        <span className="text-[10px] px-3 py-1 rounded-full bg-slate-100 text-slate-400 font-bold border border-slate-200">
-                                            未完了
-                                        </span>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </section>
                     </div>
@@ -135,39 +150,44 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
 
                         <div className="bg-white rounded-xl border border-slate-100 shadow-lg p-8">
                             <div className="grid grid-cols-1 gap-6">
-                                {categories.map((cat, idx) => (
-                                    <div key={cat.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-lg bg-white border border-slate-50 hover:border-rose-100 transition-all group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="text-slate-300 font-serif text-sm">{idx + 1}/{categories.length}</div>
-                                            <div className="font-bold text-lg text-slate-700">{cat.title}</div>
-                                            <div className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-400 border border-slate-200 uppercase font-bold tracking-tight">
-                                                未完了
-                                            </div>
-                                        </div>
+                                {categories.map((cat, idx) => {
+                                    const catBlocks = getBlocks(cat.id);
+                                    const isCatCompleted = catBlocks.every(b => completedBlockIds.includes(b.id));
 
-                                        <div className="flex items-center gap-8">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] text-slate-400 uppercase font-bold mb-1">カテゴリ終了目安</span>
-                                                <span className="text-sm font-serif italic text-slate-500">{idx === 0 ? "なし" : "1 時間"}</span>
+                                    return (
+                                        <div key={cat.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-lg bg-white border border-slate-50 hover:border-rose-100 transition-all group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-slate-300 font-serif text-sm">{idx + 1}/{categories.length}</div>
+                                                <div className="font-bold text-lg text-slate-700">{cat.title}</div>
+                                                <div className={`text-[10px] px-2 py-0.5 rounded border uppercase font-bold tracking-tight ${isCatCompleted ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                                                    {isCatCompleted ? '完了' : '未完了'}
+                                                </div>
                                             </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] text-slate-400 uppercase font-bold mb-1">あなたの完了予定日</span>
-                                                <div className="relative group/input">
-                                                    <Calendar className="w-4 h-4 absolute left-3 top-2.5 text-slate-400 group-hover/input:text-rose-500 transition-colors pointer-events-none" />
-                                                    <input
-                                                        type="date"
-                                                        className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 transition-all font-serif"
-                                                        value={targetDates[cat.id] || ""}
-                                                        onChange={(e) => {
-                                                            saveTargetDate(user.id, cat.id, e.target.value);
-                                                            setTargetDates(prev => ({ ...prev, [cat.id]: e.target.value }));
-                                                        }}
-                                                    />
+
+                                            <div className="flex items-center gap-8">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] text-slate-400 uppercase font-bold mb-1">カテゴリ終了目安</span>
+                                                    <span className="text-sm font-serif italic text-slate-500">{idx === 0 ? "なし" : "1 時間"}</span>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] text-slate-400 uppercase font-bold mb-1">あなたの完了予定日</span>
+                                                    <div className="relative group/input">
+                                                        <Calendar className="w-4 h-4 absolute left-3 top-2.5 text-slate-400 group-hover/input:text-rose-500 transition-colors pointer-events-none" />
+                                                        <input
+                                                            type="date"
+                                                            className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 transition-all font-serif"
+                                                            value={targetDates[cat.id] || ""}
+                                                            onChange={(e) => {
+                                                                saveTargetDate(user.id, cat.id, e.target.value);
+                                                                setTargetDates(prev => ({ ...prev, [cat.id]: e.target.value }));
+                                                            }}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
