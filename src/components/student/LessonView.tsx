@@ -22,27 +22,26 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
     const [showSuccessToast, setShowSuccessToast] = useState(false);
 
     const loadData = async () => {
+        let fetchedBlock: Block | null = null;
+        let fetchedCategory: Category | null = null;
+
         try {
             const res = await fetch(`/api/courses/${courseId}/learn/${blockId}`);
             if (res.ok) {
                 const data = await res.json();
+                fetchedBlock = data.block;
+                fetchedCategory = data.category;
                 setBlock(data.block);
                 setCategory(data.category);
-                // Can store nextBlockId if needed for state, or used in render via logic.
-                // Currently render logic re-calculates, I should update it to use the API provided `nextBlockId`.
-                // But for minimize diff, I'll store it in a new state or just depend on the fact that MOCK logic in render is broken now?
-                // Wait, render logic currently imports MOCK data to calc next block.
-                // I MUST update the render logic too to use `nextBlockId` from API.
-                // Let's add state for navigation.
                 setNav({ next: data.nextBlockId, prev: data.prevBlockId });
             }
 
             // Fetch progress
             const progressRes = await fetch('/api/student/progress');
             if (progressRes.ok) {
-                const data = await progressRes.json();
-                if (Array.isArray(data)) {
-                    const entry = data.find((p: any) => p.blockId === blockId);
+                const progressList = await progressRes.json();
+                if (Array.isArray(progressList)) {
+                    const entry = progressList.find((p: any) => p.blockId === blockId);
                     if (entry) {
                         setCurrentProgress({
                             blockId: entry.blockId,
@@ -50,15 +49,14 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                             feedbackStatus: entry.feedbackStatus || 'pending',
                             completedAt: entry.completedAt,
                             feedbackContent: entry.feedbackContent,
-                            // map other fields
                             userId: user.id,
                             createdAt: entry.createdAt,
                             updatedAt: entry.updatedAt,
                             courseId: courseId,
                             courseTitle: 'Course',
-                            categoryId: category?.id || '',
-                            categoryTitle: category?.title || '',
-                            blockTitle: data.block?.title || '',
+                            categoryId: fetchedCategory?.id || category?.id || '',
+                            categoryTitle: fetchedCategory?.title || category?.title || '',
+                            blockTitle: fetchedBlock?.title || block?.title || '',
                         });
                         if (entry.feedbackContent) setFeedbackContent(entry.feedbackContent);
                     }
