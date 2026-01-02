@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { getTargetDates, saveTargetDate, MOCK_USERS } from "@/lib/data";
 import { storage } from "@/app/lib/storage";
