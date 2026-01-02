@@ -18,6 +18,8 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block }) => {
     // Interactive State
     const [quizSelected, setQuizSelected] = React.useState<number | null>(null);
     const [quizSubmitted, setQuizSubmitted] = React.useState(false);
+
+    // Assignment/Feedback State
     const [assignmentText, setAssignmentText] = React.useState('');
     const [assignmentUrl, setAssignmentUrl] = React.useState('');
     const [assignmentSubmitted, setAssignmentSubmitted] = React.useState(false);
@@ -33,11 +35,90 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block }) => {
 
     if (!block) return null;
 
+    // Helper: Submission Area (Reusable for Assignment AND Feedback)
+    const renderSubmissionArea = (isFeedback: boolean = false) => {
+        if (assignmentSubmitted) {
+            return (
+                <div className="mt-8 bg-emerald-50 border border-emerald-100 p-6 rounded-lg text-center animate-fade-in">
+                    <div className="text-3xl mb-2">✅</div>
+                    <h3 className="font-bold text-emerald-800">{isFeedback ? '感想を送信しました' : '提出完了'}</h3>
+                    <p className="text-sm text-emerald-600 mt-1">{isFeedback ? 'フィードバックありがとうございます。' : '課題が提出されました。'}</p>
+                    <button
+                        onClick={() => setAssignmentSubmitted(false)}
+                        className="mt-4 text-xs text-emerald-600 underline"
+                    >
+                        再提出する (テスト)
+                    </button>
+                </div>
+            );
+        }
+
+        const formats = block.content?.formats || (isFeedback ? ['text'] : ['text']); // Default to text for feedback
+
+        return (
+            <div className={`mt-8 pt-6 border-t border-slate-100 ${styles.assignmentSubmissionArea}`}>
+                <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    {isFeedback ? '📝 感想・フィードバックの提出' : '📤 課題の提出'}
+                    {isFeedback && <span className="text-[10px] bg-rose-100 text-rose-600 px-2 py-0.5 rounded-full">必須</span>}
+                </h4>
+
+                {formats.includes('text') && (
+                    <div className={styles.submissionGroup}>
+                        <label className="text-sm font-bold text-slate-700 mb-1 block">
+                            {isFeedback ? '感想・気づき' : 'テキスト回答'}
+                        </label>
+                        <textarea
+                            className={styles.submissionTextarea}
+                            placeholder={isFeedback ? "動画を見た感想や、学んだことを記入してください..." : "回答を入力してください"}
+                            rows={4}
+                            value={assignmentText}
+                            onChange={(e) => setAssignmentText(e.target.value)}
+                        />
+                    </div>
+                )}
+
+                {formats.includes('url') && (
+                    <div className={styles.submissionGroup}>
+                        <label className="text-sm font-bold text-slate-700 mb-1 block">URL提出</label>
+                        <input
+                            type="url"
+                            className={styles.submissionInput}
+                            placeholder="https://..."
+                            value={assignmentUrl}
+                            onChange={(e) => setAssignmentUrl(e.target.value)}
+                        />
+                    </div>
+                )}
+
+                {formats.includes('image') && (
+                    <div className={styles.submissionGroup}>
+                        <label className="text-sm font-bold text-slate-700 mb-1 block">画像アップロード</label>
+                        <div className={styles.fileDropZone}>
+                            <span className={styles.dropIcon}>📷</span>
+                            <span>画像をドラッグ＆ドロップ (テスト中は無効)</span>
+                        </div>
+                    </div>
+                )}
+
+                <button
+                    className={styles.submitAssignmentBtn}
+                    onClick={() => {
+                        if (formats.includes('text') && !assignmentText && !assignmentUrl) return alert('入力してください');
+                        setAssignmentSubmitted(true);
+                    }}
+                >
+                    {isFeedback ? '感想を送信して完了' : '課題を提出する'}
+                </button>
+            </div>
+        );
+    };
+
     switch (block.type) {
         case 'video':
             return (
                 <div className={styles.videoPlayer}>
                     <VideoPlayer videoUrl={block.url || block.content?.url || ''} />
+                    {block.content?.feedbackRequired && renderSubmissionArea(true)}
                 </div>
             );
         case 'text':
@@ -50,6 +131,7 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block }) => {
                             ? (block.content?.body || '記事の本文がここに表示されます。管理画面で入力した内容が反映されます。')
                             : (block.content?.body || '短いテキストがここに表示されます。')}
                     </div>
+                    {block.content?.feedbackRequired && renderSubmissionArea(true)}
                 </div>
             );
         case 'quiz':
@@ -125,66 +207,7 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block }) => {
                     <div className={styles.assignmentDescription}>
                         {block.content?.body || '課題の説明がここに表示されます。'}
                     </div>
-
-                    {!assignmentSubmitted ? (
-                        <div className={styles.assignmentSubmissionArea}>
-                            <h4 className={styles.submissionTitle}>課題の提出</h4>
-                            {(!block.content?.formats || block.content.formats.includes('text')) && (
-                                <div className={styles.submissionGroup}>
-                                    <label>テキスト回答</label>
-                                    <textarea
-                                        className={styles.submissionTextarea}
-                                        placeholder="回答を入力してください"
-                                        rows={4}
-                                        value={assignmentText}
-                                        onChange={(e) => setAssignmentText(e.target.value)}
-                                    />
-                                </div>
-                            )}
-                            {block.content?.formats?.includes('url') && (
-                                <div className={styles.submissionGroup}>
-                                    <label>URL提出</label>
-                                    <input
-                                        type="url"
-                                        className={styles.submissionInput}
-                                        placeholder="https://..."
-                                        value={assignmentUrl}
-                                        onChange={(e) => setAssignmentUrl(e.target.value)}
-                                    />
-                                </div>
-                            )}
-                            {block.content?.formats?.includes('image') && (
-                                <div className={styles.submissionGroup}>
-                                    <label>画像アップロード</label>
-                                    <div className={styles.fileDropZone}>
-                                        <span className={styles.dropIcon}>📷</span>
-                                        <span>画像をドラッグ＆ドロップ (テスト中は無効)</span>
-                                    </div>
-                                </div>
-                            )}
-                            <button
-                                className={styles.submitAssignmentBtn}
-                                onClick={() => {
-                                    if (!assignmentText && !assignmentUrl) return alert('回答を入力してください');
-                                    setAssignmentSubmitted(true);
-                                }}
-                            >
-                                課題を提出する
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-lg text-center">
-                            <div className="text-3xl mb-2">✅</div>
-                            <h3 className="font-bold text-emerald-800">提出完了</h3>
-                            <p className="text-sm text-emerald-600 mt-1">課題が提出されました。</p>
-                            <button
-                                onClick={() => setAssignmentSubmitted(false)}
-                                className="mt-4 text-xs text-emerald-600 underline"
-                            >
-                                再提出する (テスト)
-                            </button>
-                        </div>
-                    )}
+                    {renderSubmissionArea(false)}
                 </div>
             );
         default:
@@ -196,12 +219,7 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block }) => {
                     <button className={styles.downloadBtn}>
                         {block.type === 'link' ? 'リンクを開く' : 'ファイルをダウンロード'}
                     </button>
-                    {block.content?.feedbackRequired && (
-                        <div className={styles.feedbackNotice}>
-                            <span className={styles.feedbackBadge}>必須</span>
-                            このカリキュラム完了には感想の提出が必要です
-                        </div>
-                    )}
+                    {block.content?.feedbackRequired && renderSubmissionArea(true)}
                 </div>
             );
     }
