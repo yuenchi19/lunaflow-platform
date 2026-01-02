@@ -137,7 +137,7 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
                 <div className={styles.breadcrumbLink}>
                     <Link href="/admin/courses">コース一覧</Link> / {course?.title || 'コース詳細'}
                 </div>
-                <Link href={`/student/courses/${params.id}`} className={styles.previewAsStudent} target="_blank">
+                <Link href={`/student/courses/${params.id}?mode=preview`} className={styles.previewAsStudent} target="_blank">
                     <span className={styles.previewIcon}>👁️</span> 受講生として表示
                 </Link>
             </div>
