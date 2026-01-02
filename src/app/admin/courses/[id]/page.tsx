@@ -131,10 +131,7 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
 
     return (
         <div className={styles.container}>
-            <div className={styles.planAlert}>
-                <span className={styles.alertIcon}>⚠️</span>
-                フリープランの有効期限は2026年02月20日です。
-            </div>
+            {/* Plan Alert Removed */}
 
             <div className={styles.breadcrumb}>
                 <div className={styles.breadcrumbLink}>

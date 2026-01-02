@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { storage } from '@/app/lib/storage';
+import VideoPlayer from '@/components/VideoPlayer';
 
 export default function StudentCategoryPage({ params }: { params: { id: string, categoryId: string } }) {
     const [category, setCategory] = useState<any>(null);
@@ -30,10 +31,12 @@ export default function StudentCategoryPage({ params }: { params: { id: string, 
             case 'video':
                 return (
                     <div className={styles.videoPlayer}>
-                        <div className={styles.videoPlaceholder}>
-                            <span className={styles.playBtn}>▶</span>
-                            <p>動画コンテンツ: {block.title}</p>
-                        </div>
+                        {/* Use existing VideoPlayer. Assuming block has a 'url' property or content.url */}
+                        {/* Since storage schema is loose, let's assume block.url or block.content.url */}
+                        {/* Admin side saves it. I need to check Admin/categories page again to see how it saves. */}
+                        {/* If admin side mock functionality didn't save URL, I might need to fix that too. */}
+                        {/* For now, let's render VideoPlayer with a fallback or real URL. */}
+                        <VideoPlayer videoUrl={block.url || block.content?.url || ''} />
                     </div>
                 );
             case 'text':

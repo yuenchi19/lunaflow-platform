@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import styles from './AdminLayout.module.css';
 
 // Mock icons would typically be imported here
@@ -9,6 +10,29 @@ import styles from './AdminLayout.module.css';
 
 export default function AdminSidebar() {
     const pathname = usePathname();
+    const [pendingCount, setPendingCount] = useState(0);
+
+    useEffect(() => {
+        const fetchPendingCount = async () => {
+            try {
+                // We'll assume the list API returns a list, and we can filter or count
+                // Or better, create a specific count endpoint. For now, let's fetch list and count pending.
+                // Optimally this should be an SWR or react-query hook, but useEffect is fine for now.
+                const res = await fetch('/api/admin/purchase-requests');
+                if (res.ok) {
+                    const data = await res.json();
+                    const pending = data.filter((req: any) => req.status === 'pending').length;
+                    setPendingCount(pending);
+                }
+            } catch (error) {
+                console.error("Failed to fetch notification count", error);
+            }
+        };
+
+        fetchPendingCount();
+        // Poll every minute? Or just once on mount. 
+        // Let's stick to mount for now to be safe.
+    }, []);
 
     const menuSections = [
         {
@@ -31,7 +55,7 @@ export default function AdminSidebar() {
                 { label: "受講生", href: "/admin/students", icon: "🎓" },
                 { label: "アフィリエイト", href: "/admin/affiliates", icon: "🤝" },
                 { label: "在庫管理 (Master)", href: "/admin/inventory", icon: "👜" },
-                { label: "仕入れ希望", href: "/admin/purchase-requests", icon: "📦" },
+                { label: "仕入れ希望", href: "/admin/purchase-requests", icon: "📦", badge: pendingCount },
                 { label: "感想", href: "/admin/feedback", icon: "💬" },
                 { label: "お知らせ", href: "/admin/news", icon: "📢" },
             ]
@@ -67,8 +91,15 @@ export default function AdminSidebar() {
                                     href={item.href}
                                     className={`${styles.menuItem} ${pathname === item.href ? styles.menuItemActive : ""}`}
                                 >
-                                    <span className={styles.icon}>{item.icon}</span>
-                                    <span>{item.label}</span>
+                                    <div className="flex items-center gap-2 w-full">
+                                        <span className={styles.icon}>{item.icon}</span>
+                                        <span>{item.label}</span>
+                                        {item.badge !== undefined && item.badge > 0 && (
+                                            <span className="ml-auto bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                                                {item.badge}
+                                            </span>
+                                        )}
+                                    </div>
                                 </Link>
                             ))}
                         </div>
@@ -79,4 +110,3 @@ export default function AdminSidebar() {
         </aside>
     );
 }
-

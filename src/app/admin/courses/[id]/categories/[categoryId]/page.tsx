@@ -78,7 +78,8 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
             id: Math.random().toString(36).substr(2, 9),
             type: activeType,
             title: quizTitle || `${activeType} ブロック`,
-            content: activeType === 'survey' ? { questions: surveyQuestions } : undefined
+            content: activeType === 'survey' ? { questions: surveyQuestions } :
+                activeType === 'video' ? { url: quizBody } : undefined
         };
         const updated = [...blocks, newBlock];
         setBlocks(updated);
@@ -116,32 +117,10 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
             case 'video':
                 return (
                     <div className={styles.modalContentArea}>
-                        <p className={styles.modalHelp}>講座に動画教材を追加できます。</p>
-                        <div className={styles.radioGroup}>
-                            <label className={styles.radioLabel}>
-                                <input type="radio" name="videoType" defaultChecked /> 動画ファイルをアップロードする
-                            </label>
-                            <label className={styles.radioLabel}>
-                                <input type="radio" name="videoType" /> Youtube / Vimeo
-                            </label>
-                        </div>
-                        <div className={styles.uploadBox}>
-                            {selectedFile ? (
-                                <div className={styles.selectedFileInfo}>
-                                    <span className={styles.fileIcon}>📄</span>
-                                    <span className={styles.fileName}>{selectedFile}</span>
-                                    <button className={styles.removeFile} onClick={() => setSelectedFile(null)}>✕</button>
-                                </div>
-                            ) : (
-                                <>
-                                    <p>ここに動画ファイルをドラッグまたは、<br />ボタンを押してファイルを選択してください。</p>
-                                    <div className={styles.uploadIcon}>📁</div>
-                                    <button className={styles.uploadBtn} onClick={() => handleFileSelect('lesson_video.mp4')}>⬆ ファイルを選択</button>
-                                </>
-                            )}
-                            <p className={styles.uploadHint}>※2時間を超える長時間動画は変換に時間が掛かるため、動画を分割後にブロック作成・アップロードを推奨しております。</p>
-                        </div>
+                        <p className={styles.modalHelp}>動画教材（YouTube限定公開URL）を追加できます。</p>
+
                         <div className={styles.inputGroup}>
+                            <label className={styles.inputLabel}>動画タイトル</label>
                             <input
                                 type="text"
                                 placeholder="動画タイトル"
@@ -151,11 +130,26 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
                             />
                             <span className={styles.charCount}>{quizTitle.length} / 100</span>
                         </div>
+
+                        <div className={styles.inputGroup}>
+                            <label className={styles.inputLabel}>YouTube URL</label>
+                            <input
+                                type="text"
+                                placeholder="https://youtu.be/..."
+                                className={styles.modalInput}
+                                value={quizBody} // Reusing quizBody as URL storage to avoid new state if possible, or add new state.
+                                // Actually, let's check if there is a proper state for URL.
+                                // The original code didn't seem to have a dedicated URL state, mostly mocked.
+                                // Let's use quizBody as URL for now since it's a string, or add new state.
+                                onChange={(e) => setQuizBody(e.target.value)}
+                            />
+                            <p className={styles.note}>※限定公開URLを入力してください。</p>
+                        </div>
+
                         <div className={styles.checkboxGroup}>
                             <label className={styles.checkLabel}><input type="checkbox" /> サムネイル画像を設定する</label>
                             <label className={styles.checkLabel}><input type="checkbox" /> 受講生のカテゴリー完了ステータスを維持する</label>
                         </div>
-                        <p className={styles.note}>このカテゴリーをすでに完了している受講生がいた場合、この新たなブロックを受講しなくてもカテゴリーは完了状態となります。</p>
                     </div>
                 );
             case 'quiz':
@@ -457,10 +451,7 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
     return (
         <div className={styles.container}>
             {/* ... previous breadcrumb and alert ... */}
-            <div className={styles.planAlert}>
-                <span className={styles.alertIcon}>⚠️</span>
-                フリープランの有効期限は2026年02月20日です。
-            </div>
+            {/* Plan Alert Removed */}
 
             <div className={styles.breadcrumb}>
                 <div className={styles.breadcrumbLink}>

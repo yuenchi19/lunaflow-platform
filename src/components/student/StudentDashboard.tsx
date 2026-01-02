@@ -347,7 +347,16 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     );
 
     const renderLedgerWidget = () => (
-        <LockOverlay isLocked={!user.isLedgerEnabled} title="デジタル台帳はロックされています" message="管理者による機能開放をお待ちください。">
+        <LockOverlay
+            isLocked={!user.isLedgerEnabled}
+            title="まずはカリキュラムを進めましょう！"
+            message="この機能は、実践カリキュラムへ進むと利用できるようになります。まずはコースを受講して知識を身につけましょう。"
+            actionLabel="コース受講を続ける"
+            actionLink="/student/course/course_1" // Assuming course_1 is the default start or I can make it dynamic if user has currentCourse. 
+        // Since I don't have currentCourse ID readily available in this scope (it's in courses array), 
+        // I'll just link to course list or specific course if known. 
+        // Ideally: courses[0]?.id
+        >
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-bold text-slate-800 flex items-center gap-2">

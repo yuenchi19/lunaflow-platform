@@ -172,10 +172,12 @@ export default function PurchaseRequestsPage() {
                                     </td>
                                     <td className="p-4 text-sm text-slate-600">
                                         <div className="font-mono text-xs text-slate-400 mb-0.5">{req.user?.zipCode || "-"}</div>
-                                        <div className="whitespace-pre-wrap" title={(req.user?.address || "")}>
+                                        <div className="whitespace-pre-wrap mb-1" title={(req.user?.address || "")}>
                                             {req.user?.address || "-"}
                                         </div>
-                                        <div className="mt-1 text-xs text-slate-400">{req.user?.email}</div>
+                                        <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded w-fit">
+                                            <span>✉️</span> {req.user?.email}
+                                        </div>
                                     </td>
                                     <td className="p-4 text-sm text-slate-600">
                                         {req.carrier === 'jp' ? "日本郵便" :
