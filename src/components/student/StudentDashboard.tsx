@@ -291,51 +291,58 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         </div>
     );
 
-    const renderPurchaseTracker = () => (
-        <LockOverlay
-            isLocked={!user.isLedgerEnabled}
-            title="仕入れ機能はロックされています"
-            message="規定のカリキュラムを完了することで、利用可能になります。"
-            actionLabel="コースを進める"
-            actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
-            blur="sm"
-        >
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 shadow-sm p-6 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-5">
-                    <TrendingUp className="w-24 h-24 text-indigo-900" />
-                </div>
-                <h3 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
-                    <span className="bg-indigo-100 p-1 rounded-md text-indigo-600">📊</span>
-                    今月のおまかせ仕入れ状況
-                </h3>
-                <div className="relative z-10 space-y-4">
-                    <div>
-                        <div className="flex justify-between text-xs font-bold text-indigo-800 mb-1">
-                            <span>今月の目標</span>
-                            <span>{Math.round((currentMonthPurchaseTotal / (purchaseTarget || 1)) * 100)}% 達成</span>
-                        </div>
-                        <div className="w-full bg-white h-2.5 rounded-full overflow-hidden border border-indigo-100">
-                            <div
-                                className="bg-indigo-500 h-full rounded-full transition-all duration-1000"
-                                style={{ width: `${Math.min((currentMonthPurchaseTotal / (purchaseTarget || 1)) * 100, 100)}%` }}
-                            ></div>
-                        </div>
-                        <div className="flex justify-between text-[10px] text-slate-500 mt-1">
-                            <span>現在: ¥{currentMonthPurchaseTotal.toLocaleString()}</span>
-                            <span>目標: ¥{purchaseTarget.toLocaleString()}</span>
-                        </div>
+    const renderPurchaseTracker = () => {
+        // Use real data if available, or sample data if locked/empty to show "Active" UI look in background
+        const displayTotal = !user.isLedgerEnabled ? 150000 : currentMonthPurchaseTotal;
+        const displayTarget = !user.isLedgerEnabled ? 300000 : (purchaseTarget || 1);
+        const displayPercent = Math.round((displayTotal / displayTarget) * 100);
+
+        return (
+            <LockOverlay
+                isLocked={!user.isLedgerEnabled}
+                title="仕入れ機能はロックされています"
+                message="規定のカリキュラムを完了することで、利用可能になります。"
+                actionLabel="コースを進める"
+                actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
+                blur="sm"
+            >
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 shadow-sm p-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5">
+                        <TrendingUp className="w-24 h-24 text-indigo-900" />
                     </div>
-                    <button
-                        onClick={() => setIsPurchaseModalOpen(true)}
-                        className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
-                    >
-                        <ExternalLink className="w-4 h-4" />
-                        仕入れ希望フォーム
-                    </button>
+                    <h3 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
+                        <span className="bg-indigo-100 p-1 rounded-md text-indigo-600">📊</span>
+                        今月のおまかせ仕入れ状況
+                    </h3>
+                    <div className="relative z-10 space-y-4">
+                        <div>
+                            <div className="flex justify-between text-xs font-bold text-indigo-800 mb-1">
+                                <span>今月の目標</span>
+                                <span>{displayPercent}% 達成</span>
+                            </div>
+                            <div className="w-full bg-white h-2.5 rounded-full overflow-hidden border border-indigo-100">
+                                <div
+                                    className="bg-indigo-500 h-full rounded-full transition-all duration-1000"
+                                    style={{ width: `${Math.min(displayPercent, 100)}%` }}
+                                ></div>
+                            </div>
+                            <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                                <span>現在: ¥{displayTotal.toLocaleString()}</span>
+                                <span>目標: ¥{displayTarget.toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setIsPurchaseModalOpen(true)}
+                            className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                        >
+                            <ExternalLink className="w-4 h-4" />
+                            仕入れ希望フォーム
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </LockOverlay>
-    );
+            </LockOverlay>
+        );
+    };
 
     const renderAffiliateCard = () => (
         <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 shadow-sm overflow-hidden p-6 relative">
@@ -383,40 +390,46 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         </div>
     );
 
-    const renderLedgerWidget = () => (
-        <LockOverlay
-            isLocked={!user.isLedgerEnabled}
-            title="まずはカリキュラムを進めましょう！"
-            message="規定のカリキュラムを完了することで、利用可能になります。"
-            actionLabel="コースを進める"
-            actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
-            blur="sm"
-        >
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                        <span className="bg-emerald-100 text-emerald-600 p-1.5 rounded-lg"><Book className="w-4 h-4" /></span>
-                        デジタル商品管理台帳 (在庫/売上)
-                    </h3>
-                </div>
+    const renderLedgerWidget = () => {
+        // Use sample stats if locked for "Normal UI" background look
+        const displayCount = !user.isLedgerEnabled ? 12 : inventoryStats.count;
+        const displayProfit = !user.isLedgerEnabled ? 85000 : inventoryStats.profit;
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="bg-slate-50 p-3 rounded-lg text-center">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">在庫数</p>
-                        <p className="text-lg font-bold text-slate-700">{inventoryStats.count} <span className="text-sm font-normal text-slate-400">点</span></p>
+        return (
+            <LockOverlay
+                isLocked={!user.isLedgerEnabled}
+                title="まずはカリキュラムを進めましょう！"
+                message="規定のカリキュラムを完了することで、利用可能になります。"
+                actionLabel="コースを進める"
+                actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
+                blur="sm"
+            >
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                            <span className="bg-emerald-100 text-emerald-600 p-1.5 rounded-lg"><Book className="w-4 h-4" /></span>
+                            デジタル商品管理台帳 (在庫/売上)
+                        </h3>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-lg text-center">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">今月の利益</p>
-                        <p className="text-lg font-bold text-emerald-600">¥{inventoryStats.profit.toLocaleString()}</p>
-                    </div>
-                </div>
 
-                <div className="block w-full text-center py-2 bg-white border border-slate-200 text-slate-500 rounded-lg text-xs font-bold cursor-not-allowed">
-                    台帳を開く
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="bg-slate-50 p-3 rounded-lg text-center">
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">在庫数</p>
+                            <p className="text-lg font-bold text-slate-700">{displayCount} <span className="text-sm font-normal text-slate-400">点</span></p>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-lg text-center">
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">今月の利益</p>
+                            <p className="text-lg font-bold text-emerald-600">¥{displayProfit.toLocaleString()}</p>
+                        </div>
+                    </div>
+
+                    <div className="block w-full text-center py-2 bg-white border border-slate-200 text-slate-500 rounded-lg text-xs font-bold cursor-not-allowed">
+                        台帳を開く
+                    </div>
                 </div>
-            </div>
-        </LockOverlay>
-    );
+            </LockOverlay>
+        );
+    };
 
     const renderFeedbacks = () => {
         if (feedbacks.length === 0) return null;

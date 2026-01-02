@@ -29,6 +29,7 @@ model User {
   ledgerEntries      LedgerEntry[]
   inventoryAssignments InventoryItem[]
   oneTimeTokens      OneTimeToken[]
+  progress           UserProgress[]
 }
 
 model OneTimeToken {
@@ -40,6 +41,21 @@ model OneTimeToken {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+}
+
+model UserProgress {
+  id              String    @id @default(cuid())
+  userId          String
+  blockId         String
+  status          String   // 'completed', 'in_progress', 'not_started'
+  completedAt     DateTime?
+  feedbackContent String?  @db.Text
+  feedbackStatus  String? // 'pending', 'completed'
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, blockId])
 }
 
 enum ItemStatus {

@@ -27,11 +27,28 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
             setBlock(b);
             setCategory(MOCK_CATEGORIES.find(c => c.id === b.categoryId) || null);
 
-            // Check progress
-            const progress = getStudentProgressDetail(user.id);
-            const entry = progress.find(p => p.blockId === blockId);
-            setCurrentProgress(entry || null);
-            if (entry && entry.feedbackContent) setFeedbackContent(entry.feedbackContent); // Show saved content/feedback
+            setCategory(MOCK_CATEGORIES.find(c => c.id === b.categoryId) || null);
+
+            // Fetch progress from API
+            fetch('/api/student/progress')
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        const entry = data.find((p: any) => p.blockId === blockId);
+                        if (entry) {
+                            // Map API response to ProgressDetail type roughly
+                            setCurrentProgress({
+                                blockId: entry.blockId,
+                                status: entry.status,
+                                feedbackStatus: entry.feedbackStatus || 'pending',
+                                completedAt: entry.completedAt,
+                                feedbackContent: entry.feedbackContent
+                            } as any);
+                            if (entry.feedbackContent) setFeedbackContent(entry.feedbackContent);
+                        }
+                    }
+                })
+                .catch(err => console.error("Failed to fetch progress", err));
         }
     };
 
@@ -46,18 +63,39 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
     const handleSubmit = async () => {
         if (!feedbackContent.trim() || !block) return;
         setIsSubmitting(true);
-        submitAssignment(user.id, block.id, feedbackContent);
 
-        // Save locally for immediate UI updates
-        storage.saveCompletedBlock(block.id);
+        try {
+            const res = await fetch('/api/student/progress', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    blockId: block.id,
+                    status: 'completed',
+                    feedbackContent: feedbackContent
+                })
+            });
 
-        // Simulate delay
-        setTimeout(() => {
+            if (res.ok) {
+                // Update local state potentially or re-fetch
+                // storage.saveCompletedBlock(block.id); // Valid as fallback or remove if fully DB dependent. User asked to "Remove simplified local storage".
+                // Actually, keeping local might speed up UI, but let's trust API for now as requested "DB Save".
+
+                setTimeout(() => {
+                    setIsSubmitting(false);
+                    setShowSuccessToast(true);
+                    loadData(); // This currently fetches mock data. We might need to fetch progress from API here.
+                    // But for now, let's just show toast.
+                    setTimeout(() => setShowSuccessToast(false), 3000);
+                }, 800);
+            } else {
+                alert("送信に失敗しました。");
+                setIsSubmitting(false);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("エラーが発生しました。");
             setIsSubmitting(false);
-            setShowSuccessToast(true);
-            loadData();
-            setTimeout(() => setShowSuccessToast(false), 3000);
-        }, 800);
+        }
     };
 
     if (!block) return <div className="p-10 text-center font-serif italic">Loading lesson...</div>;

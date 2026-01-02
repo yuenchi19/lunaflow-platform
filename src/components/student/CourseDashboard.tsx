@@ -28,7 +28,18 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
         setTargetDates(getTargetDates(user.id));
         // Load progress
         if (typeof window !== 'undefined') {
-            setCompletedBlockIds(storage.getCompletedBlocks(user.id));
+            fetch('/api/student/progress')
+                .then(res => res.json())
+                .then(data => {
+                    // data is array of { blockId, status, ... }
+                    if (Array.isArray(data)) {
+                        const completed = data
+                            .filter((item: any) => item.status === 'completed')
+                            .map((item: any) => item.blockId);
+                        setCompletedBlockIds(completed);
+                    }
+                })
+                .catch(err => console.error("Failed to fetch progress", err));
         }
     }, [courseId, user.id]);
 
@@ -106,10 +117,14 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                                     // getCategories returns title/id/img.
                                     // getBlocks(cat.id) is imported from data.
                                     const catBlocks = getBlocks(cat.id);
-                                    const isCatCompleted = catBlocks.every(b => completedBlockIds.includes(b.id));
+                                    const isCatCompleted = catBlocks.length > 0 && catBlocks.every(b => completedBlockIds.includes(b.id));
 
                                     return (
-                                        <div key={cat.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
+                                        <Link
+                                            href={`/student/course/${course.id}/categories/${cat.id}`}
+                                            key={cat.id}
+                                            className="block p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                                        >
                                             <div className="flex items-center gap-4">
                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center font-serif text-sm font-bold transition-colors ${isCatCompleted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400 group-hover:bg-rose-100 group-hover:text-rose-600'}`}>
                                                     {isCatCompleted ? <CheckCircle className="w-5 h-5" /> : idx + 1}
@@ -122,7 +137,7 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                                             <span className={`text-[10px] px-3 py-1 rounded-full font-bold border ${isCatCompleted ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
                                                 {isCatCompleted ? '完了' : '未完了'}
                                             </span>
-                                        </div>
+                                        </Link>
                                     );
                                 })}
                             </div>
