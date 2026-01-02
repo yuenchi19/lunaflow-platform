@@ -141,6 +141,35 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const [inventoryStats, setInventoryStats] = useState({ count: 0, profit: 0 });
+
+    useEffect(() => {
+        if (!user.isLedgerEnabled) return;
+        const fetchInventory = async () => {
+            try {
+                const res = await fetch('/api/student/inventory');
+                if (res.ok) {
+                    const data = await res.json();
+                    const count = (data.items || []).filter((i: any) => i.status !== 'SOLD').length;
+
+                    const now = new Date();
+                    const currentMonth = now.getMonth();
+                    const currentYear = now.getFullYear();
+
+                    const monthlyProfit = (data.ledger || []).filter((l: any) => {
+                        const d = new Date(l.sellDate || l.createdAt);
+                        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                    }).reduce((sum: number, l: any) => sum + (l.profit || 0), 0);
+
+                    setInventoryStats({ count, profit: monthlyProfit });
+                }
+            } catch (e) {
+                console.error("Failed to fetch inventory stats", e);
+            }
+        };
+        fetchInventory();
+    }, [user.isLedgerEnabled, user.id]);
+
     const handlePurchaseSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -352,10 +381,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
             title="まずはカリキュラムを進めましょう！"
             message="この機能は、実践カリキュラムへ進むと利用できるようになります。まずはコースを受講して知識を身につけましょう。"
             actionLabel="コース受講を続ける"
-            actionLink="/student/course/course_1" // Assuming course_1 is the default start or I can make it dynamic if user has currentCourse. 
-        // Since I don't have currentCourse ID readily available in this scope (it's in courses array), 
-        // I'll just link to course list or specific course if known. 
-        // Ideally: courses[0]?.id
+            actionLink="/student/course/course_1"
         >
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
                 <div className="flex items-center justify-between mb-4">
@@ -363,23 +389,22 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                         <span className="bg-emerald-100 text-emerald-600 p-1.5 rounded-lg"><Book className="w-4 h-4" /></span>
                         デジタル商品管理台帳 (在庫/売上)
                     </h3>
-                    <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-full">Coming Soon</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="bg-slate-50 p-3 rounded-lg text-center">
                         <p className="text-[10px] text-slate-400 font-bold uppercase">在庫数</p>
-                        <p className="text-lg font-bold text-slate-700">-</p>
+                        <p className="text-lg font-bold text-slate-700">{inventoryStats.count} <span className="text-sm font-normal text-slate-400">点</span></p>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-lg text-center">
                         <p className="text-[10px] text-slate-400 font-bold uppercase">今月の利益</p>
-                        <p className="text-lg font-bold text-emerald-600">-</p>
+                        <p className="text-lg font-bold text-emerald-600">¥{inventoryStats.profit.toLocaleString()}</p>
                     </div>
                 </div>
 
-                <button className="w-full py-2 bg-white border border-slate-200 text-slate-500 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors" disabled>
+                <Link href="/student/inventory" className="block w-full text-center py-2 bg-white border border-slate-200 text-slate-500 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors">
                     台帳を開く
-                </button>
+                </Link>
             </div>
         </LockOverlay>
     );

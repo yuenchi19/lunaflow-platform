@@ -73,3 +73,33 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+export async function GET(req: NextRequest) {
+    try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const items = await prisma.inventoryItem.findMany({
+            where: {
+                OR: [
+                    { adminId: user.id },
+                    { assignedToUserId: user.id }
+                ]
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        const ledger = await prisma.ledgerEntry.findMany({
+            where: { userId: user.id },
+            orderBy: { sellDate: 'desc' }
+        });
+
+        return NextResponse.json({ items, ledger });
+    } catch (error: any) {
+        console.error("Fetch Inventory Error:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
