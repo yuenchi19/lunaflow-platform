@@ -11,6 +11,7 @@ export default function AdminFeedbackPage() {
     const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
     const [staffComment, setStaffComment] = useState("");
     const [filterStatus, setFilterStatus] = useState<Feedback['status'] | 'all'>('all');
+    const [filterType, setFilterType] = useState<'all' | 'feedback' | 'assignment'>('all');
 
     const loadData = () => {
         setFeedbacks(getFeedbacks());
@@ -31,25 +32,42 @@ export default function AdminFeedbackPage() {
     const getBlockTitle = (id: string) => MOCK_BLOCKS.find(b => b.id === id)?.title || "Unknown Block";
     const getUserName = (id: string) => MOCK_USERS.find(u => u.id === id)?.name || "Unknown User";
 
-    const filtered = feedbacks.filter(f => filterStatus === 'all' || f.status === filterStatus).sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+    const filtered = feedbacks.filter(f => {
+        const statusMatch = filterStatus === 'all' || f.status === filterStatus;
+        const typeMatch = filterType === 'all' || f.type === filterType || (!f.type && filterType === 'feedback'); // default types to feedback
+        return statusMatch && typeMatch;
+    }).sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
 
     return (
         <div className="p-8 max-w-6xl mx-auto space-y-8 text-slate-700">
             <div className="border-b border-slate-200 pb-6 flex justify-between items-end">
                 <div>
-                    <h1 className="text-3xl font-serif font-bold mb-2">感想・フィードバック管理</h1>
-                    <p className="text-slate-500 italic">受講生から提出された感想をレビューして、受講完了の承認や差し戻しを行います。</p>
+                    <h1 className="text-3xl font-serif font-bold mb-2">感想・課題管理</h1>
+                    <p className="text-slate-500 italic">受講生からの提出物をレビューします。</p>
                 </div>
-                <div className="flex gap-2">
-                    {(['all', 'pending', 'approved', 'rejected'] as const).map(s => (
-                        <button
-                            key={s}
-                            onClick={() => setFilterStatus(s)}
-                            className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filterStatus === s ? "bg-slate-800 text-white border-slate-800 shadow-lg" : "bg-white text-slate-400 border-slate-100 hover:border-slate-200"}`}
-                        >
-                            {s === 'all' ? "すべて" : s === 'pending' ? "未処理" : s === 'approved' ? "承認済み" : "差し戻し中"}
-                        </button>
-                    ))}
+                <div className="flex flex-col gap-2 items-end">
+                    <div className="flex gap-2">
+                        {(['all', 'feedback', 'assignment'] as const).map(t => (
+                            <button
+                                key={t}
+                                onClick={() => setFilterType(t)}
+                                className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${filterType === t ? "bg-slate-700 text-white border-slate-700" : "bg-white text-slate-500 border-slate-200"}`}
+                            >
+                                {t === 'all' ? "全て" : t === 'feedback' ? "感想" : "課題"}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex gap-2">
+                        {(['all', 'pending', 'approved', 'rejected'] as const).map(s => (
+                            <button
+                                key={s}
+                                onClick={() => setFilterStatus(s)}
+                                className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filterStatus === s ? "bg-slate-800 text-white border-slate-800 shadow-lg" : "bg-white text-slate-400 border-slate-100 hover:border-slate-200"}`}
+                            >
+                                {s === 'all' ? "ステータス: 全て" : s === 'pending' ? "未処理" : s === 'approved' ? "承認済み" : "差し戻し中"}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -73,7 +91,12 @@ export default function AdminFeedbackPage() {
                                             {getUserName(f.userId)[0]}
                                         </div>
                                         <div>
-                                            <div className="font-bold text-slate-800">{getUserName(f.userId)}</div>
+                                            <div className="font-bold text-slate-800 flex items-center gap-2">
+                                                {getUserName(f.userId)}
+                                                <span className={`px-1.5 py-0.5 text-[9px] rounded uppercase border ${f.type === 'assignment' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-gray-50 text-gray-500 border-gray-100'}`}>
+                                                    {f.type === 'assignment' ? '課題' : '感想'}
+                                                </span>
+                                            </div>
                                             <div className="text-[10px] text-slate-400 uppercase tracking-wider">{getBlockTitle(f.blockId)}</div>
                                         </div>
                                     </div>
@@ -109,6 +132,16 @@ export default function AdminFeedbackPage() {
                                         <div className="bg-slate-50 p-4 rounded-lg text-sm text-slate-700 leading-relaxed font-serif italic border border-slate-100">
                                             {selectedFeedback.content}
                                         </div>
+                                        {selectedFeedback.type === 'assignment' && selectedFeedback.attachmentUrls && selectedFeedback.attachmentUrls.length > 0 && (
+                                            <div className="mt-2 text-xs">
+                                                <div className="font-bold text-slate-500 mb-1">添付ファイル:</div>
+                                                {selectedFeedback.attachmentUrls.map((url, i) => (
+                                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block text-indigo-600 underline truncate">
+                                                        {url}
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="space-y-4 pt-4 border-t border-slate-100">
@@ -159,6 +192,6 @@ export default function AdminFeedbackPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

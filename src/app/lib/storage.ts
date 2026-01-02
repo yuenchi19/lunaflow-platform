@@ -34,5 +34,21 @@ export const storage = {
     },
     saveStaff: (staff: any[]) => {
         localStorage.setItem('staff', JSON.stringify(staff));
+    },
+    getFeedbacks: () => {
+        const data = localStorage.getItem('feedbacks');
+        return data ? JSON.parse(data) : [
+            {
+                id: 'fb1', userId: 'u1', blockId: 'b1', content: 'とても分かりやすかったです！',
+                status: 'pending', submittedAt: '2023-12-25 10:00', type: 'feedback'
+            },
+            {
+                id: 'as1', userId: 'u2', blockId: 'b2', content: '課題提出します。',
+                status: 'pending', submittedAt: '2023-12-25 11:30', type: 'assignment', attachmentUrls: ['assignment_u2.pdf']
+            }
+        ];
+    },
+    saveFeedbacks: (feedbacks: any[]) => {
+        localStorage.setItem('feedbacks', JSON.stringify(feedbacks));
     }
 };

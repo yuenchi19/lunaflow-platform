@@ -247,7 +247,7 @@ export const MOCK_BLOCKS: Block[] = [
         videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ", // Dummy
         content: "動画を見て学習しましょう",
         order: 1,
-        correctionType: 'ai', // Set this block to AI for testing
+        feedbackType: 'ai', // Set this block to AI for testing
     }
 ];
 
@@ -359,11 +359,30 @@ export function getBlocks(categoryId: string): Block[] {
     return MOCK_BLOCKS.filter(b => b.categoryId === categoryId).sort((a, b) => a.order - b.order);
 }
 
+export const MOCK_FEEDBACKS: Feedback[] = [
+    {
+        id: 'fb1', userId: 'u1', blockId: 'b1', content: 'とても分かりやすかったです！',
+        status: 'pending', submittedAt: '2023-12-25 10:00', type: 'feedback'
+    },
+    {
+        id: 'as1', userId: 'u1', blockId: 'b2', content: '課題提出します。',
+        status: 'pending', submittedAt: '2023-12-25 11:30', type: 'assignment', attachmentUrls: ['https://example.com/assignment.pdf']
+    }
+];
+
 // Global Feedbacks (using localStorage for simulation)
 export function getFeedbacks(): Feedback[] {
-    if (typeof window === 'undefined') return [];
+    if (typeof window === 'undefined') return MOCK_FEEDBACKS;
     const saved = localStorage.getItem("luna_feedbacks");
-    return saved ? JSON.parse(saved) : [];
+    const local = saved ? JSON.parse(saved) : [];
+
+    // Merge, preferring local updates to mocks if IDs collide
+    // But mocks have static IDs. Local usually new ones.
+    // Let's just return merged.
+    const localIds = new Set(local.map((f: Feedback) => f.id));
+    const activeMocks = MOCK_FEEDBACKS.filter(f => !localIds.has(f.id));
+
+    return [...local, ...activeMocks];
 }
 
 export function submitFeedback(feedback: Omit<Feedback, "id" | "submittedAt" | "status">) {
@@ -768,14 +787,14 @@ export function submitAssignment(userId: string, blockId: string, content: strin
     if (!block || !user) return;
 
     // Determine correction type
-    const correctionType = block.correctionType || 'manual';
+    const feedbackType = block.feedbackType || 'manual';
 
     const now = new Date();
     let feedbackStatus: 'pending' | 'completed' = 'pending';
     let feedbackContent = "";
     let feedbackAt: string | undefined = undefined;
 
-    if (correctionType === 'ai') {
+    if (feedbackType === 'ai') {
         // Schedule AI logic
         const scheduledTime = calculateAIFeedbackTime(now);
         feedbackAt = scheduledTime.toISOString();
@@ -795,7 +814,7 @@ export function submitAssignment(userId: string, blockId: string, content: strin
         blockId,
         blockTitle: block.title,
         completedAt: now.toISOString(),
-        status: correctionType === 'ai' ? 'viewed' : 'completed', // 'viewed' for pending AI? Or just completed? 
+        status: feedbackType === 'ai' ? 'viewed' : 'completed', // 'viewed' for pending AI? Or just completed? 
         // Actually user wants feedback, so maybe 'viewed' (submitted) until feedback implies completion.
         // But typically submission = completion of TASK, feedback is extra.
         // Let's use 'viewed' as "Submitted/Pending" and 'completed' as "Feedback Received".

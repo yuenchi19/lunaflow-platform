@@ -20,7 +20,7 @@ export default function StaffManagementPage() {
     const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
     const [newName, setNewName] = useState('');
     const [newEmail, setNewEmail] = useState('');
-    const [newRole, setNewRole] = useState<'admin' | 'accounting' | 'staff' | 'student'>('staff');
+    const [newRole, setNewRole] = useState<'admin' | 'accounting' | 'staff'>('staff');
 
     useEffect(() => {
         fetchStaff();
@@ -217,7 +217,6 @@ export default function StaffManagementPage() {
                                     <option value="admin">管理者</option>
                                     <option value="accounting">経理担当</option>
                                     <option value="staff">スタッフ</option>
-                                    <option value="student">受講生 (スタッフ一覧から除外)</option>
                                 </select>
                             </div>
                             <div className={styles.modalFooter}>

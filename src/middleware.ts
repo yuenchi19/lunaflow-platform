@@ -42,7 +42,11 @@ export async function middleware(request: NextRequest) {
 
     if (isProtected && !user) {
         const redirectUrl = request.nextUrl.clone()
-        redirectUrl.pathname = '/'
+        if (path.startsWith('/admin')) {
+            redirectUrl.pathname = '/admin/login'
+        } else {
+            redirectUrl.pathname = '/'
+        }
         redirectUrl.searchParams.set('error', 'login_required')
         return NextResponse.redirect(redirectUrl)
     }
@@ -50,15 +54,66 @@ export async function middleware(request: NextRequest) {
     // Strict Guard for Content Access (Paid Plan Check)
     if (path.startsWith('/student/course/') && user) {
         const userPlan = user.user_metadata?.plan || 'light';
-        // Assuming 'light' is the unpaid/default plan. 
-        // If the user is admin/staff they might have 'light' but should bypass? 
-        // Metadata usually has role too.
         const userRole = user.user_metadata?.role || 'student';
 
-        if (userPlan === 'light' && userRole === 'student') {
+        // Admin/Staff/Accounting bypass plan checks
+        if (['admin', 'staff', 'accounting'].includes(userRole)) {
+            // Allowed
+        } else if (userPlan === 'light' && userRole === 'student') {
             const redirectUrl = request.nextUrl.clone()
-            redirectUrl.pathname = '/pricing' // or /plans
+            redirectUrl.pathname = '/pricing'
             return NextResponse.redirect(redirectUrl)
+        }
+    }
+
+    // Role Based Access Control (RBAC)
+    if (path.startsWith('/admin') && user) {
+        const userRole = user.user_metadata?.role;
+        // If no role or student, they shouldn't be here (already covered by login redirect logic usually, but double check)
+        // Actually, normal users might login via admin/login if they try? Access control needed.
+
+        if (!userRole || userRole === 'student') {
+            // Redirect to student dashboard or home
+            const redirectUrl = request.nextUrl.clone()
+            redirectUrl.pathname = '/student/dashboard'
+            return NextResponse.redirect(redirectUrl)
+        }
+
+        // Staff: Allowed [Students, Community, Feedback, Staff(Self)]
+        // Block: [Inventory, Purchase Requests, Settings, Courses(Edit?), Sales?]
+        // User request: Staff = "Students, Community, Feedback/Assignments"
+        if (userRole === 'staff') {
+            const allowedPaths = [
+                '/admin/students',
+                '/admin/community',
+                '/admin/feedback',
+                '/admin/dashboard' // Dashboard usually needed
+            ];
+            // Allow subpaths
+            const isAllowed = allowedPaths.some(p => path.startsWith(p));
+            if (!isAllowed) {
+                // Redirect to their main workspace
+                const redirectUrl = request.nextUrl.clone()
+                redirectUrl.pathname = '/admin/students'
+                return NextResponse.redirect(redirectUrl)
+            }
+        }
+
+        // Accounting: Allowed [Inventory, Purchase Requests, Community]
+        // User request: Accounting = "Inventory, Purchase Requests, Community"
+        if (userRole === 'accounting') {
+            const allowedPaths = [
+                '/admin/inventory',
+                '/admin/purchase-requests',
+                '/admin/community',
+                '/admin/dashboard'
+            ];
+            const isAllowed = allowedPaths.some(p => path.startsWith(p));
+            if (!isAllowed) {
+                const redirectUrl = request.nextUrl.clone()
+                redirectUrl.pathname = '/admin/inventory'
+                return NextResponse.redirect(redirectUrl)
+            }
         }
     }
 

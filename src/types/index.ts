@@ -6,17 +6,21 @@ export interface Category {
     description?: string;
 }
 
-export type BlockType = 'video' | 'text' | 'quiz';
+export type BlockType = 'video' | 'text' | 'quiz' | 'link' | 'pdf' | 'audio' | 'article' | 'survey' | 'assignment';
 
 export interface Block {
     id: string;
     categoryId: string;
     title: string;
-    type: BlockType;
-    content?: string;
-    videoUrl?: string;
+    type: BlockType | 'assignment'; // Added assignment
+    content?: any;
+    videoUrl?: string; // Legacy?
     order: number;
-    correctionType?: 'manual' | 'ai'; // New field for AI Feedback
+    // Enhanced Features
+    isRequired?: boolean; // General completion requirement
+    feedbackRequired?: boolean; // Requires feedback submission
+    feedbackType?: 'manual' | 'ai'; // If feedback is required
+    assignmentFormat?: ('text' | 'image' | 'url')[]; // For assignment blocks
 }
 
 export interface Feedback {
@@ -28,6 +32,9 @@ export interface Feedback {
     staffComment?: string;
     submittedAt: string;
     updatedAt?: string;
+    // Enhanced for Assignments
+    type?: 'feedback' | 'assignment';
+    attachmentUrls?: string[];
 }
 
 export interface UserProgress {
@@ -160,7 +167,7 @@ export interface Payment {
     userId: string;
     date: string;
     amount: number;
-    method: 'card' | 'bank_transfer' | 'other';
+    method: 'card' | 'bank_transfer' | 'other' | 'invoice';
     status: 'succeeded' | 'pending' | 'failed';
 }
 

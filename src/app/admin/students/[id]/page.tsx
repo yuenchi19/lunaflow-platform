@@ -257,7 +257,7 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                                     )}
                                 </div>
                                 <div className={styles.infoItem}>
-                                    <div className={styles.infoLabel}>登録日時</div>
+                                    <div className={styles.infoLabel}>Stripe初回決済日 (登録日)</div>
                                     <div className={styles.infoValue}>{student.registrationDate || "-"}</div>
                                 </div>
                             </div>
@@ -405,6 +405,7 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                                 >
                                     <option value="card">カード</option>
                                     <option value="bank_transfer">銀行振込</option>
+                                    <option value="invoice">請求書払い</option>
                                     <option value="other">その他</option>
                                 </select>
                             </div>
@@ -435,7 +436,9 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                                 <tr key={p.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4 whitespace-nowrap">{p.date}</td>
                                     <td className="px-6 py-4">
-                                        <div className="font-medium text-gray-900">月額サブスクリプション</div>
+                                        <div className="font-medium text-gray-900">
+                                            {p.method === 'invoice' || p.method === 'bank_transfer' ? '請求書/銀行振込' : '月額サブスクリプション'}
+                                        </div>
                                         <div className="text-xs text-gray-400 capitalize">{p.method}</div>
                                     </td>
                                     <td className="px-6 py-4 text-right font-mono">¥{p.amount.toLocaleString()}</td>

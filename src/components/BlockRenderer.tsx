@@ -76,6 +76,40 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block }) => {
                     </div>
                 </div>
             );
+        case 'assignment':
+            return (
+                <div className={styles.assignmentContent}>
+                    <h2>{block.title}</h2>
+                    <div className={styles.assignmentDescription}>
+                        {block.content?.body || '課題の説明がここに表示されます。'}
+                    </div>
+                    <div className={styles.assignmentSubmissionArea}>
+                        <h4 className={styles.submissionTitle}>課題の提出</h4>
+                        {(!block.content?.formats || block.content.formats.includes('text')) && (
+                            <div className={styles.submissionGroup}>
+                                <label>テキスト回答</label>
+                                <textarea className={styles.submissionTextarea} placeholder="回答を入力してください" rows={4} />
+                            </div>
+                        )}
+                        {block.content?.formats?.includes('url') && (
+                            <div className={styles.submissionGroup}>
+                                <label>URL提出</label>
+                                <input type="url" className={styles.submissionInput} placeholder="https://..." />
+                            </div>
+                        )}
+                        {block.content?.formats?.includes('image') && (
+                            <div className={styles.submissionGroup}>
+                                <label>画像アップロード</label>
+                                <div className={styles.fileDropZone}>
+                                    <span className={styles.dropIcon}>📷</span>
+                                    <span>画像をドラッグ＆ドロップ</span>
+                                </div>
+                            </div>
+                        )}
+                        <button className={styles.submitAssignmentBtn}>課題を提出する</button>
+                    </div>
+                </div>
+            );
         default:
             return (
                 <div className={styles.otherContent}>
@@ -85,6 +119,12 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block }) => {
                     <button className={styles.downloadBtn}>
                         {block.type === 'link' ? 'リンクを開く' : 'ファイルをダウンロード'}
                     </button>
+                    {block.content?.feedbackRequired && (
+                        <div className={styles.feedbackNotice}>
+                            <span className={styles.feedbackBadge}>必須</span>
+                            このカリキュラム完了には感想の提出が必要です
+                        </div>
+                    )}
                 </div>
             );
     }
