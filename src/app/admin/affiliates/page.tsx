@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 // import { getAllAffiliateStats } from "@/lib/data";
 import { User, AffiliateEarnings } from "@/types";
+import { useToast } from "@/components/ui/ToastContext"; // Added import
 
 interface AffiliateUser extends User {
     earnings: AffiliateEarnings;
 }
 
 export default function AdminAffiliatesPage() {
+    const { showToast } = useToast(); // Added hook
     const [affiliates, setAffiliates] = useState<AffiliateUser[]>([]);
     const [totalPayout, setTotalPayout] = useState(0);
 
@@ -16,6 +18,7 @@ export default function AdminAffiliatesPage() {
 
     useEffect(() => {
         const fetchAffiliates = async () => {
+            // ... (no change)
             try {
                 const res = await fetch('/api/admin/affiliates');
                 if (res.ok) {
@@ -36,23 +39,38 @@ export default function AdminAffiliatesPage() {
     }, []);
 
     const handleMarkAsPaid = async (userId: string) => {
-        if (confirm("このユーザーの未払い分を支払い済みにしますか？（未実装の実処理 - UIのみ更新）")) {
-            // NOTE: In real world, we should call an API to create a 'Payout' RewardTransaction
-            setAffiliates(prev => prev.map(a => {
-                if (a.id === userId) {
-                    return {
-                        ...a,
-                        earnings: { ...a.earnings, monthlyEarnings: 0 } // Reset just the payout
-                    };
-                }
-                return a;
-            }));
+        const user = affiliates.find(u => u.id === userId);
+        if (!user || user.earnings.monthlyEarnings === 0) return;
 
-            // Re-calc total local
-            setTotalPayout(prev => {
-                const user = affiliates.find(u => u.id === userId);
-                return user ? prev - user.earnings.monthlyEarnings : prev;
-            });
+        if (confirm(`このユーザー (${user.name}) に ¥${user.earnings.monthlyEarnings.toLocaleString()} を支払いますか？`)) {
+            try {
+                const res = await fetch('/api/admin/affiliates/payout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, amount: user.earnings.monthlyEarnings })
+                });
+
+                if (!res.ok) throw new Error('Payment processing failed');
+
+                showToast("支払いを完了しました", "success"); // Changed to showToast(message, type)
+
+                // Update Local State directly for speed, or refetch
+                setAffiliates(prev => prev.map(a => {
+                    if (a.id === userId) {
+                        return {
+                            ...a,
+                            earnings: { ...a.earnings, monthlyEarnings: 0 }
+                        };
+                    }
+                    return a;
+                }));
+                // Re-calc total local
+                setTotalPayout(prev => prev - user.earnings.monthlyEarnings);
+
+            } catch (error) {
+                console.error("Payout error:", error);
+                showToast("支払処理に失敗しました", "error"); // Changed
+            }
         }
     };
 

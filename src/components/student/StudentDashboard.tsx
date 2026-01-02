@@ -383,6 +383,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
             message="規定のカリキュラムを完了することで、利用可能になります。"
             actionLabel="コースを進める"
             actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/courses/course_1"}
+            blur="sm"
         >
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
                 <div className="flex items-center justify-between mb-4">
@@ -403,9 +404,9 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                     </div>
                 </div>
 
-                <Link href="/student/inventory" className="block w-full text-center py-2 bg-white border border-slate-200 text-slate-500 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors">
+                <div className="block w-full text-center py-2 bg-white border border-slate-200 text-slate-500 rounded-lg text-xs font-bold cursor-not-allowed">
                     台帳を開く
-                </Link>
+                </div>
             </div>
         </LockOverlay>
     );

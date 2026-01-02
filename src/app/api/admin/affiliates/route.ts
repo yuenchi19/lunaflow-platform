@@ -39,7 +39,22 @@ export async function GET() {
             !u.email.endsWith('@example.com') // Exclude mock users
         );
 
-        // 3. Calculate Earnings for each Affiliate
+        // 3. Fetch Payouts for current month
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        const payouts = await prisma.rewardTransaction.findMany({
+            where: {
+                type: 'payout',
+                createdAt: {
+                    gte: startOfMonth,
+                    lte: endOfMonth
+                }
+            }
+        });
+
+        // 4. Calculate Earnings for each Affiliate
         const stats = affiliates.map(affiliate => {
             let directCount = 0;
             let indirectCount = 0;
@@ -67,13 +82,19 @@ export async function GET() {
                 }
             });
 
+            // Adjust for Payouts (reset if paid)
+            const userPayouts = payouts.filter(p => p.userId === affiliate.id)
+                .reduce((sum, p) => sum + Math.abs(p.amount), 0);
+
+            const unpaidEarnings = Math.max(0, monthlyEarnings - userPayouts);
+
             return {
                 ...affiliate,
                 avatarUrl: `https://ui-avatars.com/api/?name=${affiliate.name || 'User'}&background=random`,
                 earnings: {
                     directReferrals: directCount,
                     indirectReferrals: indirectCount,
-                    monthlyEarnings
+                    monthlyEarnings: unpaidEarnings // Show unpaid amount
                 }
             };
         });

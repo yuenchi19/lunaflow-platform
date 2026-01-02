@@ -7,17 +7,25 @@ interface LockOverlayProps {
     message?: string;
     children: React.ReactNode;
     actionLabel?: string;
-    onAction?: () => void; // Optional handler
-    actionLink?: string;   // Optional link
+    onAction?: () => void;
+    actionLink?: string;
+    blur?: 'none' | 'sm' | 'md' | 'lg'; // Added
 }
 
-export default function LockOverlay({ isLocked, title, message, children, actionLabel, onAction, actionLink }: LockOverlayProps) {
+export default function LockOverlay({ isLocked, title, message, children, actionLabel, onAction, actionLink, blur = 'sm' }: LockOverlayProps) {
     if (!isLocked) return <>{children}</>;
+
+    const blurClass = {
+        'none': '',
+        'sm': 'blur-sm',
+        'md': 'blur-md',
+        'lg': 'blur-lg'
+    }[blur];
 
     return (
         <div className="relative group overflow-hidden rounded-2xl">
             {/* Blurred Content */}
-            <div className="filter blur-sm select-none pointer-events-none opacity-50 grayscale transition-all duration-500">
+            <div className={`filter ${blurClass} select-none pointer-events-none opacity-50 grayscale transition-all duration-500`}>
                 {children}
             </div>
 

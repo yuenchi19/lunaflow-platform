@@ -50,5 +50,16 @@ export const storage = {
     },
     saveFeedbacks: (feedbacks: any[]) => {
         localStorage.setItem('feedbacks', JSON.stringify(feedbacks));
+    },
+    getCompletedBlocks: (userId: string = 'current_user') => {
+        const data = localStorage.getItem(`progress_${userId}`);
+        return data ? JSON.parse(data) : []; // Array of blockIds
+    },
+    saveCompletedBlock: (blockId: string, userId: string = 'current_user') => {
+        const current = storage.getCompletedBlocks(userId);
+        if (!current.includes(blockId)) {
+            const updated = [...current, blockId];
+            localStorage.setItem(`progress_${userId}`, JSON.stringify(updated));
+        }
     }
 };

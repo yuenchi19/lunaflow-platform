@@ -11,6 +11,7 @@ export default function StudentCategoryPage({ params }: { params: { id: string, 
     const [category, setCategory] = useState<any>(null);
     const [blocks, setBlocks] = useState<any[]>([]);
     const [activeBlockIndex, setActiveBlockIndex] = useState(0);
+    const [completedBlockIds, setCompletedBlockIds] = useState<string[]>([]);
 
     useEffect(() => {
         const categories = storage.getCategories(params.id);
@@ -19,7 +20,17 @@ export default function StudentCategoryPage({ params }: { params: { id: string, 
 
         const fetchedBlocks = storage.getBlocks(params.categoryId);
         setBlocks(fetchedBlocks);
+
+        // Load progress
+        setCompletedBlockIds(storage.getCompletedBlocks());
     }, [params.id, params.categoryId]);
+
+    const handleBlockComplete = () => {
+        if (activeBlock) {
+            storage.saveCompletedBlock(activeBlock.id);
+            setCompletedBlockIds(prev => [...prev, activeBlock.id]);
+        }
+    };
 
     if (!category) return <div className={styles.loading}>読み込み中...</div>;
 
@@ -38,16 +49,21 @@ export default function StudentCategoryPage({ params }: { params: { id: string, 
                     <h1 className={styles.categoryTitle}>{category.title}</h1>
                 </div>
                 <div className={styles.blockList}>
-                    {blocks.map((block, index) => (
-                        <button
-                            key={block.id}
-                            className={`${styles.blockSidebarItem} ${index === activeBlockIndex ? styles.activeBlock : ''}`}
-                            onClick={() => setActiveBlockIndex(index)}
-                        >
-                            <span className={styles.blockIndex}>{index + 1}</span>
-                            <span className={styles.blockTitleSide}>{block.title}</span>
-                        </button>
-                    ))}
+                    {blocks.map((block, index) => {
+                        const isCompleted = completedBlockIds.includes(block.id);
+                        return (
+                            <button
+                                key={block.id}
+                                className={`${styles.blockSidebarItem} ${index === activeBlockIndex ? styles.activeBlock : ''} ${isCompleted ? styles.completedBlock : ''}`}
+                                onClick={() => setActiveBlockIndex(index)}
+                            >
+                                <span className={styles.blockIndex}>
+                                    {isCompleted ? '✅' : index + 1}
+                                </span>
+                                <span className={styles.blockTitleSide}>{block.title}</span>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -67,6 +83,7 @@ export default function StudentCategoryPage({ params }: { params: { id: string, 
                                 <button
                                     className={styles.navBtnPrimary}
                                     onClick={() => {
+                                        handleBlockComplete(); // Mark current as done
                                         if (activeBlockIndex < blocks.length - 1) {
                                             setActiveBlockIndex(activeBlockIndex + 1);
                                         } else {
