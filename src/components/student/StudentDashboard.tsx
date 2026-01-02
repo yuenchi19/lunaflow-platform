@@ -292,7 +292,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     );
 
     const renderPurchaseTracker = () => (
-        <LockOverlay isLocked={!user.isLedgerEnabled} title="仕入れ機能はロックされています" message="規定のカリキュラムを完了し、管理者承認を受けると利用可能になります。">
+        <LockOverlay isLocked={!user.isLedgerEnabled} title="仕入れ機能はロックされています" message="規定のカリキュラムを完了することで、利用可能になります。">
             <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 shadow-sm p-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5">
                     <TrendingUp className="w-24 h-24 text-indigo-900" />
@@ -380,9 +380,9 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         <LockOverlay
             isLocked={!user.isLedgerEnabled}
             title="まずはカリキュラムを進めましょう！"
-            message="この機能は、実践カリキュラムへ進むと利用できるようになります。まずはコースを受講して知識を身につけましょう。"
-            actionLabel="コース受講を続ける"
-            actionLink="/student/course/course_1"
+            message="規定のカリキュラムを完了することで、利用可能になります。"
+            actionLabel="コースを進める"
+            actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/courses/course_1"}
         >
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
                 <div className="flex items-center justify-between mb-4">

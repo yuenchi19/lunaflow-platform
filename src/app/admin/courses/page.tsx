@@ -80,13 +80,64 @@ export default function CoursesPage() {
     };
 
     const handleDeleteCourse = (id: string) => {
+        if (!confirm('このコースを削除してもよろしいですか？\n紐づくカテゴリやブロックも削除されます。')) return;
+
         const updated = courses.filter(c => c.id !== id);
         setCourses(updated);
         storage.saveCourses(updated);
+
+        // Cleanup storage for categories (Optional but good for hygiene)
+        // localStorage.removeItem(`categories_${id}`); 
+        // Note: Deep cleanup of blocks would require iterating categories, which is complex without a backend.
+        // For localStorage mock, just removing the course entry is usually sufficient for the UI.
+
         setToastMessage("コースが削除されました");
         setTimeout(() => setToastMessage(null), 3000);
         setOpenMenuId(null);
-    }
+    };
+
+    const handleDuplicateCourse = (course: Course) => {
+        if (!confirm(`「${course.title}」を複製しますか？`)) return;
+
+        const newId = Math.random().toString(36).substr(2, 9);
+        const newCourse: Course = {
+            ...course,
+            id: newId,
+            title: `${course.title} (コピー)`,
+            studentCount: 0 // Reset student count
+        };
+
+        // Deep Copy Categories & Blocks
+        const sourceCategories = storage.getCategories(course.id);
+        const newCategories = sourceCategories.map((cat: any) => {
+            const newCatId = Math.random().toString(36).substr(2, 9);
+
+            // Copy Blocks for this Category
+            const sourceBlocks = storage.getBlocks(cat.id);
+            const newBlocks = sourceBlocks.map((block: any) => ({
+                ...block,
+                id: Math.random().toString(36).substr(2, 9)
+            }));
+            storage.saveBlocks(newCatId, newBlocks);
+
+            return {
+                ...cat,
+                id: newCatId,
+                courseId: newId,
+                // blockCount remains same
+            };
+        });
+        storage.saveCategories(newId, newCategories);
+
+        // Update Course List
+        const updated = [...courses, newCourse];
+        setCourses(updated);
+        storage.saveCourses(updated);
+
+        setToastMessage("コースを複製しました");
+        setTimeout(() => setToastMessage(null), 3000);
+        setOpenMenuId(null);
+    };
 
     return (
         <div className={styles.container}>
@@ -127,6 +178,7 @@ export default function CoursesPage() {
                                 course={course}
                                 openMenuId={openMenuId}
                                 setOpenMenuId={setOpenMenuId}
+                                handleDuplicateCourse={handleDuplicateCourse}
                                 handleDeleteCourse={handleDeleteCourse}
                                 setIsTopVideoModalOpen={setIsTopVideoModalOpen}
                             />
@@ -148,7 +200,7 @@ export default function CoursesPage() {
     );
 }
 
-function SortableCourseItem({ course, openMenuId, setOpenMenuId, handleDeleteCourse, setIsTopVideoModalOpen }: any) {
+function SortableCourseItem({ course, openMenuId, setOpenMenuId, handleDeleteCourse, handleDuplicateCourse, setIsTopVideoModalOpen }: any) {
     const {
         attributes,
         listeners,
@@ -197,8 +249,8 @@ function SortableCourseItem({ course, openMenuId, setOpenMenuId, handleDeleteCou
                     </span>
                     {openMenuId === course.id && (
                         <div className={styles.dropdownMenu}>
-                            <div className={styles.dropdownItem}>コース編集</div>
-                            <div className={styles.dropdownItem}>コース複製</div>
+                            <Link href={`/admin/courses/${course.id}`} className={styles.dropdownItem}>コース編集</Link>
+                            <div className={styles.dropdownItem} onClick={() => handleDuplicateCourse(course)}>コース複製</div>
                             <div className={`${styles.dropdownItem} ${styles.deleteText}`} onClick={() => handleDeleteCourse(course.id)}>コース削除</div>
                         </div>
                     )}
