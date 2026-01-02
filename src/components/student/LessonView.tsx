@@ -196,7 +196,7 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                                     <div className="bg-blue-50 border border-blue-100 p-4 rounded-md flex items-center gap-3">
                                         <Clock className="w-5 h-5 text-blue-600" />
                                         <div className="font-bold text-blue-800 text-sm">
-                                            {block.correctionType === 'ai' ? "AI講師が確認中です。フィードバックをお待ちください。" : "スタッフが確認中です。承認されるまでお待ちください。"}
+                                            {block.feedbackType === 'ai' ? "AI講師が確認中です。フィードバックをお待ちください。" : "スタッフが確認中です。承認されるまでお待ちください。"}
                                         </div>
                                     </div>
                                 )}
