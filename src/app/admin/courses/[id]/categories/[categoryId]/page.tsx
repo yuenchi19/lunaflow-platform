@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { storage } from '@/app/lib/storage';
+import BlockRenderer from '@/components/BlockRenderer';
+import { useToast } from "@/components/ui/ToastContext";
 
 interface Block {
     id: string;
@@ -49,7 +51,7 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
 
     const handleFileSelect = (name: string) => {
         setSelectedFile(name);
-        alert(`${name} を選択しました（モック機能）`);
+        showToast(`${name} を選択しました（モック機能）`, 'info');
     };
 
     const handleAddSurveyQuestion = () => {
@@ -69,31 +71,92 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
         setQuizOptions(['']);
     };
 
-    const handlePreview = () => {
-        alert('プレビュー画面を生成しています... (モック機能)');
-    };
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-    const handleSave = () => {
-        const newBlock: Block = {
-            id: Math.random().toString(36).substr(2, 9),
+    const getPreviewBlock = (): Block => {
+        // Construct a block object from current inputs
+        return {
+            id: 'preview',
             type: activeType,
             title: quizTitle || `${activeType} ブロック`,
             content: activeType === 'survey' ? { questions: surveyQuestions } :
-                activeType === 'video' ? { url: quizBody } : undefined
+                activeType === 'video' ? { url: quizBody } :
+                    activeType === 'quiz' ? { body: quizBody, explanation: quizExplanation, options: quizOptions } :
+                        activeType === 'article' || activeType === 'text' ? { body: quizBody } :
+                            undefined
         };
-        const updated = [...blocks, newBlock];
-        setBlocks(updated);
-        storage.saveBlocks(params.categoryId, updated);
+    };
 
-        // Update category block count in parent storage
-        const categories: Category[] = storage.getCategories(params.id);
-        const updatedCategories = categories.map((cat: Category) =>
-            cat.id === params.categoryId ? { ...cat, blockCount: updated.length } : cat
-        );
-        storage.saveCategories(params.id, updatedCategories);
+    const handlePreview = () => {
+        setIsPreviewOpen(true);
+    };
 
-        alert('設定を保存しました。');
+    const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+    const { showToast } = useToast();
+
+    const handleEditBlock = (block: Block) => {
+        setEditingBlockId(block.id);
+        setActiveType(block.type);
+        setQuizTitle(block.title);
+
+        // Populate content based on type
+        if (block.type === 'video' && block.content?.url) {
+            setQuizBody(block.content.url); // Using quizBody for URL
+        } else if (block.type === 'quiz') {
+            setQuizBody(block.content?.body || ''); // Assuming body in content
+            setQuizExplanation(block.content?.explanation || '');
+            setQuizOptions(block.content?.options || ['']);
+        } else if (block.type === 'survey') {
+            setSurveyQuestions(block.content?.questions || [{ type: 'text', title: '', options: [''] }]);
+        }
+
+        setIsModalOpen(true);
+    };
+
+    const handleSave = () => {
+        if (editingBlockId) {
+            // Update existing block
+            const updated = blocks.map(b => {
+                if (b.id === editingBlockId) {
+                    return {
+                        ...b,
+                        type: activeType,
+                        title: quizTitle || `${activeType} ブロック`,
+                        content: activeType === 'survey' ? { questions: surveyQuestions } :
+                            activeType === 'video' ? { url: quizBody } :
+                                activeType === 'quiz' ? { body: quizBody, explanation: quizExplanation, options: quizOptions } : undefined
+                    };
+                }
+                return b;
+            });
+            setBlocks(updated);
+            storage.saveBlocks(params.categoryId, updated);
+            showToast('ブロックを更新しました', 'success');
+        } else {
+            // Create New Block
+            const newBlock: Block = {
+                id: Math.random().toString(36).substr(2, 9),
+                type: activeType,
+                title: quizTitle || `${activeType} ブロック`,
+                content: activeType === 'survey' ? { questions: surveyQuestions } :
+                    activeType === 'video' ? { url: quizBody } :
+                        activeType === 'quiz' ? { body: quizBody, explanation: quizExplanation, options: quizOptions } : undefined
+            };
+            const updated = [...blocks, newBlock];
+            setBlocks(updated);
+            storage.saveBlocks(params.categoryId, updated);
+
+            // Update category block count in parent storage
+            const categories: Category[] = storage.getCategories(params.id);
+            const updatedCategories = categories.map((cat: Category) =>
+                cat.id === params.categoryId ? { ...cat, blockCount: updated.length } : cat
+            );
+            storage.saveCategories(params.id, updatedCategories);
+            showToast('ブロックを作成しました', 'success');
+        }
+
         setIsModalOpen(false);
+        setEditingBlockId(null);
         handleClearQuiz();
         setSelectedFile(null);
     };
@@ -109,6 +172,7 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
                 cat.id === params.categoryId ? { ...cat, blockCount: updated.length } : cat
             );
             storage.saveCategories(params.id, updatedCategories);
+            showToast('ブロックを削除しました', 'error');
         }
     };
 
@@ -508,7 +572,7 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
                             <div className={styles.blockTypeLabel}>{blockTypes.find(t => t.id === block.type)?.label}</div>
                         </div>
                         <div className={styles.blockActions}>
-                            <button className={styles.blockActionBtn}>編集</button>
+                            <button className={styles.blockActionBtn} onClick={() => handleEditBlock(block)}>編集</button>
                             <button className={styles.blockActionBtn} onClick={() => handleDeleteBlock(block.id)}>削除</button>
                         </div>
                     </div>
@@ -534,8 +598,26 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
                         <div className={styles.modalMain}>
                             {renderModalContent()}
                             <div className={styles.modalFooter}>
-                                <button className={styles.modalCancelBtn} onClick={() => setIsModalOpen(false)}>キャンセル</button>
+                                <button className={styles.modalCancelBtn} onClick={() => { setIsModalOpen(false); setEditingBlockId(null); }}>キャンセル</button>
                                 <button className={styles.modalSaveBtn} onClick={handleSave}>保存</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Preview Modal */}
+            {isPreviewOpen && (
+                <div className={styles.modalBackdrop} style={{ zIndex: 2000 }}>
+                    <div className={styles.detailedModal} style={{ width: '800px', height: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ padding: '1rem', borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>プレビュー (受講生視点)</h2>
+                            <button onClick={() => setIsPreviewOpen(false)} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+                        </div>
+                        <div style={{ padding: '2rem', overflowY: 'auto', flex: 1, background: '#fff' }}>
+                            <BlockRenderer block={getPreviewBlock()} />
+                            <div style={{ marginTop: '20px', padding: '10px', background: '#f8fafc', fontSize: '0.8rem', color: '#666' }}>
+                                ※ これはプレビューです。実際の表示は端末サイズにより異なる場合があります。
                             </div>
                         </div>
                     </div>

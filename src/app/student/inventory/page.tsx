@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Loader2, Plus, Search, Tag, DollarSign, Calendar, Package } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface InventoryItem {
     id: string;
@@ -132,28 +133,28 @@ export default function StudentInventoryPage() {
             </div>
 
             {/* Stats Summary (Simple) */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-xs font-bold text-slate-400 uppercase">在庫総数</p>
-                    <p className="text-2xl font-bold text-slate-800">
-                        {items.filter(i => i.status !== 'SOLD').length} <span className="text-sm font-normal text-slate-400">点</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase">在庫総数</p>
+                    <p className="text-xl md:text-2xl font-bold text-slate-800">
+                        {items.filter(i => i.status !== 'SOLD').length} <span className="text-xs md:text-sm font-normal text-slate-400">点</span>
                     </p>
                 </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-xs font-bold text-slate-400 uppercase">販売済み</p>
-                    <p className="text-2xl font-bold text-indigo-600">
-                        {ledger.length} <span className="text-sm font-normal text-slate-400">点</span>
+                <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase">販売済み</p>
+                    <p className="text-xl md:text-2xl font-bold text-indigo-600">
+                        {ledger.length} <span className="text-xs md:text-sm font-normal text-slate-400">点</span>
                     </p>
                 </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-xs font-bold text-slate-400 uppercase">在庫金額(原価)</p>
-                    <p className="text-xl font-bold text-slate-800">
+                <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase">在庫金額(原価)</p>
+                    <p className="text-lg md:text-xl font-bold text-slate-800 truncate">
                         ¥{items.filter(i => i.status !== 'SOLD').reduce((sum, i) => sum + i.costPrice, 0).toLocaleString()}
                     </p>
                 </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-xs font-bold text-slate-400 uppercase">粗利益総額</p>
-                    <p className="text-xl font-bold text-emerald-600">
+                <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase">粗利益総額</p>
+                    <p className="text-lg md:text-xl font-bold text-emerald-600 truncate">
                         ¥{ledger.reduce((sum, l) => sum + (l.profit || 0), 0).toLocaleString()}
                     </p>
                 </div>
@@ -191,9 +192,12 @@ export default function StudentInventoryPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {activeTab === 'stock' ? (
                     filteredItems.length === 0 ? (
-                        <div className="col-span-full text-center py-12 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                            該当する在庫がありません。
-                        </div>
+                        <EmptyState
+                            title="在庫がありません"
+                            description="在庫アイテムが登録されていません。「商品登録」ボタンから追加してください。"
+                            icon={Package}
+                            className="col-span-full py-16"
+                        />
                     ) : (
                         filteredItems.map(item => (
                             <div key={item.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden group hover:shadow-md transition-all">
@@ -238,9 +242,12 @@ export default function StudentInventoryPage() {
                 ) : (
                     // SOLD VIEW (Using Ledger)
                     ledger.filter(l => (l.brand || '').toLowerCase().includes(searchTerm.toLowerCase()) || (l.name || '').toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
-                        <div className="col-span-full text-center py-12 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                            販売履歴がありません。
-                        </div>
+                        <EmptyState
+                            title="販売履歴がありません"
+                            description="まだ販売された商品がありません。在庫を販売登録するとここに表示されます。"
+                            icon={DollarSign}
+                            className="col-span-full py-16"
+                        />
                     ) : (
                         ledger.filter(l => (l.brand || '').toLowerCase().includes(searchTerm.toLowerCase()) || (l.name || '').toLowerCase().includes(searchTerm.toLowerCase())).map(entry => (
                             <div key={entry.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden group hover:shadow-md transition-all">

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, Search, CheckCircle, Clock } from "lucide-react";
+import { Download, Search, CheckCircle, Clock, FileText } from "lucide-react";
+import { useToast } from "@/components/ui/ToastContext";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface AdminPurchaseRequest {
     id: string;
@@ -27,6 +29,7 @@ export default function PurchaseRequestsPage() {
     const [requests, setRequests] = useState<AdminPurchaseRequest[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(true);
+    const { showToast } = useToast();
 
     const fetchRequests = async () => {
         try {
@@ -67,14 +70,14 @@ export default function PurchaseRequestsPage() {
                 // Optimistic update or refetch
                 fetchRequests(); // Refetch to be sure, or map local
                 if (newStatus === 'completed') {
-                    alert("ステータスを更新しました。");
+                    showToast("ステータスを更新しました。", 'success');
                 }
             } else {
-                alert("更新に失敗しました。");
+                showToast("更新に失敗しました。", 'error');
             }
         } catch (error) {
             console.error("Error updating status:", error);
-            alert("通信エラーが発生しました。");
+            showToast("通信エラーが発生しました。", 'error');
         }
     };
 
@@ -134,8 +137,13 @@ export default function PurchaseRequestsPage() {
                     <tbody className="divide-y divide-slate-100">
                         {filteredRequests.length === 0 ? (
                             <tr>
-                                <td colSpan={8} className="p-8 text-center text-slate-400">
-                                    リクエストはまだありません。
+                                <td colSpan={8} className="p-0">
+                                    <EmptyState
+                                        title="リクエストはまだありません"
+                                        description="受講生からの仕入れリクエストが届くとここに表示されます。"
+                                        icon={FileText}
+                                        className="m-8"
+                                    />
                                 </td>
                             </tr>
                         ) : (

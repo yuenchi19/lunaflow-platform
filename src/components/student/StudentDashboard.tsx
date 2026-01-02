@@ -8,6 +8,7 @@ import { User as UserIcon, Bell, ExternalLink, Book, LogOut, Settings, PlayCircl
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import LockOverlay from "../LockOverlay";
+import { ProgressBar } from "../ui/ProgressBar";
 
 interface StudentDashboardProps {
     initialUser?: User | null;
@@ -457,9 +458,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                                     {course.title}
                                 </Link>
                             </h3>
-                            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4">
-                                <div className="bg-rose-500 h-full w-[10%] rounded-full"></div>
-                            </div>
+                            <ProgressBar value={10} color="bg-rose-500" height="h-1.5" className="mb-4" />
                             <div className="flex flex-col gap-3">
                                 <p className="text-xs text-slate-500 leading-tight">
                                     {course.title}へようこそ！まずは動画を確認して感想を記載して受講を開始してください。

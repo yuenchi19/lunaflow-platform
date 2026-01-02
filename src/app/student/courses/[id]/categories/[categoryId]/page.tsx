@@ -5,6 +5,7 @@ import Link from 'next/link';
 import styles from './page.module.css';
 import { storage } from '@/app/lib/storage';
 import VideoPlayer from '@/components/VideoPlayer';
+import BlockRenderer from '@/components/BlockRenderer';
 
 export default function StudentCategoryPage({ params }: { params: { id: string, categoryId: string } }) {
     const [category, setCategory] = useState<any>(null);
@@ -24,83 +25,8 @@ export default function StudentCategoryPage({ params }: { params: { id: string, 
 
     const activeBlock = blocks[activeBlockIndex];
 
-    const renderBlockContent = (block: any) => {
-        if (!block) return null;
-
-        switch (block.type) {
-            case 'video':
-                return (
-                    <div className={styles.videoPlayer}>
-                        {/* Use existing VideoPlayer. Assuming block has a 'url' property or content.url */}
-                        {/* Since storage schema is loose, let's assume block.url or block.content.url */}
-                        {/* Admin side saves it. I need to check Admin/categories page again to see how it saves. */}
-                        {/* If admin side mock functionality didn't save URL, I might need to fix that too. */}
-                        {/* For now, let's render VideoPlayer with a fallback or real URL. */}
-                        <VideoPlayer videoUrl={block.url || block.content?.url || ''} />
-                    </div>
-                );
-            case 'text':
-            case 'article':
-                return (
-                    <div className={styles.textContent}>
-                        <h2>{block.title}</h2>
-                        <div className={styles.textBody}>
-                            {block.type === 'article' ? '記事の本文がここに表示されます。管理画面で入力した内容が反映されます。' : '短いテキストがここに表示されます。'}
-                        </div>
-                    </div>
-                );
-            case 'quiz':
-                return (
-                    <div className={styles.quizContent}>
-                        <h2>{block.title}</h2>
-                        <div className={styles.quizQuestion}>
-                            問題の本文がここに表示されます。
-                        </div>
-                        <div className={styles.quizOptions}>
-                            <button className={styles.quizOptionBtn}>選択肢 1</button>
-                            <button className={styles.quizOptionBtn}>選択肢 2</button>
-                            <button className={styles.quizOptionBtn}>選択肢 3</button>
-                        </div>
-                    </div>
-                );
-            case 'survey':
-                return (
-                    <div className={styles.surveyContent}>
-                        <h2>{block.title}</h2>
-                        <p>アンケートへのご協力をお願いします。</p>
-                        <div className={styles.surveyQuestions}>
-                            {block.content?.questions?.map((q: any, i: number) => (
-                                <div key={i} className={styles.surveyQuestionItem}>
-                                    <p className={styles.qTitle}>{i + 1}. {q.title || '無題の質問'}</p>
-                                    {q.type === 'text' ? (
-                                        <textarea className={styles.surveyTextarea} placeholder="回答を入力"></textarea>
-                                    ) : (
-                                        <div className={styles.qOptions}>
-                                            {q.options?.map((opt: string, oi: number) => (
-                                                <label key={oi} className={styles.qOptionLabel}>
-                                                    <input type={q.type} name={`q${i}`} /> {opt || `選択肢 ${oi + 1}`}
-                                                </label>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )) || <p>質問が設定されていません。</p>}
-                        </div>
-                    </div>
-                );
-            default:
-                return (
-                    <div className={styles.otherContent}>
-                        <div className={styles.otherIcon}>{block.type === 'pdf' ? '📂' : block.type === 'audio' ? '🔊' : '🔗'}</div>
-                        <h3>{block.title}</h3>
-                        <p>{block.type.toUpperCase()} コンテンツ</p>
-                        <button className={styles.downloadBtn}>
-                            {block.type === 'link' ? 'リンクを開く' : 'ファイルをダウンロード'}
-                        </button>
-                    </div>
-                );
-        }
-    };
+    // Converted to separate Component
+    // const renderBlockContent = (block: any) => ...
 
     return (
         <div className={styles.container}>
@@ -129,7 +55,7 @@ export default function StudentCategoryPage({ params }: { params: { id: string, 
                 <div className={styles.contentWrapper}>
                     {blocks.length > 0 ? (
                         <>
-                            {renderBlockContent(activeBlock)}
+                            <BlockRenderer block={activeBlock} />
                             <div className={styles.navigation}>
                                 <button
                                     className={styles.navBtn}

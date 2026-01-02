@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 };
 
 import { AccessControl } from "@/components/AccessControl";
+import { ToastProvider } from "@/components/ui/ToastContext";
 
 // ...
 
@@ -32,16 +33,18 @@ export default function RootLayout({
     <html lang="ja" translate="no">
       <body className={inter.className}>
         <AccessControl>
-          <HeaderWrapper />
-          {children}
-          {/* PromoteKit Tracking Script */}
-          {/* Use standard next/script for third-party scripts */}
-          { /* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
-          <Script
-            src="https://cdn.promotekit.com/promotekit.js"
-            strategy="afterInteractive"
-            data-promotekit="8b96c931-3fa9-460e-bba8-1e5c42ed5254"
-          />
+          <ToastProvider>
+            <HeaderWrapper />
+            {children}
+            {/* PromoteKit Tracking Script */}
+            {/* Use standard next/script for third-party scripts */}
+            { /* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
+            <Script
+              src="https://cdn.promotekit.com/promotekit.js"
+              strategy="afterInteractive"
+              data-promotekit="8b96c931-3fa9-460e-bba8-1e5c42ed5254"
+            />
+          </ToastProvider>
         </AccessControl>
       </body>
     </html>

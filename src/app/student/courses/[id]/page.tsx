@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { storage } from '@/app/lib/storage';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 
 export default function StudentCoursePage({ params }: { params: { id: string } }) {
     const [course, setCourse] = useState<any>(null);
@@ -31,11 +32,15 @@ export default function StudentCoursePage({ params }: { params: { id: string } }
             <div className={styles.progressSection}>
                 <div className={styles.progressHeader}>
                     <span className={styles.progressLabel}>学習の進捗</span>
-                    <span className={styles.progressPercent}>0% (0/{categories.reduce((acc, cat) => acc + cat.blockCount, 0)})</span>
                 </div>
-                <div className={styles.progressBar}>
-                    <div className={styles.progressFill} style={{ width: '0%' }}></div>
-                </div>
+                <ProgressBar
+                    value={0}
+                    max={categories.reduce((acc, cat) => acc + cat.blockCount, 0) || 100}
+                    color="bg-indigo-600"
+                    height="h-3"
+                    showLabel
+                    label="0%" // Or calculate real %
+                />
             </div>
 
             <div className={styles.categoryList}>

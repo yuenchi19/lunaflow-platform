@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { calculateStudentStatus } from '@/lib/utils';
+import { Users } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function StudentsPage() {
     // Version: 2025-12-27 Refined
@@ -157,21 +159,25 @@ export default function StudentsPage() {
                                                 目標: ¥{stats.requiredTotal.toLocaleString()}
                                             </div>
                                             {stats.isPurchaseOk ? (
-                                                <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1 rounded w-fit">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
                                                     ✅ 条件達成済
                                                 </span>
                                             ) : (
-                                                <span className="text-[10px] text-rose-600 font-bold bg-rose-50 px-1 rounded w-fit">
-                                                    不足: ¥{stats.purchaseDeficit.toLocaleString()}
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                                                    ⚠️ 不足: ¥{stats.purchaseDeficit.toLocaleString()}
                                                 </span>
                                             )}
                                         </div>
                                     </td>
                                     <td>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-emerald-600 font-bold text-xs">サブスク有効</span>
+                                        <div className="flex flex-col gap-2">
+                                            <span className="inline-flex items-center w-fit px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-700">
+                                                ✅ サブスク有効
+                                            </span>
                                             {stats.isDurationOk && stats.isPurchaseOk && (
-                                                <span className="text-[10px] font-bold text-indigo-600">卒業/変更可</span>
+                                                <span className="inline-flex items-center w-fit px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-100 text-indigo-700 animate-pulse">
+                                                    🎓 卒業/変更可
+                                                </span>
                                             )}
                                         </div>
                                     </td>
@@ -183,8 +189,13 @@ export default function StudentsPage() {
                         })}
                         {filteredStudents.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="text-center py-8 text-gray-500">
-                                    該当する受講生が見つかりません
+                                <td colSpan={5} className="p-0">
+                                    <EmptyState
+                                        title="受講生が見つかりません"
+                                        description="検索条件を変更するか、新しい受講生が登録されるのをお待ちください。"
+                                        icon={Users}
+                                        className="m-8"
+                                    />
                                 </td>
                             </tr>
                         )}
