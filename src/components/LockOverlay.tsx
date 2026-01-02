@@ -15,31 +15,31 @@ export default function LockOverlay({ isLocked, title, message, children, action
     if (!isLocked) return <>{children}</>;
 
     return (
-        <div className="relative group">
+        <div className="relative group overflow-hidden rounded-2xl">
             {/* Blurred Content */}
             <div className="filter blur-sm select-none pointer-events-none opacity-50 grayscale transition-all duration-500">
                 {children}
             </div>
 
             {/* Overlay */}
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center bg-slate-50/10 backdrop-blur-[1px]">
-                <div className="bg-white/95 p-6 rounded-2xl shadow-xl border border-slate-200 max-w-sm">
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-4 text-center bg-slate-50/10 backdrop-blur-[1px]">
+                <div className="bg-white/95 p-6 rounded-2xl shadow-xl border border-slate-200 w-full max-w-[90%] md:max-w-sm mx-auto">
                     <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
                         <Lock className="w-6 h-6" />
                     </div>
-                    <h3 className="font-bold text-slate-800 text-lg mb-2">
+                    <h3 className="font-bold text-slate-800 text-lg mb-2 break-words">
                         {title || "機能制限されています"}
                     </h3>
-                    <p className="text-sm text-slate-500 mb-4 leading-relaxed">
+                    <p className="text-sm text-slate-500 mb-4 leading-relaxed break-words">
                         {message || "この機能は特定のカリキュラムを完了後に利用可能になります。"}
                     </p>
 
                     {actionLabel && actionLink ? (
-                        <Link href={actionLink} className="block w-full py-2.5 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors shadow-md text-sm mb-3">
+                        <Link href={actionLink} className="block w-full py-2.5 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors shadow-md text-sm mb-3 text-ellipsis overflow-hidden whitespace-nowrap">
                             {actionLabel}
                         </Link>
                     ) : actionLabel && onAction ? (
-                        <button onClick={onAction} className="block w-full py-2.5 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors shadow-md text-sm mb-3">
+                        <button onClick={onAction} className="block w-full py-2.5 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors shadow-md text-sm mb-3 text-ellipsis overflow-hidden whitespace-nowrap">
                             {actionLabel}
                         </button>
                     ) : (
