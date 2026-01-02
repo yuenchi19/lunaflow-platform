@@ -21,12 +21,25 @@ model User {
   address            String?
   payoutPreference   String              @default("offset_purchase")
   isLedgerEnabled    Boolean             @default(false)
+  lineUserId         String?             @unique
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   purchaseRequests   PurchaseRequest[]
   rewardTransactions RewardTransaction[]
   ledgerEntries      LedgerEntry[]
   inventoryAssignments InventoryItem[]
+  oneTimeTokens      OneTimeToken[]
+}
+
+model OneTimeToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  type      String    @default("line_auth") // line_auth, etc.
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 }
 
 enum ItemStatus {
