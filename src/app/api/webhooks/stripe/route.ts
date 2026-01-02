@@ -204,6 +204,11 @@ export async function POST(req: Request) {
                                 
                                 <p>※セキュリティのため、ログイン後は速やかに「設定」よりパスワードの変更をお願いいたします。</p>
 
+                                <p><strong>■ 【重要】サポート公式LINEのご案内</strong><br>
+                                学習中のご不明点やシステムの使い方など、お困りの際は公式LINEにてサポートいたします。<br>
+                                必ず以下のリンクより「友だち追加」をお願いいたします！<br>
+                                <a href="https://lin.ee/0vHJsum">https://lin.ee/0vHJsum</a></p>
+
                                 <p>これから始まるLuna Flowでの体験が、${customerDetails?.name || 'お客様'} 様にとって輝かしいものとなりますように。<br>
                                 あなたの毎日が、もっと心地よく、もっと私らしくなりますように。<br>
                                 心を込めて。</p>

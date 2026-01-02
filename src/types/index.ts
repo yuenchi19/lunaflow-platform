@@ -43,6 +43,9 @@ export interface UserProgress {
     completed: boolean;
     score?: number;
     lastWatchedPosition?: number;
+    stripeCustomerId?: string; // For linking to Stripe Customer
+    lineUserId?: string; // For syncing with LINE Messaging API
+    lastLoginDate?: string; // For inactivity reminders
     targetDate?: string; // For learning plan
 }
 
