@@ -389,7 +389,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
             title="まずはカリキュラムを進めましょう！"
             message="規定のカリキュラムを完了することで、利用可能になります。"
             actionLabel="コースを進める"
-            actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/courses/course_1"}
+            actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
             blur="sm"
         >
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
