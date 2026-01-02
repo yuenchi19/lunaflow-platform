@@ -40,7 +40,11 @@ export default function CoursesPage() {
     const [toastMessage, setToastMessage] = useState<string | null>(null);
 
     const sensors = useSensors(
-        useSensor(PointerSensor),
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        }),
         useSensor(KeyboardSensor, {
             coordinateGetter: sortableKeyboardCoordinates,
         })
@@ -241,26 +245,24 @@ function SortableCourseItem({ course, openMenuId, setOpenMenuId, handleDeleteCou
 
             <div className={styles.actions} onMouseDown={e => e.stopPropagation()}>
                 <div className={styles.dropdownContainer}>
-                    <span
-                        className={styles.moreMenu}
+                    <button
+                        className={styles.settingsButton}
                         onClick={() => setOpenMenuId(openMenuId === course.id ? null : course.id)}
                     >
-                        ︙
-                    </span>
+                        設定
+                    </button>
                     {openMenuId === course.id && (
-                        <div className={styles.dropdownMenu}>
+                        <div className={styles.dropdownMenu} style={{ right: 0, top: '100%', marginTop: '0.5rem' }}>
                             <Link href={`/admin/courses/${course.id}`} className={styles.dropdownItem}>コース編集</Link>
+                            <div className={styles.dropdownItem} onClick={() => {
+                                setIsTopVideoModalOpen(true);
+                                setOpenMenuId(null);
+                            }}>トップ動画設定</div>
                             <div className={styles.dropdownItem} onClick={() => handleDuplicateCourse(course)}>コース複製</div>
                             <div className={`${styles.dropdownItem} ${styles.deleteText}`} onClick={() => handleDeleteCourse(course.id)}>コース削除</div>
                         </div>
                     )}
                 </div>
-                <button
-                    className={styles.settingsButton}
-                    onClick={() => setIsTopVideoModalOpen(true)}
-                >
-                    設定
-                </button>
             </div>
         </div>
     );
