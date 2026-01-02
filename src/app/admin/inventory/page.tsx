@@ -11,7 +11,7 @@ interface InventoryItem {
     category?: string;
     costPrice: number;
     images: string[];
-    status: 'IN_STOCK' | 'ASSIGNED' | 'SOLD' | 'SHIPPED' | 'RETURNED';
+    status: 'IN_STOCK' | 'ASSIGNED' | 'SOLD' | 'SHIPPED' | 'RECEIVED' | 'RETURNED';
     assignedToUser?: { id: string; name: string; email?: string };
     createdAt: string;
 }
@@ -160,6 +160,7 @@ export default function AdminInventoryPage() {
         if (filter === 'in_stock') return item.status === 'IN_STOCK';
         if (filter === 'assigned') return item.status === 'ASSIGNED';
         if (filter === 'shipped') return item.status === 'SHIPPED';
+        if (filter === 'received') return item.status === 'RECEIVED';
         return true;
     });
 
@@ -218,6 +219,9 @@ export default function AdminInventoryPage() {
                 <button onClick={() => setFilter('shipped')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${filter === 'shipped' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'}`}>
                     発送済み ({items.filter(i => i.status === 'SHIPPED').length})
                 </button>
+                <button onClick={() => setFilter('received')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${filter === 'received' ? 'bg-slate-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                    受取済み ({items.filter(i => i.status === 'RECEIVED').length})
+                </button>
             </div>
 
             {/* List */}
@@ -244,7 +248,14 @@ export default function AdminInventoryPage() {
                             <tr><td colSpan={8} className="text-center py-10 text-slate-400">データがありません</td></tr>
                         ) : (
                             filteredItems.map(item => (
-                                <tr key={item.id} className={`hover:bg-slate-50 transition-colors ${selectedItemIds.includes(item.id) ? 'bg-indigo-50/50' : ''}`}>
+                                <tr 
+                                    key={item.id} 
+                                    className={`
+                                        transition-colors 
+                                        ${selectedItemIds.includes(item.id) ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}
+                                        ${item.status === 'RECEIVED' ? 'opacity-60 bg-slate-50 grayscale' : ''}
+                                    `}
+                                >
                                     <td className="px-6 py-4">
                                         <input
                                             type="checkbox"
@@ -274,11 +285,13 @@ export default function AdminInventoryPage() {
                                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${item.status === 'IN_STOCK' ? 'bg-emerald-100 text-emerald-700' :
                                             item.status === 'ASSIGNED' ? 'bg-amber-100 text-amber-700' :
                                                 item.status === 'SHIPPED' ? 'bg-indigo-100 text-indigo-700' :
-                                                    'bg-slate-100 text-slate-700'
+                                                    item.status === 'RECEIVED' ? 'bg-slate-200 text-slate-600' :
+                                                        'bg-slate-100 text-slate-700'
                                             }`}>
                                             {item.status === 'IN_STOCK' ? '在庫あり' :
                                                 item.status === 'ASSIGNED' ? '割当済' :
-                                                    item.status === 'SHIPPED' ? '発送済' : item.status}
+                                                    item.status === 'SHIPPED' ? '発送済' : 
+                                                        item.status === 'RECEIVED' ? '受取済' : item.status}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
@@ -318,10 +331,13 @@ export default function AdminInventoryPage() {
                                             {item.status === 'SHIPPED' && (
                                                 <button
                                                     onClick={() => handleOpenAssignModal(item)}
-                                                    className="bg-rose-50 text-rose-600 text-xs font-bold px-3 py-1.5 rounded hover:bg-rose-100 whitespace-nowrap"
+                                                    className="bg-indigo-50 text-indigo-600 text-xs font-bold px-3 py-1.5 rounded hover:bg-indigo-100 whitespace-nowrap border border-indigo-200"
                                                 >
-                                                    返品処理
+                                                    到着確認
                                                 </button>
+                                            )}
+                                             {item.status === 'RECEIVED' && (
+                                                <span className="text-xs text-slate-400 font-bold">完了</span>
                                             )}
 
                                             <Link
@@ -446,29 +462,39 @@ export default function AdminInventoryPage() {
                                 </div>
                             )}
 
-                            {/* SINGLE: SHIPPED - Return Only */}
+                            {/* SINGLE: SHIPPED - Return or Receive */}
                             {selectedItem && selectedItem.status === 'SHIPPED' && (
                                 <div className="space-y-4">
-                                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-lg">
-                                        <h4 className="font-bold text-rose-800 text-sm mb-1">返品・キャンセル処理</h4>
-                                        <p className="text-xs text-rose-600 mb-3">
-                                            発送済み商品の割当変更はできません。一度「返品」または「在庫」に戻す必要があります。
-                                        </p>
+                                    <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-lg flex flex-col gap-3">
+                                         <h4 className="font-bold text-indigo-900 text-sm mb-1">到着確認</h4>
+                                         <p className="text-xs text-indigo-700">生徒側で商品の到着が確認できた場合、ステータスを更新します。</p>
+                                        <button
+                                            onClick={() => handleUpdateStatus('RECEIVED')}
+                                            className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2"
+                                        >
+                                            <span>✨</span> 到着確認済みにする (グレーアウト)
+                                        </button>
+                                    </div>
 
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => handleUpdateStatus('RETURNED')}
-                                                className="flex-1 bg-rose-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-rose-700"
-                                            >
-                                                返品として処理
-                                            </button>
-                                            <button
-                                                onClick={() => handleUpdateStatus('IN_STOCK')}
-                                                className="flex-1 bg-white border border-rose-200 text-rose-600 font-bold py-2 rounded-lg text-sm hover:bg-rose-50"
-                                            >
-                                                在庫に戻す
-                                            </button>
-                                        </div>
+                                    <div className="relative flex py-2 items-center">
+                                        <div className="flex-grow border-t border-slate-200"></div>
+                                        <span className="flex-shrink-0 mx-4 text-slate-300 text-xs font-bold">返品・キャンセル</span>
+                                        <div className="flex-grow border-t border-slate-200"></div>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleUpdateStatus('RETURNED')}
+                                            className="flex-1 bg-rose-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-rose-700"
+                                        >
+                                            返品として処理
+                                        </button>
+                                        <button
+                                            onClick={() => handleUpdateStatus('IN_STOCK')}
+                                            className="flex-1 bg-white border border-rose-200 text-rose-600 font-bold py-2 rounded-lg text-sm hover:bg-rose-50"
+                                        >
+                                            在庫に戻す
+                                        </button>
                                     </div>
                                 </div>
                             )}
