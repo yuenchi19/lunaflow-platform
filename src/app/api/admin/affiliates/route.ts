@@ -60,27 +60,30 @@ export async function GET() {
             let indirectCount = 0;
             let monthlyEarnings = 0;
 
-            // Level 1: Users referred by this affiliate
-            const directReferrals = allUsers.filter(u => u.referredBy === affiliate.affiliateCode);
-            directCount = directReferrals.length;
+            // Only calculate if affiliate code exists
+            if (affiliate.affiliateCode) {
+                // Level 1: Users referred by this affiliate
+                const directReferrals = allUsers.filter(u => u.referredBy === affiliate.affiliateCode);
+                directCount = directReferrals.length;
 
-            directReferrals.forEach(direct => {
-                // Calculate 7%
-                const price = PLAN_PRICES[direct.plan as Plan] || 0;
-                monthlyEarnings += Math.floor(price * 0.07);
+                directReferrals.forEach(direct => {
+                    // Calculate 7%
+                    const price = PLAN_PRICES[direct.plan as Plan] || 0;
+                    monthlyEarnings += Math.floor(price * 0.07);
 
-                // Level 2: Users referred by the direct referral (if direct referral has a code)
-                if (direct.affiliateCode) {
-                    const indirectReferrals = allUsers.filter(u => u.referredBy === direct.affiliateCode);
-                    indirectCount += indirectReferrals.length;
+                    // Level 2: Users referred by the direct referral (if direct referral has a code)
+                    if (direct.affiliateCode) {
+                        const indirectReferrals = allUsers.filter(u => u.referredBy === direct.affiliateCode);
+                        indirectCount += indirectReferrals.length;
 
-                    indirectReferrals.forEach(indirect => {
-                        // Calculate 3%
-                        const indPrice = PLAN_PRICES[indirect.plan as Plan] || 0;
-                        monthlyEarnings += Math.floor(indPrice * 0.03);
-                    });
-                }
-            });
+                        indirectReferrals.forEach(indirect => {
+                            // Calculate 3%
+                            const indPrice = PLAN_PRICES[indirect.plan as Plan] || 0;
+                            monthlyEarnings += Math.floor(indPrice * 0.03);
+                        });
+                    }
+                });
+            }
 
             // Adjust for Payouts (reset if paid)
             const userPayouts = payouts.filter(p => p.userId === affiliate.id)

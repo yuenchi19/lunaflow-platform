@@ -28,24 +28,29 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
         let userTier = 1; // Default: Light/Guest
 
         if (authUser && !authError) {
-            // 2. Get DB User to check Plan
+            // 2. Get DB User to check Plan and Role
             const user = await prisma.user.findUnique({
                 where: { email: authUser.email! },
-                select: { plan: true }
+                select: { plan: true, role: true }
             });
 
-            if (user && user.plan) {
-                switch (user.plan.toLowerCase()) {
-                    case 'premium':
-                        userTier = 3;
-                        break;
-                    case 'standard':
-                        userTier = 2;
-                        break;
-                    case 'light':
-                    default:
-                        userTier = 1;
-                        break;
+            if (user) {
+                // Admin and Staff bypass tier restrictions (treat as Premium)
+                if (user.role === 'admin' || user.role === 'staff') {
+                    userTier = 3;
+                } else if (user.plan) {
+                    switch (user.plan.toLowerCase()) {
+                        case 'premium':
+                            userTier = 3;
+                            break;
+                        case 'standard':
+                            userTier = 2;
+                            break;
+                        case 'light':
+                        default:
+                            userTier = 1;
+                            break;
+                    }
                 }
             }
         }

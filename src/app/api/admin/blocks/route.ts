@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
 
 export async function POST(req: Request) {
     try {
@@ -58,6 +59,16 @@ export async function POST(req: Request) {
                 feedbackType: feedbackType || null
             }
         });
+
+        // Revalidate Student Course Page
+        const category = await prisma.category.findUnique({
+            where: { id: categoryId },
+            select: { courseId: true }
+        });
+        if (category) {
+            revalidatePath(`/student/course/${category.courseId}`);
+            revalidatePath(`/student/courses/${category.courseId}`); // Covers both singular/plural paths just in case
+        }
 
         return NextResponse.json(block);
 
