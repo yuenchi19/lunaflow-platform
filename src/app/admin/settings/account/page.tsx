@@ -27,26 +27,9 @@ export default function AccountSettingsPage() {
                 // But `lineUserId` is in public `User` table.
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
-                    // Check via API
-                    // We'll reuse the student link API which checks the logged-in user context.
-                    // But that API is for GENERATING a link. 
-                    // Let's create a quick status check or infer from `test-send` result? No, that's hacky.
-                    // Let's add a simple status check logic here. 
-                    // Actually, we can just check if we can generate a link? No.
-
-                    // We'll fetch the profile. Admin is also a User.
-                    const res = await fetch(`/api/admin/staff/${user.id}`); // Or similar. 
-                    // If that fails, we might need a dedicated endpoint. 
-                    // Let's assume for now we use a simpler method: 
-                    // We will just show "Link" button. If already linked, the backend Link API *could* return "already linked" or similar?
-                    // The Generate Link API doesn't check if linked.
-
-                    // Let's implement a small "Check Status" fetch inside this component for now via database query? No client side DB.
-                    // Let's try to fetch from a new endpoint `GET /api/me` or similar?
-                    // Actually, let's just fetch `GET /api/admin/me` which redirects to `GET /api/admin/staff/[id]`.
-
-                    // BETTER PLAN: Since we are admin, we can fetch ANY user. 
-                    const res = await fetch(`/api/admin/students/${user.id}`); // This endpoint works for ANY user ID in the User table.
+                    // Fetch user details to check LINE status
+                    // Since Admin is also a User, we can use the generic student endpoint which fetches by ID from the User table.
+                    const res = await fetch(`/api/admin/students/${user.id}`);
                     if (res.ok) {
                         const data = await res.json();
                         if (data.user && data.user.lineUserId) {
@@ -57,14 +40,13 @@ export default function AccountSettingsPage() {
                     } else {
                         setLineStatus('unlinked');
                     }
+                } catch (e) {
+                    console.error("Failed to check LINE status", e);
+                    setLineStatus('unlinked');
                 }
-            } catch (e) {
-                console.error("Failed to check LINE status", e);
-                setLineStatus('unlinked');
-            }
-        };
-        checkLineStatus();
-    }, []);
+            };
+            checkLineStatus();
+        }, []);
 
     const handleLineLink = async () => {
         try {
