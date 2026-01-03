@@ -67,6 +67,7 @@ export interface User {
     address?: string;
     phoneNumber?: string;
     isLedgerEnabled?: boolean;
+    lastLoginDate?: string;
 }
 
 export interface StripeSettings {
