@@ -685,6 +685,46 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                                 />
                             </div>
 
+                            {/* LINE Integration */}
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">SNS連携</label>
+                                <div className="flex items-center justify-between bg-[#06C755]/10 border border-[#06C755]/20 rounded-lg p-3">
+                                    <div className="flex items-center gap-3">
+                                        <MessageSquare className="w-5 h-5 text-[#06C755]" />
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-700">LINE連携</p>
+                                            <p className="text-xs text-slate-500">
+                                                {user.lineUserId ? '連携済みです' : '連携すると学習リマインドなどを受け取れます'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {user.lineUserId ? (
+                                        <span className="text-xs font-bold text-[#06C755] bg-white px-3 py-1.5 rounded border border-[#06C755]/30">
+                                            連携中
+                                        </span>
+                                    ) : (
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const res = await fetch('/api/student/line/link', { method: 'POST' });
+                                                    const data = await res.json();
+                                                    if (data.url) {
+                                                        window.location.href = data.url;
+                                                    } else {
+                                                        alert('連携URLの発行に失敗しました');
+                                                    }
+                                                } catch (e) {
+                                                    alert('エラーが発生しました');
+                                                }
+                                            }}
+                                            className="text-xs font-bold text-white bg-[#06C755] px-4 py-2 rounded hover:bg-[#05b64d] transition-colors shadow-sm"
+                                        >
+                                            連携する
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
                             {/* Password Change */}
                             <div className="pt-4 border-t border-slate-100">
                                 <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">

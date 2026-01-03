@@ -20,7 +20,8 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
         name: "",
         email: "",
         communityNickname: "",
-        plan: "light"
+        plan: "light",
+        lineUserId: ""
     });
 
     useEffect(() => {
@@ -34,7 +35,8 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                         name: data.user.name || "",
                         email: data.user.email || "",
                         communityNickname: data.user.communityNickname || "",
-                        plan: data.user.plan || "light"
+                        plan: data.user.plan || "light",
+                        lineUserId: data.user.lineUserId || ""
                     });
 
                     // Payments
@@ -56,18 +58,28 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
         }
     }, [params.id]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!student) return;
-        // Mock Save
-        setStudent({
-            ...student,
-            name: editForm.name,
-            email: editForm.email,
-            communityNickname: editForm.communityNickname,
-            plan: editForm.plan as any
-        });
-        setIsEditing(false);
-        alert("保存しました (擬似)");
+
+        try {
+            const res = await fetch(`/api/admin/students/${student.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editForm)
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setStudent(data.user);
+                setIsEditing(false);
+                alert("保存しました");
+            } else {
+                alert("保存に失敗しました");
+            }
+        } catch (e) {
+            console.error("Save error:", e);
+            alert("エラーが発生しました");
+        }
     };
 
     const handleDownloadCSV = () => {
@@ -259,6 +271,32 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                                 <div className={styles.infoItem}>
                                     <div className={styles.infoLabel}>Stripe初回決済日 (登録日)</div>
                                     <div className={styles.infoValue}>{student.registrationDate || "-"}</div>
+                                </div>
+
+                                {/* LINE User ID */}
+                                <div className={styles.infoItem}>
+                                    <div className={styles.infoLabel}>LINE連携ID (内部ID)</div>
+                                    {isEditing ? (
+                                        <div>
+                                            <input
+                                                className="border p-1 rounded w-full text-sm font-mono"
+                                                value={editForm.lineUserId}
+                                                onChange={e => setEditForm({ ...editForm, lineUserId: e.target.value })}
+                                                placeholder="U..."
+                                            />
+                                            <p className="text-[10px] text-red-500 mt-1">※ 通常は変更不要。連携トラブル時のみ手動設定。</p>
+                                        </div>
+                                    ) : (
+                                        <div className={styles.infoValue}>
+                                            {student.lineUserId ? (
+                                                <code className="text-xs bg-slate-100 px-1 py-0.5 rounded text-slate-500">
+                                                    {student.lineUserId}
+                                                </code>
+                                            ) : (
+                                                <span className="text-slate-400 text-xs">未連携</span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
