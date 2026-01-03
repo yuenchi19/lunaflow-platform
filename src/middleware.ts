@@ -3,8 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
     // 1. Force Bypass for Webhooks (Top Priority)
-    // Using simple substring match to be absolutely safe
-    if (request.nextUrl.pathname.includes('/api/webhooks')) {
+    if (request.nextUrl.pathname.startsWith('/api/webhooks')) {
         return NextResponse.next();
     }
 
