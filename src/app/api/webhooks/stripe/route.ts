@@ -178,9 +178,14 @@ export async function POST(req: Request) {
 
                 // Real Email Sending with Resend
                 const { Resend } = await import('resend');
+                const { generateLineMagicLinkUrl } = await import('@/lib/line-auth');
+
                 if (!process.env.RESEND_API_KEY) throw new Error("Missing RESEND_API_KEY");
 
                 const resend = new Resend(process.env.RESEND_API_KEY);
+
+                // Generate Magic Link (LINE Integration)
+                const magicLinkUrl = await generateLineMagicLinkUrl(targetUserId);
 
                 try {
                     const { data: emailData, error: emailError } = await resend.emails.send({
@@ -189,29 +194,43 @@ export async function POST(req: Request) {
                         subject: '【重要】Luna Flowへようこそ！アカウント登録が完了しました ✨',
                         html: `
                                 <p>${customerDetails?.name || 'お客様'} 様</p>
+
                                 <p>Luna Flowへの入会誠にありがとうございます。<br>
                                 お客様のアカウント作成が完了いたしました！</p>
 
-                                <p>新しい一歩を踏み出すお手伝いができること、心より嬉しく思います。<br>
-                                これから、理想の毎日を一緒に叶えていきましょう！</p>
+                                <p>これからの新しい一歩を、私たちが全力でサポートいたします。<br>
+                                理想の毎日を一緒に叶えていきましょう！</p>
 
-                                <p>さっそく、以下の情報でマイページにログインいただけます。</p>
+                                <p><strong>▼ 面倒な入力なしで、今すぐスタート！</strong><br>
+                                以下のボタンを押すだけで、<strong>自動的にログインし、同時にLINE連携も完了します。</strong><br>
+                                （推奨：スマートフォンからタップしてください）</p>
+
+                                <p style="text-align: center; margin: 24px 0;">
+                                    <a href="${magicLinkUrl}" style="display:inline-block; background-color:#E64A19; color:#ffffff; padding:15px 30px; text-decoration:none; border-radius:5px; font-weight:bold; font-size:16px;">
+                                        🚀 今すぐ学習を始める
+                                    </a>
+                                </p>
+                                <p style="text-align: center; margin-bottom: 24px;"><small>※このリンクはセキュリティのため72時間有効です。</small></p>
+
+                                <hr style="border: 0; border-top: 1px solid #eee; margin: 24px 0;">
+
+                                <p><strong>■ 通常のログイン情報（PCやリンク切れの場合）</strong><br>
+                                もし上記ボタンから入れない場合は、以下の情報でログインしてください。</p>
                                 
-                                <p><strong>■ ログイン情報</strong><br>
+                                <p style="background-color: #f9f9f9; padding: 16px; border-radius: 8px;">
                                 ・ログインURL： ${process.env.NEXT_PUBLIC_APP_URL}<br>
                                 ・メールアドレス： ${email}<br>
-                                ・初期パスワード： ${tempPassword}</p>
+                                ・初期パスワード： ${tempPassword}
+                                </p>
                                 
-                                <p>※セキュリティのため、ログイン後は速やかに「設定」よりパスワードの変更をお願いいたします。</p>
+                                <p>※ログイン後、マイページの「設定」からパスワードを変更可能です。</p>
 
-                                <p><strong>■ 【重要】サポート公式LINEのご案内</strong><br>
-                                学習中のご不明点やシステムの使い方など、お困りの際は公式LINEにてサポートいたします。<br>
-                                必ず以下のリンクより「友だち追加」をお願いいたします！<br>
-                                <a href="https://lin.ee/0vHJsum">https://lin.ee/0vHJsum</a></p>
+                                <hr style="border: 0; border-top: 1px solid #eee; margin: 24px 0;">
 
-                                <p>これから始まるLuna Flowでの体験が、${customerDetails?.name || 'お客様'} 様にとって輝かしいものとなりますように。<br>
-                                あなたの毎日が、もっと心地よく、もっと私らしくなりますように。<br>
-                                心を込めて。</p>
+                                <p><strong>■ 公式LINEについて</strong><br>
+                                上記のボタンからスタートすると、公式LINEとの連携もスムーズに完了します。</p>
+
+                                <p>これから始まるLuna Flowでの体験が、${customerDetails?.name || 'お客様'} 様にとって輝かしいものとなりますように。</p>
 
                                 <p>Luna Flow 運営事務局</p>
                             `
