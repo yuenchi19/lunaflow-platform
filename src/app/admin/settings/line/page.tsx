@@ -159,12 +159,12 @@ export default function LineSettingsPage() {
                                 type="email"
                                 value={targetEmail}
                                 onChange={(e) => setTargetEmail(e.target.value)}
-                                placeholder="連携済みのアドレスを入力 (空欄の場合は自分)"
+                                placeholder="LINE連携済みユーザーのメールアドレスを入力"
                                 className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                             />
                         </div>
                         <p className="mt-1 text-xs text-slate-500">
-                            ※ 管理者がLINE未連携の場合、連携済みのユーザー（メールアドレス）を指定してテストできます。
+                            ※ 管理者自身がLINE未連携の場合、連携済みのユーザー（メールアドレス）を指定してテストできます。
                         </p>
                     </div>
 
