@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { lineClient } from '@/lib/line-client';
 import { createClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(req: Request) {
     try {
