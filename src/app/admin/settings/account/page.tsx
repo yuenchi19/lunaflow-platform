@@ -37,16 +37,15 @@ export default function AccountSettingsPage() {
                         } else {
                             setLineStatus('unlinked');
                         }
-                    } else {
-                        setLineStatus('unlinked');
                     }
-                } catch (e) {
-                    console.error("Failed to check LINE status", e);
-                    setLineStatus('unlinked');
                 }
-            };
-            checkLineStatus();
-        }, []);
+            } catch (e) {
+                console.error("Failed to check LINE status", e);
+                setLineStatus('unlinked');
+            }
+        };
+        checkLineStatus();
+    }, []);
 
     const handleLineLink = async () => {
         try {
