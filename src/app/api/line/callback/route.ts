@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
         // NOTE: In a real implementation, we would call LINE API here.
         // Since we don't have real credentials in this environment, we will Mock the profile retrieval.
 
-        /*
+        // 2. Exchange Code for Access Token
         const tokenResponse = await fetch('https://api.line.me/oauth2/v2.1/token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -43,27 +43,35 @@ export async function GET(req: NextRequest) {
                 code,
                 redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/line/callback`,
                 client_id: process.env.LINE_CLIENT_ID!,
-                client_secret: process.env.LINE_CLIENT_SECRET!,
+                client_secret: process.env.LINE_CHANNEL_SECRET!,
             }),
         });
+
+        if (!tokenResponse.ok) {
+            const errorData = await tokenResponse.json();
+            console.error('LINE Token Error:', errorData);
+            return NextResponse.json({ error: 'Failed to exchange token', details: errorData }, { status: 400 });
+        }
+
         const tokenData = await tokenResponse.json();
-        if (tokenData.error) throw new Error(tokenData.error_description);
-        
+
+        // Get Profile
         const profileResponse = await fetch('https://api.line.me/v2/profile', {
             headers: { Authorization: `Bearer ${tokenData.access_token}` },
         });
+
+        if (!profileResponse.ok) {
+            return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 400 });
+        }
+
         const profile = await profileResponse.json();
         const lineUserId = profile.userId;
-        */
-
-        // MOCK DATA for logic verification
-        const mockLineUserId = `line_user_${Date.now().toString().slice(-6)}`;
 
         // 3. Update User and Token
         await prisma.$transaction([
             prisma.user.update({
                 where: { id: oneTimeToken.userId },
-                data: { lineUserId: mockLineUserId }
+                data: { lineUserId: lineUserId }
             }),
             prisma.oneTimeToken.update({
                 where: { id: oneTimeToken.id },
