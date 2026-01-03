@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Lock, ArrowRight, UserPlus, LogIn } from "lucide-react";
 
-export default function EmbeddableLoginForm() {
+function LoginFormContent() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -13,7 +13,15 @@ export default function EmbeddableLoginForm() {
     const [error, setError] = useState("");
     const [message, setMessage] = useState("");
     const router = useRouter();
+    const searchParams = useSearchParams();
     const supabase = createClient();
+
+    useEffect(() => {
+        const m = searchParams.get('mode');
+        if (m === 'register' || m === 'signup') {
+            setMode('signup');
+        }
+    }, [searchParams]);
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -147,5 +155,13 @@ export default function EmbeddableLoginForm() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function EmbeddableLoginForm() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <LoginFormContent />
+        </Suspense>
     );
 }

@@ -212,3 +212,11 @@ model SentEmail {
   sentAt         DateTime @default(now())
   status         String
 }
+
+model FeatureUnlock {
+  id               String   @id @default(cuid())
+  featureKey       String   @unique // "affiliate", "inventory"
+  requiredCourseId String?
+  requiredBlockId  String?
+  updatedAt        DateTime @updatedAt
+}

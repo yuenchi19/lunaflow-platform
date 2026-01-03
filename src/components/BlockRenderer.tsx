@@ -35,6 +35,17 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block }) => {
 
     if (!block) return null;
 
+    // Parse content if it's a string (fixes JSON display issue)
+    let content = block.content;
+    if (typeof content === 'string') {
+        try {
+            content = JSON.parse(content);
+        } catch (e) {
+            console.error('Failed to parse block content', e);
+            content = {};
+        }
+    }
+
     // Helper: Submission Area (Reusable for Assignment AND Feedback)
     const renderSubmissionArea = (isFeedback: boolean = false) => {
         if (assignmentSubmitted) {
@@ -53,7 +64,7 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block }) => {
             );
         }
 
-        const formats = block.content?.formats || (isFeedback ? ['text'] : ['text']); // Default to text for feedback
+        const formats = content?.formats || (isFeedback ? ['text'] : ['text']); // Default to text for feedback
 
         return (
             <div className={`mt-8 pt-6 border-t border-slate-100 ${styles.assignmentSubmissionArea}`}>
@@ -117,8 +128,8 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block }) => {
         case 'video':
             return (
                 <div className={styles.videoPlayer}>
-                    <VideoPlayer videoUrl={block.url || block.content?.url || ''} />
-                    {block.content?.feedbackRequired && renderSubmissionArea(true)}
+                    <VideoPlayer videoUrl={block.url || content?.url || ''} />
+                    {content?.feedbackRequired && renderSubmissionArea(true)}
                 </div>
             );
         case 'text':
@@ -128,21 +139,21 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block }) => {
                     <h2>{block.title}</h2>
                     <div className={styles.textBody}>
                         {block.type === 'article'
-                            ? (block.content?.body || '記事の本文がここに表示されます。管理画面で入力した内容が反映されます。')
-                            : (block.content?.body || '短いテキストがここに表示されます。')}
+                            ? (content?.body || '記事の本文がここに表示されます。管理画面で入力した内容が反映されます。')
+                            : (content?.body || '短いテキストがここに表示されます。')}
                     </div>
-                    {block.content?.feedbackRequired && renderSubmissionArea(true)}
+                    {content?.feedbackRequired && renderSubmissionArea(true)}
                 </div>
             );
         case 'quiz':
-            const options = block.content?.options || ['選択肢 1', '選択肢 2', '選択肢 3'];
-            const correctIndex = block.content?.correctIndex ?? 0; // Mock correct index if missing
+            const options = content?.options || ['選択肢 1', '選択肢 2', '選択肢 3'];
+            const correctIndex = content?.correctIndex ?? 0; // Mock correct index if missing
 
             return (
                 <div className={styles.quizContent}>
                     <h2>{block.title}</h2>
                     <div className={styles.quizQuestion}>
-                        {block.content?.body || '問題の本文がここに表示されます。'}
+                        {content?.body || '問題の本文がここに表示されます。'}
                     </div>
                     <div className={styles.quizOptions}>
                         {options.map((opt: string, i: number) => (
@@ -180,7 +191,7 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block }) => {
                     <h2>{block.title}</h2>
                     <p>アンケートへのご協力をお願いします。</p>
                     <div className={styles.surveyQuestions}>
-                        {block.content?.questions?.map((q: any, i: number) => (
+                        {content?.questions?.map((q: any, i: number) => (
                             <div key={i} className={styles.surveyQuestionItem}>
                                 <p className={styles.qTitle}>{i + 1}. {q.title || '無題の質問'}</p>
                                 {q.type === 'text' ? (
@@ -205,7 +216,7 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block }) => {
                 <div className={styles.assignmentContent}>
                     <h2>{block.title}</h2>
                     <div className={styles.assignmentDescription}>
-                        {block.content?.body || '課題の説明がここに表示されます。'}
+                        {content?.body || '課題の説明がここに表示されます。'}
                     </div>
                     {renderSubmissionArea(false)}
                 </div>

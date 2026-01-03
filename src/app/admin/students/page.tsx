@@ -40,11 +40,12 @@ export default function StudentsPage() {
     );
 
     const handleDownloadCSV = () => {
-        const headers = ["ID", "名前", "プラン", "メールアドレス", "コミュニティ名", "登録日", "合計購入額"];
+        const headers = ["ID", "名前", "プラン", "紹介コード", "メールアドレス", "コミュニティ名", "登録日", "合計購入額"];
         const rows = filteredStudents.map(st => [
             st.id,
             st.name,
             st.plan,
+            st.affiliateCode || "",
             st.email,
             st.communityNickname || "",
             st.registrationDate || "",
@@ -105,6 +106,7 @@ export default function StudentsPage() {
                     <thead>
                         <tr>
                             <th>名前 (コミュニティ名)</th>
+                            <th>紹介コード</th>
                             <th>プラン / 契約期間</th>
                             <th>おまかせ仕入れ状況</th>
                             <th>ステータス</th>
@@ -131,6 +133,15 @@ export default function StudentsPage() {
                                                 <div className="text-[10px] text-slate-400">{st.email}</div>
                                             </div>
                                         </div>
+                                    </td>
+                                    <td>
+                                        {st.affiliateCode ? (
+                                            <code className="text-xs font-mono font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                                                {st.affiliateCode}
+                                            </code>
+                                        ) : (
+                                            <span className="text-xs text-slate-300">-</span>
+                                        )}
                                     </td>
                                     <td>
                                         <div className="flex flex-col gap-1">

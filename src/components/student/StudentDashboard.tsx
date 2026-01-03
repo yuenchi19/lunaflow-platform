@@ -122,6 +122,20 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         }
     }, [user.plan, isPurchaseModalOpen]);
 
+    // Affiliate Code Auto-Generation
+    useEffect(() => {
+        if (!user.affiliateCode && (user.plan === 'standard' || user.plan === 'premium')) {
+            fetch('/api/student/affiliate/generate', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.affiliateCode) {
+                        setUser(prev => ({ ...prev, affiliateCode: data.affiliateCode }));
+                    }
+                })
+                .catch(err => console.error("Failed to generate affiliate code", err));
+        }
+    }, [user.affiliateCode, user.plan]);
+
     useEffect(() => {
         // ... (keep existing lifetime total logic or switch to API)
         if (typeof window !== 'undefined') {
@@ -306,15 +320,29 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         </div>
     );
 
+    const [unlocks, setUnlocks] = useState({ affiliate: false, inventory: false });
+
+    useEffect(() => {
+        // Fetch Unlock Status
+        fetch('/api/student/unlock-status')
+            .then(res => res.json())
+            .then(data => {
+                if (data && !data.error) {
+                    setUnlocks(data);
+                }
+            })
+            .catch(err => console.error("Failed to fetch unlock status", err));
+    }, []);
+
     const renderPurchaseTracker = () => {
-        // Use real data if available, or sample data if locked/empty to show "Active" UI look in background
-        const displayTotal = !user.isLedgerEnabled ? 150000 : currentMonthPurchaseTotal;
-        const displayTarget = !user.isLedgerEnabled ? 300000 : (purchaseTarget || 1);
+        const isUnlocked = user.isLedgerEnabled || unlocks.inventory;
+        const displayTotal = !isUnlocked ? 150000 : currentMonthPurchaseTotal;
+        const displayTarget = !isUnlocked ? 300000 : (purchaseTarget || 1);
         const displayPercent = Math.round((displayTotal / displayTarget) * 100);
 
         return (
             <LockOverlay
-                isLocked={!user.isLedgerEnabled}
+                isLocked={!isUnlocked}
                 title="仕入れ機能はロックされています"
                 message="規定のカリキュラムを完了することで、利用可能になります。"
                 actionLabel="コースを進める"
@@ -359,60 +387,76 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         );
     };
 
-    const renderAffiliateCard = () => (
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 shadow-sm overflow-hidden p-6 relative">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-                <span className="text-6xl">🤝</span>
-            </div>
-            <h3 className="font-bold text-amber-900 mb-2 flex items-center gap-2">
-                <span className="bg-amber-100 p-1 rounded-md">🤝</span>
-                アフィリエイト
-            </h3>
+    const renderAffiliateCard = () => {
+        const hasPlan = user.plan === 'standard' || user.plan === 'premium';
+        const isUnlocked = hasPlan && unlocks.affiliate;
 
-            {(user.plan === 'standard' || user.plan === 'premium') ? (
-                <div className="space-y-4 relative z-10">
-                    <div>
-                        <p className="text-[10px] text-amber-700 font-bold uppercase tracking-wider mb-1">あなたの紹介コード</p>
-                        <div className="flex items-center gap-2 bg-white border border-amber-200 rounded-lg p-2">
-                            <code className="flex-1 font-mono text-sm font-bold text-amber-800 text-center">{user.affiliateCode || "CODE_GENERATING..."}</code>
-                            <button
-                                className="text-[10px] bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold hover:bg-amber-200 transition-colors"
-                                onClick={() => {
-                                    const url = typeof window !== 'undefined' ? window.location.origin : 'https://lunaflow.space';
-                                    navigator.clipboard.writeText(`${url}?ref=${user.affiliateCode}`);
-                                    alert("紹介リンクをコピーしました！");
-                                }}
-                            >
-                                コピー
-                            </button>
-                        </div>
-                    </div>
-                    <div className="bg-white/60 rounded-lg p-3">
-                        <div className="flex justify-between items-end mb-1">
-                            <span className="text-[10px] text-amber-800 font-bold">今月の見込み収益</span>
-                            <span className="text-lg font-bold text-amber-600">
-                                ¥{affiliateEarnings.monthlyEarnings.toLocaleString()}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            ) : (
-                <div className="relative z-10 bg-white/60 rounded-xl p-4 text-center border border-amber-200/50 mt-4">
-                    <p className="text-sm font-bold text-amber-900 mb-1">スタンダードプラン以上で開放</p>
-                    <p className="text-xs text-amber-700">アフィリエイト機能を利用するにはプランのアップグレードが必要です。</p>
-                </div>
-            )}
-        </div>
-    );
+        // Determine Lock Message
+        let lockTitle = "アフィリエイト機能はロックされています";
+        let lockMessage = "規定のカリキュラムを完了することで、利用可能になります。";
 
-    const renderLedgerWidget = () => {
-        // Use sample stats if locked for "Normal UI" background look
-        const displayCount = !user.isLedgerEnabled ? 12 : inventoryStats.count;
-        const displayProfit = !user.isLedgerEnabled ? 85000 : inventoryStats.profit;
+        if (!hasPlan) {
+            lockTitle = "スタンダードプラン以上で開放";
+            lockMessage = "アフィリエイト機能を利用するにはプランのアップグレードが必要です。";
+        }
 
         return (
             <LockOverlay
-                isLocked={!user.isLedgerEnabled}
+                isLocked={!isUnlocked}
+                title={lockTitle}
+                message={lockMessage}
+                actionLabel={!hasPlan ? "プランを確認" : "コースを進める"}
+                actionLink={!hasPlan ? "/pricing" : (courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1")}
+                blur="sm"
+            >
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 shadow-sm overflow-hidden p-6 relative">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <span className="text-6xl">🤝</span>
+                    </div>
+                    <h3 className="font-bold text-amber-900 mb-2 flex items-center gap-2">
+                        <span className="bg-amber-100 p-1 rounded-md">🤝</span>
+                        アフィリエイト
+                    </h3>
+
+                    <div className="space-y-4 relative z-10">
+                        <div>
+                            <p className="text-[10px] text-amber-700 font-bold uppercase tracking-wider mb-1">あなたの紹介コード</p>
+                            <div className="flex items-center gap-2 bg-white border border-amber-200 rounded-lg p-2">
+                                <code className="flex-1 font-mono text-sm font-bold text-amber-800 text-center">{user.affiliateCode || "CODE_GENERATING..."}</code>
+                                <button
+                                    className="text-[10px] bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold hover:bg-amber-200 transition-colors"
+                                    onClick={() => {
+                                        const url = typeof window !== 'undefined' ? window.location.origin : 'https://lunaflow.space';
+                                        navigator.clipboard.writeText(`${url}?mode=register&ref=${user.affiliateCode}`);
+                                        alert("紹介リンクをコピーしました！");
+                                    }}
+                                >
+                                    コピー
+                                </button>
+                            </div>
+                        </div>
+                        <div className="bg-white/60 rounded-lg p-3">
+                            <div className="flex justify-between items-end mb-1">
+                                <span className="text-[10px] text-amber-800 font-bold">今月の見込み収益</span>
+                                <span className="text-lg font-bold text-amber-600">
+                                    ¥{affiliateEarnings.monthlyEarnings.toLocaleString()}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </LockOverlay>
+        );
+    };
+
+    const renderLedgerWidget = () => {
+        const isUnlocked = user.isLedgerEnabled || unlocks.inventory;
+        const displayCount = !isUnlocked ? 12 : inventoryStats.count;
+        const displayProfit = !isUnlocked ? 85000 : inventoryStats.profit;
+
+        return (
+            <LockOverlay
+                isLocked={!isUnlocked}
                 title="まずはカリキュラムを進めましょう！"
                 message="規定のカリキュラムを完了することで、利用可能になります。"
                 actionLabel="コースを進める"
@@ -438,9 +482,9 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                         </div>
                     </div>
 
-                    <div className="block w-full text-center py-2 bg-white border border-slate-200 text-slate-500 rounded-lg text-xs font-bold cursor-not-allowed">
+                    <button className="block w-full text-center py-2 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors">
                         台帳を開く
-                    </div>
+                    </button>
                 </div>
             </LockOverlay>
         );
@@ -590,7 +634,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 {/* Desktop Order Layout (Grid) */}
                 <div className="hidden lg:grid lg:grid-cols-12 gap-12">
                     {/* Left Sidebar */}
-                    <div className="lg:col-span-3 space-y-8">
+                    <div className="lg:col-span-4 space-y-8">
                         {renderProfileCard()}
                         {renderLedgerWidget()}
                         {renderPurchaseTracker()}
@@ -599,7 +643,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                     </div>
 
                     {/* Right Content */}
-                    <div className="lg:col-span-9 space-y-10">
+                    <div className="lg:col-span-8 space-y-10">
                         {renderFeedbacks()}
                         {renderCourses()}
                         {renderAnnouncements()}
