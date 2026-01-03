@@ -57,6 +57,13 @@ export default function NewsPage() {
         setIsModalOpen(false);
     };
 
+    const handleDelete = (id: string) => {
+        if (confirm('本当に削除してもよろしいですか？')) {
+            setNews(prev => prev.filter(item => item.id !== id));
+            setIsModalOpen(false);
+        }
+    };
+
     return (
         <div className={styles.container}>
             <div className={styles.header}>
@@ -98,7 +105,15 @@ export default function NewsPage() {
                                     </span>
                                 </td>
                                 <td>
-                                    <button className={styles.editBtn} onClick={() => handleEditClick(item)}>編集</button>
+                                    <div className="flex items-center gap-2">
+                                        <button className={styles.editBtn} onClick={() => handleEditClick(item)}>編集</button>
+                                        <button
+                                            className="text-xs text-rose-600 font-bold px-3 py-1 bg-rose-50 rounded hover:bg-rose-100 transition-colors"
+                                            onClick={() => handleDelete(item.id)}
+                                        >
+                                            削除
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -170,19 +185,31 @@ export default function NewsPage() {
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 mt-6">
-                            <button
-                                onClick={() => setIsModalOpen(false)}
-                                className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded"
-                            >
-                                キャンセル
-                            </button>
-                            <button
-                                onClick={handleSave}
-                                className="px-6 py-2 bg-slate-800 text-white font-bold rounded hover:bg-slate-700 shadow-sm"
-                            >
-                                保存する
-                            </button>
+                        <div className="flex justify-between items-center mt-6">
+                            <div>
+                                {editingItem.id && (
+                                    <button
+                                        onClick={() => handleDelete(editingItem.id!)}
+                                        className="text-red-500 text-sm font-bold hover:underline"
+                                    >
+                                        このお知らせを削除
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded"
+                                >
+                                    キャンセル
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    className="px-6 py-2 bg-slate-800 text-white font-bold rounded hover:bg-slate-700 shadow-sm"
+                                >
+                                    保存する
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
