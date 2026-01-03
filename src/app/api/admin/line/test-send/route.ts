@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { lineClient } from '@/lib/line-client';
 import { createClient } from '@/lib/supabase/server';
 
+
 export async function POST(req: Request) {
     try {
         const supabase = createClient();
@@ -13,12 +14,28 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        let targetEmail = user.email!;
+
+        // Parse body to check for specific target
+        try {
+            const body = await req.json();
+            if (body.targetEmail) {
+                targetEmail = body.targetEmail;
+            }
+        } catch (e) {
+            // Body might be empty, ignore
+        }
+
         const dbUser = await prisma.user.findUnique({
-            where: { email: user.email! }
+            where: { email: targetEmail }
         });
 
-        if (!dbUser || !dbUser.lineUserId) {
-            return NextResponse.json({ error: 'LINE integration not found for this user.' }, { status: 400 });
+        if (!dbUser) {
+            return NextResponse.json({ error: `User not found: ${targetEmail}` }, { status: 404 });
+        }
+
+        if (!dbUser.lineUserId) {
+            return NextResponse.json({ error: `User ${targetEmail} is not linked to LINE.` }, { status: 400 });
         }
 
         if (!lineClient) {

@@ -11,6 +11,7 @@ export default function LineSettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [sending, setSending] = useState(false);
+    const [targetEmail, setTargetEmail] = useState('');
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -53,12 +54,18 @@ export default function LineSettingsPage() {
     };
 
     const handleTestSend = async () => {
-        if (!confirm('あなた（ログイン中のユーザー）にテストメッセージを送信しますか？\n※LINE連携済みである必要があります。')) return;
+        const confirmMsg = targetEmail
+            ? `${targetEmail} にテストメッセージを送信しますか？`
+            : 'あなた（ログイン中のユーザー）にテストメッセージを送信しますか？\n※LINE連携済みである必要があります。';
+
+        if (!confirm(confirmMsg)) return;
 
         setSending(true);
         try {
             const res = await fetch('/api/admin/line/test-send', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetEmail }),
             });
             const data = await res.json();
 
@@ -139,6 +146,25 @@ export default function LineSettingsPage() {
                         />
                         <p className="mt-2 text-xs text-slate-500">
                             ※ `[Login URL]` は自動的にログイン用URLに置換されます。
+                        </p>
+                    </div>
+
+                    {/* Test Send Target */}
+                    <div className="pt-4 border-t border-slate-100">
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                            テスト送信先 (任意)
+                        </label>
+                        <div className="flex gap-2">
+                            <input
+                                type="email"
+                                value={targetEmail}
+                                onChange={(e) => setTargetEmail(e.target.value)}
+                                placeholder="連携済みのアドレスを入力 (空欄の場合は自分)"
+                                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            />
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">
+                            ※ 管理者がLINE未連携の場合、連携済みのユーザー（メールアドレス）を指定してテストできます。
                         </p>
                     </div>
 
