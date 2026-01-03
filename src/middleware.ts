@@ -2,11 +2,13 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-    // Bypass Middleware for Webhooks
-    if (request.nextUrl.pathname.startsWith('/api/webhooks') || request.nextUrl.pathname.startsWith('/api/webhooks/stripe')) {
+    // 1. Force Bypass for Webhooks (Top Priority)
+    // Using simple substring match to be absolutely safe
+    if (request.nextUrl.pathname.includes('/api/webhooks')) {
         return NextResponse.next();
     }
 
+    // 2. Initial Auth Check (Supabase)
     let response = NextResponse.next({
         request: {
             headers: request.headers,
@@ -37,6 +39,12 @@ export async function middleware(request: NextRequest) {
     )
 
     const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user && request.nextUrl.pathname.startsWith('/api/') && !request.nextUrl.pathname.includes('/api/auth')) {
+        // Optional: Protect other API routes if needed, but for now let's focus on fixing Webhook.
+        // If we block all /api/ without user, we might block public APIs.
+        // Assuming other APIs handle their own auth or are public.
+    }
 
     const path = request.nextUrl.pathname
     // Protected Routes List
@@ -132,9 +140,9 @@ export const config = {
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
-         * - api/ (API routes - generally managed separately or protected inside the handler)
-         * - auth/ (Auth routes if needed)
+         * - auth/ (Auth routes)
+         * NOTE: We removed 'api' from exclusion to ensure we can manually handle/bypass them in logic.
          */
-        '/((?!_next/static|_next/image|favicon.ico|api|auth).*)',
+        '/((?!_next/static|_next/image|favicon.ico|auth).*)',
     ],
 }
