@@ -1,102 +1,168 @@
+
 "use client";
 
-import { useState, useEffect } from "react";
-import { saveLineSettings, getLineSettings } from "@/lib/line-settings"; // We'll create this lib file
-import { Loader2, Save } from "lucide-react";
-import { useToast } from "@/components/ui/ToastContext";
+import { useState, useEffect } from 'react';
+import { Save, Send, MessageCircle } from 'lucide-react';
 
-export default function AdminLineSettingsPage() {
-    const { showToast } = useToast();
+export default function LineSettingsPage() {
+    const [enabled, setEnabled] = useState(false);
+    const [days, setDays] = useState(7);
+    const [template, setTemplate] = useState('');
     const [loading, setLoading] = useState(true);
-    const [settings, setSettings] = useState({
-        enabled: false,
-        reminderDays: 7,
-        reminderMessage: "こんにちは！LunaFlow事務局です。\n学習の進み具合はいかがでしょうか？\nもし操作方法や内容で分からないことがあれば、このLINEでいつでも質問してくださいね！\n\n▼ 学習を再開する\nhttps://www.lunaflow.space/"
-    });
+    const [saving, setSaving] = useState(false);
+    const [sending, setSending] = useState(false);
 
     useEffect(() => {
-        // Mock fetching settings
-        const loaded = getLineSettings();
-        setSettings(loaded);
-        setLoading(false);
+        const fetchSettings = async () => {
+            try {
+                const res = await fetch('/api/admin/settings/line');
+                if (res.ok) {
+                    const data = await res.json();
+                    setEnabled(data.enabled);
+                    setDays(data.days);
+                    setTemplate(data.template);
+                }
+            } catch (error) {
+                console.error('Failed to load settings', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchSettings();
     }, []);
 
-    const handleSave = () => {
-        saveLineSettings(settings);
-        showToast("LINE設定を保存しました", "success");
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            const res = await fetch('/api/admin/settings/line', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled, days, template }),
+            });
+            if (res.ok) {
+                alert('設定を保存しました');
+            } else {
+                alert('保存に失敗しました');
+            }
+        } catch (error) {
+            console.error('Failed to save', error);
+            alert('エラーが発生しました');
+        } finally {
+            setSaving(false);
+        }
     };
 
-    if (loading) return <div className="p-8"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
+    const handleTestSend = async () => {
+        if (!confirm('あなた（ログイン中のユーザー）にテストメッセージを送信しますか？\n※LINE連携済みである必要があります。')) return;
+
+        setSending(true);
+        try {
+            const res = await fetch('/api/admin/line/test-send', {
+                method: 'POST',
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alert('送信しました！LINEを確認してください。');
+            } else {
+                alert(`送信失敗: ${data.error}`);
+            }
+        } catch (error) {
+            console.error('Failed to send test', error);
+            alert('送信エラーが発生しました');
+        } finally {
+            setSending(false);
+        }
+    };
+
+    if (loading) return <div className="p-8">Loading...</div>;
 
     return (
-        <div className="p-8 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
-            <div>
-                <h1 className="text-3xl font-serif font-bold text-slate-800 mb-2">LINE連携設定</h1>
-                <p className="text-slate-500">公式LINEとの連携機能と自動リマインドの設定を行います。</p>
+        <div className="p-6 max-w-4xl mx-auto space-y-8">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                        <MessageCircle className="w-8 h-8 text-[#06C755]" />
+                        LINE通知設定
+                    </h1>
+                    <p className="text-slate-500 mt-1">未ログインユーザーへの自動リマインド設定</p>
+                </div>
             </div>
 
-            <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm space-y-8">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="p-6 space-y-6">
+                    {/* Enable/Disable Switch */}
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100">
+                        <div>
+                            <h3 className="font-semibold text-slate-800">自動配信を有効にする</h3>
+                            <p className="text-sm text-slate-500">OFFにすると、条件を満たしてもメッセージは送信されません。</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={enabled}
+                                onChange={(e) => setEnabled(e.target.checked)}
+                                className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#06C755]"></div>
+                        </label>
+                    </div>
 
-                {/* Feature Toggle */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-6">
+                    {/* Days Setting */}
                     <div>
-                        <h3 className="text-lg font-bold text-slate-800">自動リマインド機能</h3>
-                        <p className="text-sm text-slate-500">最終ログインから一定期間経過したユーザーにメッセージを送信します。</p>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                            未ログイン判定期間（日数）
+                        </label>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="number"
+                                value={days}
+                                onChange={(e) => setDays(Number(e.target.value))}
+                                min="1"
+                                className="w-24 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            />
+                            <span className="text-slate-600">日間ログインがない場合に送信</span>
+                        </div>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={settings.enabled}
-                            onChange={(e) => setSettings({ ...settings, enabled: e.target.checked })}
+
+                    {/* Template Setting */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                            メッセージ文面
+                        </label>
+                        <textarea
+                            value={template}
+                            onChange={(e) => setTemplate(e.target.value)}
+                            rows={8}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm"
+                            placeholder="メッセージを入力..."
                         />
-                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                    </label>
-                </div>
-
-                {/* Days Setting */}
-                <div className="space-y-3">
-                    <label className="block text-sm font-bold text-slate-700">未ログイン経過日数 (トリガー)</label>
-                    <div className="flex items-center gap-3">
-                        <input
-                            type="number"
-                            min="1"
-                            max="365"
-                            className="w-24 p-2 border border-slate-200 rounded-md text-right font-mono"
-                            value={settings.reminderDays}
-                            onChange={(e) => setSettings({ ...settings, reminderDays: parseInt(e.target.value) || 7 })}
-                        />
-                        <span className="text-slate-600">日</span>
+                        <p className="mt-2 text-xs text-slate-500">
+                            ※ `[Login URL]` は自動的にログイン用URLに置換されます。
+                        </p>
                     </div>
-                    <p className="text-xs text-slate-400">※ 指定した日数以上ログインしていないユーザーが対象になります。</p>
-                </div>
 
-                {/* Message Template */}
-                <div className="space-y-3">
-                    <label className="block text-sm font-bold text-slate-700">送信メッセージ内容</label>
-                    <textarea
-                        className="w-full h-48 p-4 border border-slate-200 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                        value={settings.reminderMessage}
-                        onChange={(e) => setSettings({ ...settings, reminderMessage: e.target.value })}
-                        placeholder="送信するメッセージを入力してください..."
-                    />
-                    <div className="bg-slate-50 p-3 rounded text-xs text-slate-500 leading-relaxed">
-                        <span className="font-bold">プレビュー:</span><br />
-                        {settings.reminderMessage.split('\n').map((line, i) => (
-                            <span key={i}>{line}<br /></span>
-                        ))}
+                    {/* Actions */}
+                    <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+                        <button
+                            onClick={handleTestSend}
+                            disabled={sending}
+                            className="flex items-center gap-2 px-4 py-2 text-[#06C755] border border-[#06C755] rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
+                        >
+                            <Send className="w-4 h-4" />
+                            {sending ? '送信中...' : '自分にテスト送信'}
+                        </button>
+
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50"
+                        >
+                            <Save className="w-4 h-4" />
+                            {saving ? '保存中...' : '設定を保存'}
+                        </button>
                     </div>
                 </div>
-
-                <div className="pt-6 border-t border-slate-100 flex justify-end">
-                    <button
-                        onClick={handleSave}
-                        className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg active:scale-95"
-                    >
-                        <Save className="w-4 h-4" /> 設定を保存
-                    </button>
-                </div>
-
             </div>
         </div>
     );
