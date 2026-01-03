@@ -184,6 +184,10 @@ export async function POST(req: Request) {
 
                 const resend = new Resend(process.env.RESEND_API_KEY);
 
+                if (!targetUserId) {
+                    throw new Error("Failed to resolve User ID for Magic Link generation");
+                }
+
                 // Generate Magic Link (LINE Integration)
                 const magicLinkUrl = await generateLineMagicLinkUrl(targetUserId);
 
