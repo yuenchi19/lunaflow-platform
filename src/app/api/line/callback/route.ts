@@ -67,10 +67,39 @@ export async function GET(req: NextRequest) {
         const profile = await profileResponse.json();
         const lineUserId = profile.userId;
 
-        // 3. Update User and Token
+        // 3. Check for existing link
+        const existingLinearUser = await prisma.user.findUnique({
+            where: { lineUserId: lineUserId },
+            select: { id: true }
+        });
+
+        const targetUserId = oneTimeToken.userId;
+
+        if (existingLinearUser) {
+            if (existingLinearUser.id === targetUserId) {
+                // Already linked to this user. Just consume token.
+                await prisma.oneTimeToken.update({
+                    where: { id: oneTimeToken.id },
+                    data: { usedAt: new Date() }
+                });
+                // Success redirect
+                const dashboardUrl = new URL('/student/dashboard', req.url);
+                dashboardUrl.searchParams.set('line_linked', 'already_done');
+                return NextResponse.redirect(dashboardUrl);
+            } else {
+                // Linked to ANOTHER user.
+                // For now, return a clear error.
+                return NextResponse.json({
+                    error: 'Content Conflict',
+                    message: 'This LINE account is already linked to another email address.'
+                }, { status: 409 });
+            }
+        }
+
+        // 4. Update User and Token (Fresh Link)
         await prisma.$transaction([
             prisma.user.update({
-                where: { id: oneTimeToken.userId },
+                where: { id: targetUserId },
                 data: { lineUserId: lineUserId }
             }),
             prisma.oneTimeToken.update({
@@ -79,16 +108,17 @@ export async function GET(req: NextRequest) {
             })
         ]);
 
-        // 4. Redirect to Dashboard with success flag
-        // The user requested: "Automatically redirect to the official LINE talk screen... or the top page of the learning site."
-        // We redirect to the student dashboard.
+        // 5. Redirect to Dashboard
         const dashboardUrl = new URL('/student/dashboard', req.url);
         dashboardUrl.searchParams.set('line_linked', 'true');
 
         return NextResponse.redirect(dashboardUrl);
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('LINE Callback Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({
+            error: 'Internal Server Error',
+            details: error.message
+        }, { status: 500 });
     }
 }
