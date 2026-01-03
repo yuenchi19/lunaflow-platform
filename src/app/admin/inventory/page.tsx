@@ -30,6 +30,49 @@ export default function AdminInventoryPage() {
 
     const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
 
+    // Sorting
+    const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const handleExportCSV = () => {
+        // Headers
+        const headers = ["ID", "Brand", "Name", "Category", "Cost Price", "Status", "Assigned To Name", "Assigned To Email", "Registered At"];
+
+        // Rows
+        const rows = filteredItems.map(item => [
+            item.id,
+            item.brand,
+            item.name || '',
+            item.category || '',
+            item.costPrice.toString(),
+            item.status,
+            item.assignedToUser?.name || '',
+            item.assignedToUser?.email || '',
+            item.createdAt
+        ]);
+
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `inventory_export_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     // Bulk Actions
     const handleToggleSelectKey = (id: string) => {
         setSelectedItemIds(prev =>
@@ -162,6 +205,20 @@ export default function AdminInventoryPage() {
         if (filter === 'shipped') return item.status === 'SHIPPED';
         if (filter === 'received') return item.status === 'RECEIVED';
         return true;
+    }).sort((a, b) => {
+        if (!sortConfig) return 0;
+
+        const { key, direction } = sortConfig;
+
+        if (key === 'assignedToUser') {
+            const nameA = a.assignedToUser?.name || '';
+            const nameB = b.assignedToUser?.name || '';
+            if (nameA < nameB) return direction === 'asc' ? -1 : 1;
+            if (nameA > nameB) return direction === 'asc' ? 1 : -1;
+            return 0;
+        }
+
+        return 0;
     });
 
     return (
@@ -196,13 +253,21 @@ export default function AdminInventoryPage() {
                         商品の登録、生徒への割り当て管理を行います
                     </p>
                 </div>
-                <Link
-                    href="/admin/inventory/new"
-                    className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-sm"
-                >
-                    <Plus className="w-4 h-4" />
-                    商品登録
-                </Link>
+                <div className="flex gap-3">
+                    <button
+                        onClick={handleExportCSV}
+                        className="flex items-center gap-2 bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg font-bold hover:bg-slate-50 transition-colors shadow-sm"
+                    >
+                        <span>⬇️</span> CSV出力
+                    </button>
+                    <Link
+                        href="/admin/inventory/new"
+                        className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-sm"
+                    >
+                        <Plus className="w-4 h-4" />
+                        商品登録
+                    </Link>
+                </div>
             </div>
 
             {/* Filters */}
@@ -236,7 +301,17 @@ export default function AdminInventoryPage() {
                             <th className="px-6 py-4">カテゴリ</th>
                             <th className="px-6 py-4 text-right">仕入れ価格</th>
                             <th className="px-6 py-4 text-center">ステータス</th>
-                            <th className="px-6 py-4">割当先</th>
+                            <th
+                                className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                                onClick={() => handleSort('assignedToUser')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    割当先
+                                    {sortConfig?.key === 'assignedToUser' && (
+                                        <span>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
+                                    )}
+                                </div>
+                            </th>
                             <th className="px-6 py-4">登録日</th>
                             <th className="px-6 py-4 text-center">操作</th>
                         </tr>
@@ -248,8 +323,8 @@ export default function AdminInventoryPage() {
                             <tr><td colSpan={8} className="text-center py-10 text-slate-400">データがありません</td></tr>
                         ) : (
                             filteredItems.map(item => (
-                                <tr 
-                                    key={item.id} 
+                                <tr
+                                    key={item.id}
                                     className={`
                                         transition-colors 
                                         ${selectedItemIds.includes(item.id) ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}
@@ -290,7 +365,7 @@ export default function AdminInventoryPage() {
                                             }`}>
                                             {item.status === 'IN_STOCK' ? '在庫あり' :
                                                 item.status === 'ASSIGNED' ? '割当済' :
-                                                    item.status === 'SHIPPED' ? '発送済' : 
+                                                    item.status === 'SHIPPED' ? '発送済' :
                                                         item.status === 'RECEIVED' ? '受取済' : item.status}
                                         </span>
                                     </td>
@@ -336,7 +411,7 @@ export default function AdminInventoryPage() {
                                                     到着確認
                                                 </button>
                                             )}
-                                             {item.status === 'RECEIVED' && (
+                                            {item.status === 'RECEIVED' && (
                                                 <span className="text-xs text-slate-400 font-bold">完了</span>
                                             )}
 
@@ -466,8 +541,8 @@ export default function AdminInventoryPage() {
                             {selectedItem && selectedItem.status === 'SHIPPED' && (
                                 <div className="space-y-4">
                                     <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-lg flex flex-col gap-3">
-                                         <h4 className="font-bold text-indigo-900 text-sm mb-1">到着確認</h4>
-                                         <p className="text-xs text-indigo-700">生徒側で商品の到着が確認できた場合、ステータスを更新します。</p>
+                                        <h4 className="font-bold text-indigo-900 text-sm mb-1">到着確認</h4>
+                                        <p className="text-xs text-indigo-700">生徒側で商品の到着が確認できた場合、ステータスを更新します。</p>
                                         <button
                                             onClick={() => handleUpdateStatus('RECEIVED')}
                                             className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2"

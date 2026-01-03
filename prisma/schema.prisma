@@ -13,6 +13,7 @@ model User {
   name               String?
   email              String              @unique
   role               String              @default("student")
+  status             String              @default("active") // active, inactive
   plan               String              @default("light")
   affiliateCode      String?             @unique
   referredBy         String?

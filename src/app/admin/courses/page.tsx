@@ -11,7 +11,8 @@ interface Course {
     label?: string;
     categoryCount: number;
     studentCount: number;
-    minTier?: number; // Added
+    minTier?: number;
+    published: boolean; // Added
 }
 
 // ... imports ...
@@ -89,6 +90,26 @@ export default function CoursesPage() {
 
             // TODO: Implement API reorder sync
             // await fetch('/api/admin/courses/reorder', { method: 'POST', body: JSON.stringify(newOrder.map((c, i) => ({ id: c.id, order: i }))) });
+        }
+    };
+
+    const togglePublic = async (id: string) => {
+        const course = courses.find(c => c.id === id);
+        if (!course) return;
+        const newStatus = !course.published;
+
+        // Optimistic
+        setCourses(courses.map(c => c.id === id ? { ...c, published: newStatus } : c));
+
+        try {
+            await fetch(`/api/admin/courses/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ published: newStatus })
+            });
+        } catch (e) {
+            alert('更新に失敗しました');
+            fetchCourses();
         }
     };
 
@@ -180,6 +201,7 @@ export default function CoursesPage() {
                                     handleDuplicateCourse={handleDuplicateCourse}
                                     handleDeleteCourse={handleDeleteCourse}
                                     setIsTopVideoModalOpen={setIsTopVideoModalOpen}
+                                    togglePublic={togglePublic}
                                 />
                             ))}
                         </SortableContext>
@@ -206,7 +228,7 @@ export default function CoursesPage() {
 }
 
 
-function SortableCourseItem({ course, openMenuId, setOpenMenuId, handleDeleteCourse, handleDuplicateCourse, setIsTopVideoModalOpen }: any) {
+function SortableCourseItem({ course, openMenuId, setOpenMenuId, handleDeleteCourse, handleDuplicateCourse, setIsTopVideoModalOpen, togglePublic }: any) {
     const {
         attributes,
         listeners,
@@ -232,6 +254,22 @@ function SortableCourseItem({ course, openMenuId, setOpenMenuId, handleDeleteCou
                     <span className={`${styles.badgeLabel} bg-slate-100 text-slate-600`}>
                         {course.minTier === 3 ? '👑 プレミアム限定' : course.minTier === 2 ? '⭐ スタンダード以上' : '🟢 ライト以上'}
                     </span>
+
+                    {/* Toggle Switch */}
+                    <div className={styles.toggleWrapper} onMouseDown={e => e.stopPropagation()} style={{ marginLeft: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <label className={styles.switch}>
+                            <input
+                                type="checkbox"
+                                checked={course.published}
+                                onChange={() => togglePublic(course.id)}
+                            />
+                            <span className={styles.slider}></span>
+                        </label>
+                        <span className={styles.toggleLabel} style={{ fontSize: '12px', color: course.published ? '#10b981' : '#94a3b8', fontWeight: 'bold' }}>
+                            {course.published ? '公開中' : '非公開'}
+                        </span>
+                    </div>
+
                 </div>
                 <div className={styles.metrics}>
                     <div className={styles.metricItem}>

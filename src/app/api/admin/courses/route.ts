@@ -20,7 +20,8 @@ export async function GET() {
             categoryCount: c._count.categories,
             studentCount: 0, // TODO: Implement real student count
             order: c.order,
-            thumbnailUrl: c.thumbnailUrl
+            thumbnailUrl: c.thumbnailUrl,
+            published: c.published
         }));
 
         return NextResponse.json(formatted);
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
                 label,
                 minTier: minTier ? parseInt(minTier) : 1,
                 order: newOrder,
-                published: false
+                published: true
             }
         });
 

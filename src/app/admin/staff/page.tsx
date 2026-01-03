@@ -21,6 +21,7 @@ export default function StaffManagementPage() {
     const [newName, setNewName] = useState('');
     const [newEmail, setNewEmail] = useState('');
     const [newRole, setNewRole] = useState<'admin' | 'accounting' | 'staff'>('staff');
+    const [newStatus, setNewStatus] = useState<'active' | 'inactive'>('active');
 
     useEffect(() => {
         fetchStaff();
@@ -43,6 +44,7 @@ export default function StaffManagementPage() {
         setNewName('');
         setNewEmail('');
         setNewRole('staff');
+        setNewStatus('active');
         setIsAddModalOpen(true);
     };
 
@@ -51,6 +53,7 @@ export default function StaffManagementPage() {
         setNewName(staff.name);
         setNewEmail(staff.email);
         setNewRole(staff.role);
+        setNewStatus(staff.status);
         setIsAddModalOpen(true);
     };
 
@@ -63,7 +66,7 @@ export default function StaffManagementPage() {
                 const res = await fetch(`/api/admin/staff/${editingStaff.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: newName, email: newEmail, role: newRole })
+                    body: JSON.stringify({ name: newName, email: newEmail, role: newRole, status: newStatus })
                 });
                 if (!res.ok) throw new Error('Update failed');
             } else {
@@ -71,7 +74,7 @@ export default function StaffManagementPage() {
                 const res = await fetch('/api/admin/staff', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: newName, email: newEmail, role: newRole })
+                    body: JSON.stringify({ name: newName, email: newEmail, role: newRole, status: newStatus })
                 });
                 if (!res.ok) throw new Error('Create failed');
             }
@@ -217,6 +220,16 @@ export default function StaffManagementPage() {
                                     <option value="admin">管理者</option>
                                     <option value="accounting">経理担当</option>
                                     <option value="staff">スタッフ</option>
+                                </select>
+                            </div>
+                            <div className={styles.formItem}>
+                                <label>ステータス</label>
+                                <select
+                                    value={newStatus}
+                                    onChange={(e) => setNewStatus(e.target.value as 'active' | 'inactive')}
+                                >
+                                    <option value="active">有効</option>
+                                    <option value="inactive">無効</option>
                                 </select>
                             </div>
                             <div className={styles.modalFooter}>

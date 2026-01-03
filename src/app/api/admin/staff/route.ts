@@ -34,6 +34,7 @@ export async function GET() {
             name: u.name || 'No Name',
             email: u.email,
             role: u.role,
+            status: u.status || 'inactive',
             avatarUrl: u.avatarUrl || `https://ui-avatars.com/api/?name=${u.name || 'User'}&background=random`,
             joinedAt: u.createdAt,
         }));
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json();
-        const { email, name, role } = body;
+        const { email, name, role, status } = body;
 
         // 1. Create Auth User (Invite)
         const { data: authData, error: authError } = await supabase.auth.admin.inviteUserByEmail(email, {
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
                 email: email,
                 name: name,
                 role: role,
+                status: status || 'active',
                 updatedAt: new Date().toISOString()
             });
 
