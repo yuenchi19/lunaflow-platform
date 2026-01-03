@@ -299,7 +299,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
     const renderProfileCard = () => (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group">
-            <div className="pt-6 pb-6 px-4 text-center">
+            <div className="pt-4 pb-4 px-4 md:pt-6 md:pb-6 text-center">
                 <div className="flex flex-col items-center justify-center gap-1 mb-1">
                     <h2 className="font-bold text-xl text-slate-800">{user.name}</h2>
                     <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full uppercase">Contract: {user.plan}</span>
@@ -349,7 +349,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
                 blur="sm"
             >
-                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 shadow-sm p-6 relative overflow-hidden">
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 shadow-sm p-4 md:p-6 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-5">
                         <TrendingUp className="w-24 h-24 text-indigo-900" />
                     </div>
@@ -409,7 +409,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 actionLink={!hasPlan ? "/pricing" : (courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1")}
                 blur="sm"
             >
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 shadow-sm overflow-hidden p-6 relative">
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 shadow-sm overflow-hidden p-4 md:p-6 relative">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                         <span className="text-6xl">🤝</span>
                     </div>
@@ -463,7 +463,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
                 blur="sm"
             >
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="font-bold text-slate-800 flex items-center gap-2">
                             <span className="bg-emerald-100 text-emerald-600 p-1.5 rounded-lg"><Book className="w-4 h-4" /></span>
@@ -520,30 +520,30 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
     const renderCourses = () => (
         <section>
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-serif font-bold text-slate-800 flex items-center gap-2">
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+                <h2 className="text-lg md:text-xl font-serif font-bold text-slate-800 flex items-center gap-2">
                     <PlayCircle className="w-5 h-5 text-rose-600" />
                     受講中のコース
                 </h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4 md:space-y-6">
                 {courses.map((course) => (
-                    <div key={course.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+                    <div key={course.id} className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
                         <div className="relative z-10">
-                            <div className="flex justify-between items-start mb-4">
+                            <div className="flex justify-between items-start mb-3 md:mb-4">
                                 <span className="bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-1 rounded-full">受講中</span>
                             </div>
-                            <h3 className="text-lg font-bold text-slate-800 mb-2 leading-relaxed group-hover:text-rose-700 transition-colors">
+                            <h3 className="text-base md:text-lg font-bold text-slate-800 mb-2 leading-relaxed group-hover:text-rose-700 transition-colors">
                                 <Link href={`/student/course/${course.id}`} className="before:absolute before:inset-0">
                                     {course.title}
                                 </Link>
                             </h3>
                             <ProgressBar value={10} color="bg-rose-500" height="h-1.5" className="mb-4" />
-                            <div className="flex flex-col gap-3">
-                                <p className="text-xs text-slate-500 leading-tight">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-6">
+                                <p className="text-xs text-slate-500 leading-tight md:flex-1">
                                     {course.title}へようこそ！まずは動画を確認して感想を記載して受講を開始してください。
                                 </p>
-                                <div className="flex justify-end">
+                                <div className="flex justify-end md:justify-start">
                                     <span className="text-xs font-bold text-white bg-rose-600 px-3 py-2 rounded-lg shadow-sm group-hover:bg-rose-700 transition-colors">
                                         感想を送ってスタート &rarr;
                                     </span>
@@ -567,7 +567,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
             </div>
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100">
                 {announcements.map((item) => (
-                    <div key={item.id} className="p-5 flex items-start gap-4 hover:bg-slate-50/80 transition-colors cursor-pointer group">
+                    <div key={item.id} className="p-4 md:p-5 flex items-start gap-4 hover:bg-slate-50/80 transition-colors cursor-pointer group">
                         <div className="text-xs font-bold text-slate-400 pt-1 w-24 flex-shrink-0">{item.date}</div>
                         <div className="flex-1">
                             <h4 className="text-sm font-bold text-slate-700 mb-1 group-hover:text-rose-700 transition-colors">{item.title}</h4>
