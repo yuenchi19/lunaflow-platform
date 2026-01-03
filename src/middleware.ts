@@ -2,8 +2,13 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+    const requestPath = request.nextUrl.pathname;
+    // Debug Log for Vercel Functions
+    console.log(`[Middleware] Processing path: ${requestPath}`);
+
     // 1. Force Bypass for Webhooks (Top Priority)
-    if (request.nextUrl.pathname.startsWith('/api/webhooks')) {
+    if (requestPath.startsWith('/api/webhooks')) {
+        console.log(`[Middleware] Bypassing auth for webhook: ${requestPath}`);
         return NextResponse.next();
     }
 
@@ -39,13 +44,11 @@ export async function middleware(request: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user && request.nextUrl.pathname.startsWith('/api/') && !request.nextUrl.pathname.includes('/api/auth')) {
-        // Optional: Protect other API routes if needed, but for now let's focus on fixing Webhook.
-        // If we block all /api/ without user, we might block public APIs.
-        // Assuming other APIs handle their own auth or are public.
+    if (!user && requestPath.startsWith('/api/') && !requestPath.includes('/api/auth')) {
+        // Optional: Protect other API routes if needed.
     }
 
-    const path = request.nextUrl.pathname
+    const path = requestPath;
     // Protected Routes List
     // Protect /student, /admin, /community, /settings
     const protectedPrefixes = ['/student', '/admin', '/community', '/settings']
@@ -53,6 +56,7 @@ export async function middleware(request: NextRequest) {
     const isProtected = protectedPrefixes.some(prefix => path.startsWith(prefix))
 
     if (isProtected && !user) {
+        console.log(`[Middleware] Redirecting unauthenticated user from ${path}`);
         const redirectUrl = request.nextUrl.clone()
         if (path.startsWith('/admin')) {
             redirectUrl.pathname = '/admin/login'
@@ -139,9 +143,8 @@ export const config = {
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
-         * - auth/ (Auth routes)
-         * NOTE: We removed 'api' from exclusion to ensure we can manually handle/bypass them in logic.
+         * NOTE: Using simple glob to avoid regex issues
          */
-        '/((?!_next/static|_next/image|favicon.ico|auth).*)',
+        '/((?!_next/static|_next/image|favicon.ico).*)',
     ],
 }
