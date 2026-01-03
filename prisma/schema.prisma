@@ -220,3 +220,14 @@ model FeatureUnlock {
   requiredBlockId  String?
   updatedAt        DateTime @updatedAt
 }
+
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  target      String   @default("all") // all, students, staff
+  status      String   @default("draft") // draft, published
+  publishedAt DateTime @default(now()) // Display date
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

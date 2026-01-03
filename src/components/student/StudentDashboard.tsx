@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { User, Course, Announcement } from "@/types";
 import { createMockStripeSession } from "@/lib/stripe-integration";
-import { MOCK_USERS, MOCK_COURSES, getAnnouncements, getAffiliateEarnings, getStudentProgressDetail } from "@/lib/data";
+import { MOCK_USERS, MOCK_COURSES, getAffiliateEarnings, getStudentProgressDetail } from "@/lib/data";
 import { User as UserIcon, Bell, ExternalLink, Book, LogOut, Settings, PlayCircle, Clock, TrendingUp, Lock, MessageSquare, X } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -18,7 +18,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     const supabase = createClient();
     const [user, setUser] = useState<User>(initialUser || MOCK_USERS[0]);
     const [courses, setCourses] = useState<Course[]>([]);
-    const [announcements] = useState<Announcement[]>(getAnnouncements());
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [affiliateEarnings, setAffiliateEarnings] = useState({ directReferrals: 0, indirectReferrals: 0, monthlyEarnings: 0 });
 
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -67,7 +67,21 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 console.error("Failed to fetch courses", e);
             }
         };
+
+        const fetchNews = async () => {
+            try {
+                const res = await fetch('/api/news');
+                if (res.ok) {
+                    const data = await res.json();
+                    setAnnouncements(data);
+                }
+            } catch (e) {
+                console.error("Failed to fetch news", e);
+            }
+        };
+
         fetchCourses();
+        fetchNews();
     }, []);
 
     useEffect(() => {

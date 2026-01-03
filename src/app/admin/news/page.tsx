@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
 
@@ -14,17 +14,32 @@ interface NewsItem {
 }
 
 export default function NewsPage() {
-    const [news, setNews] = useState<NewsItem[]>([
-        { id: 'n1', title: '年末年始のサポート休業のお知らせ', target: 'all', date: '2023-12-20', status: 'published' },
-        { id: 'n2', title: '新機能：ファイルダウンロード機能が追加されました', target: 'students', date: '2023-12-18', status: 'published' },
-        { id: 'n3', title: 'システムメンテナンスのお知らせ（1/15）', target: 'all', date: '2023-12-25', status: 'draft' },
-    ]);
+    const [news, setNews] = useState<NewsItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Partial<NewsItem>>({});
 
+    useEffect(() => {
+        fetchNews();
+    }, []);
+
+    const fetchNews = async () => {
+        try {
+            const res = await fetch('/api/admin/news');
+            if (res.ok) {
+                const data = await res.json();
+                setNews(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch news", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleCreateClick = () => {
-        setEditingItem({ title: '', target: 'all', status: 'draft', content: '' });
+        setEditingItem({ title: '', target: 'all', status: 'draft', content: '', date: new Date().toISOString().split('T')[0] });
         setIsModalOpen(true);
     };
 
@@ -33,36 +48,62 @@ export default function NewsPage() {
         setIsModalOpen(true);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!editingItem.title || !editingItem.date) {
             alert('タイトルと日付は必須です');
             return;
         }
 
-        if (editingItem.id) {
-            // Update
-            setNews(prev => prev.map(n => n.id === editingItem.id ? { ...n, ...editingItem } as NewsItem : n));
-        } else {
-            // Create
-            const newItem: NewsItem = {
-                id: `n${Date.now()}`,
-                title: editingItem.title || '',
-                target: editingItem.target || 'all',
-                date: editingItem.date || new Date().toISOString().split('T')[0],
-                status: editingItem.status || 'draft',
-                content: editingItem.content || ''
-            };
-            setNews(prev => [newItem, ...prev]);
+        try {
+            let res;
+            if (editingItem.id) {
+                // Update
+                res = await fetch(`/api/admin/news/${editingItem.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(editingItem)
+                });
+            } else {
+                // Create
+                res = await fetch('/api/admin/news', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(editingItem)
+                });
+            }
+
+            if (res.ok) {
+                fetchNews(); // Refresh list
+                setIsModalOpen(false);
+            } else {
+                alert('保存に失敗しました');
+            }
+        } catch (error) {
+            console.error("Save error", error);
+            alert('エラーが発生しました');
         }
-        setIsModalOpen(false);
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (confirm('本当に削除してもよろしいですか？')) {
-            setNews(prev => prev.filter(item => item.id !== id));
-            setIsModalOpen(false);
+            try {
+                const res = await fetch(`/api/admin/news/${id}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    setNews(prev => prev.filter(item => item.id !== id));
+                    setIsModalOpen(false);
+                } else {
+                    alert('削除に失敗しました');
+                }
+            } catch (error) {
+                console.error("Delete error", error);
+                alert('エラーが発生しました');
+            }
         }
     };
+
+    if (isLoading) return <div className="p-8">Loading...</div>;
 
     return (
         <div className={styles.container}>
@@ -117,6 +158,11 @@ export default function NewsPage() {
                                 </td>
                             </tr>
                         ))}
+                        {news.length === 0 && (
+                            <tr>
+                                <td colSpan={5} className="text-center py-8 text-slate-500">お知らせはありません</td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
