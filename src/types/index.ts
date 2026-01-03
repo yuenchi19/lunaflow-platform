@@ -67,7 +67,6 @@ export interface User {
     address?: string;
     phoneNumber?: string;
     isLedgerEnabled?: boolean;
-    isLedgerEnabled?: boolean;
     lastLoginDate?: string;
     lineUserId?: string;
 }
