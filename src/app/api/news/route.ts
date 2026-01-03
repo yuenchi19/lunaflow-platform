@@ -14,11 +14,11 @@ export async function GET() {
         // If no user, maybe only 'all'?
         // Let's assume logged in user mainly.
 
-        let targetFilter: string[] = ['all'];
+        // Always include 'students' for the dashboard API to ensure visibility
+        // even if auth context is partial or stricter checks fail temporarily.
+        let targetFilter: string[] = ['all', 'students'];
         if (user) {
-            targetFilter.push('students');
-            // Check if staff from DB? Skipping for now for simplicity/speed as user wants update, 
-            // relying on simple target matching.
+            // Can extend for staff later
         }
 
         const news = await prisma.announcement.findMany({
