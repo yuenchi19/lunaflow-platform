@@ -63,7 +63,7 @@ export default function AdminSidebar() {
         {
             label: "設定",
             items: [
-                { label: "設定", href: "/admin/settings", icon: "⚙️" },
+                { label: "アカウント設定", href: "/admin/settings/account", icon: "⚙️" },
                 { label: "メール配信設定", href: "/admin/settings/email", icon: "📧" },
                 { label: "コミュニティ設定", href: "/admin/settings/community", icon: "💬" },
                 { label: "機能開放設定", href: "/admin/settings/unlocks", icon: "🔓" },
