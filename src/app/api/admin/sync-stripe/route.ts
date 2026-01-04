@@ -4,7 +4,12 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
     try {
+        const searchParams = request.nextUrl.searchParams;
+        const debugEmail = searchParams.get('debug_email')?.toLowerCase();
+        const debugLog: string[] = [];
+
         console.log("[Sync] Starting Stripe Subscription Sync...");
+        if (debugEmail) debugLog.push(`Debug Mode for: ${debugEmail}`);
 
         // 1. Fetch ALL subscriptions from Stripe (Pagination)
         let hasMore = true;
@@ -30,38 +35,24 @@ export async function GET(request: NextRequest) {
 
         console.log(`[Sync] Fetched total ${allSubs.length} subscriptions.`);
 
-        const activeEmails = new Set<string>();
         const subMap = new Map<string, any>();
 
         for (const sub of allSubs) {
             const customer = sub.customer as any;
-            // Handle deleted customer case where customer might not have email field expanded or is null
-            // Check if customer object exists and has email, OR check deleted
             if (!customer || customer.deleted) continue;
 
-            const email = customer.email;
+            const email = customer.email?.toLowerCase(); // Case insensitive
             if (email) {
                 const currentStatus = sub.status;
                 const existingEntry = subMap.get(email);
 
                 const isActiveLike = (s: string) => ['active', 'trialing'].includes(s);
 
-                // Priority Logic:
-                // 1. If we already have an ACTIVE entry, don't overwrite it with a non-active one.
-                // 2. If the current sub is ACTIVE, definitely save it.
-                // 3. Otherwise (current is canceled/past_due etc), saves it only if we don't have an entry yet.
-                //    (Wait, if we have a canceled entry, and find another canceled one, it doesn't matter much.
-                //     But we want to capture the "most meaningful" status.)
-
                 let shouldUpdate = true;
                 if (existingEntry) {
                     if (isActiveLike(existingEntry.status)) {
-                        shouldUpdate = false; // Already have active, keep it.
+                        shouldUpdate = false;
                     } else if (isActiveLike(currentStatus)) {
-                        shouldUpdate = true; // New one is active, upgrade.
-                    } else {
-                        // Both are non-active. Maybe keep the latest?
-                        // For now, overwrite is fine.
                         shouldUpdate = true;
                     }
                 }
@@ -70,51 +61,57 @@ export async function GET(request: NextRequest) {
                     subMap.set(email, {
                         stripeCustomerId: customer.id,
                         stripeSubscriptionId: sub.id,
-                        status: currentStatus
+                        status: currentStatus,
+                        cancelAtPeriodEnd: sub.cancel_at_period_end
                     });
+                }
+
+                if (debugEmail && email === debugEmail) {
+                    debugLog.push(`Found Stripe Sub: ${sub.id}, Status: ${currentStatus}, CancelAtPeriodEnd: ${sub.cancel_at_period_end}`);
                 }
             }
         }
-
-        console.log(`[Sync] Found ${activeEmails.size} active emails in Stripe.`);
 
         // 2. Fetch all DB Users
         const users = await prisma.user.findMany();
         let updatedCount = 0;
 
         for (const user of users) {
-            const stripeData = subMap.get(user.email);
+            const userEmail = user.email.toLowerCase();
+            const stripeData = subMap.get(userEmail);
 
             let newStatus = 'inactive';
             let newSubStatus = 'none';
-            let stripeCustId = user.stripeCustomerId; // Keep existing if not found? Or overwrite? 
+            let stripeCustId = user.stripeCustomerId;
             let stripeSubId = user.stripeSubscriptionId;
 
             if (stripeData) {
-                // User exists in Stripe List
                 stripeCustId = stripeData.stripeCustomerId;
                 stripeSubId = stripeData.stripeSubscriptionId;
                 newSubStatus = stripeData.status;
 
+                // Priority Logic
                 if (newSubStatus === 'active' || newSubStatus === 'trialing') {
                     newStatus = 'active';
                 } else {
                     newStatus = 'inactive';
                 }
+
+                if (debugEmail && userEmail === debugEmail) {
+                    debugLog.push(`Match Found. StripeStatus: ${newSubStatus} -> DB Status: ${newStatus}`);
+                }
             } else {
-                // User NOT in Stripe List at all (or limit reached).
-                // If we fetched 'all', then they likely don't have a subscription or it's very old.
-                // EXCEPTION: Admin/Staff should stay active
                 if (user.role === 'admin' || user.role === 'staff') {
                     newStatus = 'active';
-                    newSubStatus = 'active'; // Fake it or leave as is?
+                    newSubStatus = 'active';
+                    if (debugEmail && userEmail === debugEmail) debugLog.push(`No Stripe, but Admin/Staff -> Active`);
                 } else {
                     newStatus = 'inactive';
                     newSubStatus = 'none';
+                    if (debugEmail && userEmail === debugEmail) debugLog.push(`No Stripe, Student -> Inactive`);
                 }
             }
 
-            // Perform Update
             if (user.status !== newStatus || user.subscriptionStatus !== newSubStatus || user.stripeSubscriptionId !== stripeSubId) {
                 await prisma.user.update({
                     where: { id: user.id },
@@ -126,13 +123,16 @@ export async function GET(request: NextRequest) {
                     }
                 });
                 updatedCount++;
+                if (debugEmail && userEmail === debugEmail) debugLog.push(`UPDATED DB to: ${newStatus} / ${newSubStatus}`);
+            } else {
+                if (debugEmail && userEmail === debugEmail) debugLog.push(`No DB Change Needed. Current: ${user.status} / ${user.subscriptionStatus}`);
             }
         }
 
         return NextResponse.json({
             success: true,
             message: `Synced ${users.length} users. Updated ${updatedCount}.`,
-            activeCount: activeEmails.size
+            debugLog: debugLog
         });
 
     } catch (e: any) {
