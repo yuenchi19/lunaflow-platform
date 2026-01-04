@@ -51,24 +51,39 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     try {
-        // 1. Delete from DB (User table) first to ensure no broken references
+        // Attempt to DELETE from Auth first (Prevent Login)
+        // If this fails, the user might not be in Auth, but we still want to clean DB.
+        const { error: authError } = await supabase.auth.admin.deleteUser(id);
+        if (authError) {
+            console.warn(`[Staff Delete] Auth delete warning: ${authError.message}`);
+            // Proceed to DB delete anyway, as Auth might be desynced
+        }
+
+        // Try HARD DELETE from DB
         const { error: dbError } = await supabase
             .from('User')
             .delete()
             .eq('id', id);
 
         if (dbError) {
-            console.error('Error deleting from DB:', dbError);
-            // Continue to try deleting from Auth? Or stop? 
-            // If we stop, we might leave Auth orphaned. 
-            // Better to try Auth delete even if DB delete fails (or maybe DB delete fail means it doesn't exist).
-        }
+            console.error(`[Staff Delete] Hard delete failed (likely FK constraint): ${dbError.message}`);
 
-        // 2. Delete from Auth (Prevents login)
-        const { error } = await supabase.auth.admin.deleteUser(id);
+            // FALLBACK: SOFT DELETE (Deactivate & Remove Role)
+            // If we can't delete the row, we strip permissions and hide them.
+            const { error: updateError } = await supabase
+                .from('User')
+                .update({
+                    status: 'inactive',
+                    role: 'student', // Downgrade to student so they don't show up in Staff list if filter is by role
+                    subscriptionStatus: 'canceled'
+                })
+                .eq('id', id);
 
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            if (updateError) {
+                return NextResponse.json({ error: `Failed to delete and failed to deactivate: ${updateError.message}` }, { status: 500 });
+            }
+
+            return NextResponse.json({ success: true, message: 'Soft deleted due to constraints' });
         }
 
         return NextResponse.json({ success: true });
