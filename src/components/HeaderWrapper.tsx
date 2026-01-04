@@ -7,7 +7,7 @@ export default function HeaderWrapper() {
     const pathname = usePathname();
 
     // Hide header on admin pages, community pages, and login page (root)
-    if (pathname?.startsWith('/admin') || pathname?.startsWith('/community') || pathname === '/') {
+    if (pathname?.startsWith('/admin') || pathname?.startsWith('/community') || pathname?.startsWith('/affiliate') || pathname === '/') {
         return null;
     }
 

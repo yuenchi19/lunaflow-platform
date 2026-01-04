@@ -18,13 +18,14 @@ export default function PartnerDashboardPage() {
     const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
     const [earnings, setEarnings] = useState<AffiliateEarnings>({ directReferrals: 0, indirectReferrals: 0, monthlyEarnings: 0 });
 
+    const [error, setError] = useState<string | null>(null);
+
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                // In a real app, use SWR or React Query. Here mimicking the dashboard fetch pattern.
                 const { data: { user: authUser } } = await supabase.auth.getUser();
                 if (!authUser) {
-                    router.push("/");
+                    router.push("/login?redirect=/affiliate/dashboard");
                     return;
                 }
 
@@ -33,8 +34,7 @@ export default function PartnerDashboardPage() {
                 if (res.ok) {
                     const profile = await res.json();
                     if (profile.plan !== 'partner') {
-                        // Redirect logic is also in login, but safety check here
-                        router.push("/student/dashboard");
+                        setError("このアカウントはパートナープランではありません。");
                         return;
                     }
                     setUser(profile);
@@ -48,12 +48,13 @@ export default function PartnerDashboardPage() {
                     const e = getAffiliateEarnings(profile.id);
                     setEarnings(e);
                 } else {
-                    // Fallback for dev/mock if API fails or no session
-                    // Checking mock users for demo purposes if auth fails
-                    // This part is tricky without real auth.
+                    const errData = await res.json().catch(() => ({}));
+                    console.error("Profile fetch error:", res.status, errData);
+                    setError(`プロフィールの取得に失敗しました (Status: ${res.status})`);
                 }
-            } catch (e) {
+            } catch (e: any) {
                 console.error("Auth check failed", e);
+                setError(`エラーが発生しました: ${e.message}`);
             } finally {
                 setIsLoading(false);
             }
@@ -76,6 +77,28 @@ export default function PartnerDashboardPage() {
     };
 
     if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-[#FDFCFB]">Loading...</div>;
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDFCFB] p-4 text-center">
+                <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 max-w-md w-full">
+                    <div className="text-red-500 mb-4">⚠️</div>
+                    <h2 className="text-lg font-bold text-slate-800 mb-2">エラーが発生しました</h2>
+                    <p className="text-slate-600 mb-6 text-sm">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 transition-colors"
+                    >
+                        再読み込み
+                    </button>
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                        <Link href="/" className="text-xs text-slate-400 hover:text-slate-600">トップページへ戻る</Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (!user) return null;
 
     return (
