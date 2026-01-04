@@ -104,11 +104,49 @@ export async function GET(request: NextRequest) {
                     debugLog.push(`Match Found. StripeStatus: ${newSubStatus} -> DB Status: ${newStatus}`);
                 }
             } else {
-                if (user.role === 'admin' || user.role === 'staff') {
+                // FALLBACK: User has no Stripe ID in DB/Memory-Map.
+                // Try to find them by EMAIL in Stripe (Auto-Repair)
+                if (!u.stripeCustomerId) {
+                    try {
+                        const existingCustomers = await stripe.customers.list({
+                            email: userEmail,
+                            limit: 1,
+                        });
+
+                        if (existingCustomers.data.length > 0) {
+                            const foundCustomer = existingCustomers.data[0];
+                            stripeCustId = foundCustomer.id;
+
+                            // Check if this customer has subscriptions
+                            const foundSubs = await stripe.subscriptions.list({
+                                customer: stripeCustId,
+                                status: 'all', // check all
+                            });
+
+                            const validSub = foundSubs.data.find(s => ['active', 'trialing'].includes(s.status));
+
+                            if (validSub) {
+                                stripeSubId = validSub.id;
+                                newStatus = 'active';
+                                newSubStatus = validSub.status;
+                                if (debugEmail && userEmail === debugEmail) debugLog.push(`[Auto-Repair] Found Stripe Customer via Email! Linked ${stripeSubId}`);
+                            } else {
+                                // Customer exists but no active sub
+                                newStatus = 'inactive';
+                                newSubStatus = 'none'; // or keep existing if better?
+                                if (debugEmail && userEmail === debugEmail) debugLog.push(`[Auto-Repair] Found Customer but no Active Sub.`);
+                            }
+                        }
+                    } catch (err) {
+                        console.error(`[Sync] Auto-Repair Error for ${userEmail}:`, err);
+                    }
+                }
+
+                if (newStatus === 'inactive' && (user.role === 'admin' || user.role === 'staff')) {
                     newStatus = 'active';
                     newSubStatus = 'active';
-                    if (debugEmail && userEmail === debugEmail) debugLog.push(`No Stripe, but Admin/Staff -> Active`);
-                } else {
+                    if (debugEmail && userEmail === debugEmail) debugLog.push(`No Stripe (and no fallback match), but Admin/Staff -> Active`);
+                } else if (newStatus !== 'active') { // Only set inactive if we didn't just find a valid sub above
                     newStatus = 'inactive';
                     newSubStatus = 'none';
                     if (debugEmail && userEmail === debugEmail) debugLog.push(`No Stripe, Student -> Inactive`);
