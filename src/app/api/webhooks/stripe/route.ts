@@ -110,7 +110,7 @@ export async function POST(req: Request) {
                 } else {
                     console.log("[Webhook] Existing User profile updated.");
                     await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
-                        user_metadata: { plan: 'premium', role: newRole }
+                        user_metadata: { plan: 'premium', role: newRole, subscriptionStatus: 'active' }
                     });
                 }
             } else {
@@ -138,7 +138,8 @@ export async function POST(req: Request) {
                     user_metadata: {
                         name: customerDetails?.name || email!.split('@')[0],
                         role: 'student',
-                        plan: detectedPlan
+                        plan: detectedPlan,
+                        subscriptionStatus: 'active'
                     }
                 });
 
@@ -287,6 +288,23 @@ export async function POST(req: Request) {
                 console.error(`[Webhook] Failed to update subscription status: ${subUpdateError.message}`);
             } else {
                 console.log(`[Webhook] User subscription updated to ${status}`);
+
+                // Also update Auth Metadata for Middleware Checks
+                // Need to find the user first to get ID? We updated by stripeSubscriptionId. 
+                // We returned nothing. Let's select ID first or use returned data if supported (Supabase update returns count, need select).
+
+                const { data: updatedUser } = await supabaseAdmin
+                    .from('User')
+                    .select('id')
+                    .eq('stripeSubscriptionId', stripeSubscriptionId)
+                    .single();
+
+                if (updatedUser) {
+                    await supabaseAdmin.auth.admin.updateUserById(updatedUser.id, {
+                        user_metadata: { subscriptionStatus: status }
+                    });
+                    console.log(`[Webhook] Auth metadata updated for ${updatedUser.id}`);
+                }
             }
         }
 

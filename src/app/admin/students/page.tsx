@@ -213,10 +213,18 @@ export default function StudentsPage() {
                                     </td>
                                     <td>
                                         <div className="flex flex-col gap-2">
-                                            <span className="inline-flex items-center w-fit px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-700">
-                                                ✅ サブスク有効
-                                            </span>
-                                            {stats.isDurationOk && stats.isPurchaseOk && (
+                                            {st.subscriptionStatus === 'active' || st.subscriptionStatus === 'trialing' ? (
+                                                <span className="inline-flex items-center w-fit px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-700">
+                                                    ✅ サブスク有効
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center w-fit px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                                    🚫 {st.subscriptionStatus === 'canceled' ? '解約済み' : '無効/停止'}
+                                                </span>
+                                            )}
+
+                                            {/* Graduation/Change logic based on Active status AND Duration/Purchase */}
+                                            {(st.subscriptionStatus === 'active' || st.subscriptionStatus === 'trialing') && stats.isDurationOk && stats.isPurchaseOk && (
                                                 <span className="inline-flex items-center w-fit px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-100 text-indigo-700 animate-pulse">
                                                     🎓 卒業/変更可
                                                 </span>

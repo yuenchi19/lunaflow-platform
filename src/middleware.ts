@@ -68,6 +68,18 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(redirectUrl)
     }
 
+    // Check Subscription Status (Strict)
+    if (user && (path.startsWith('/student') || path.startsWith('/affiliate'))) {
+        const subStatus = user.user_metadata?.subscriptionStatus;
+        // Block if explicitly inactive/canceled/unpaid
+        if (subStatus && ['canceled', 'inactive', 'unpaid', 'past_due'].includes(subStatus)) {
+            console.log(`[Middleware] Blocking user with status: ${subStatus}`);
+            const redirectUrl = request.nextUrl.clone();
+            redirectUrl.pathname = '/pricing'; // Redirect to pricing/payment page
+            return NextResponse.redirect(redirectUrl);
+        }
+    }
+
     // Strict Guard for Content Access (Paid Plan Check)
     if (path.startsWith('/student') && user) {
         const userPlan = user.user_metadata?.plan || 'light';
