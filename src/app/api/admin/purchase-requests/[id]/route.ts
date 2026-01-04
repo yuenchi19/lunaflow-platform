@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export const dynamic = 'force-dynamic';
+
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
     try {
         const supabase = createClient();
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
