@@ -90,9 +90,11 @@ export async function POST(req: Request) {
 
                 const amount = session.amount_total || 0;
                 let detectedPlan = 'premium'; // Default fallback
-                if (amount === 9800) detectedPlan = 'standard';
-                if (amount === 2980) detectedPlan = 'light';
-                if (amount === 1980) detectedPlan = 'partner';
+
+                if (amount === 18960 || amount === 12980) detectedPlan = 'standard';
+                if (amount === 11960 || amount === 5980) detectedPlan = 'light';
+                if (amount === 7960 || amount === 1980) detectedPlan = 'partner';
+                if (amount === 25780 || amount === 19800) detectedPlan = 'premium';
 
                 // Update Existing User
                 const { error: updateError } = await supabaseAdmin.from('User').update({
@@ -126,9 +128,11 @@ export async function POST(req: Request) {
 
                 const amount = session.amount_total || 0;
                 let detectedPlan = 'premium'; // Default fallback
-                if (amount === 9800) detectedPlan = 'standard';
-                if (amount === 2980) detectedPlan = 'light';
-                if (amount === 1980) detectedPlan = 'partner';
+
+                if (amount === 18960 || amount === 12980) detectedPlan = 'standard';
+                if (amount === 11960 || amount === 5980) detectedPlan = 'light';
+                if (amount === 7960 || amount === 1980) detectedPlan = 'partner';
+                if (amount === 25780 || amount === 19800) detectedPlan = 'premium';
 
                 // 1. Try Create
                 const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -206,6 +210,7 @@ export async function POST(req: Request) {
                 const magicLinkUrl = await generateLineMagicLinkUrl(targetUserId);
 
                 try {
+                    console.log(`[Webhook] Attempting to send welcome email to ${email}...`);
                     const { data: emailData, error: emailError } = await resend.emails.send({
                         from: process.env.RESEND_FROM_EMAIL || 'info@lunaflow.space',
                         to: email!,
@@ -254,9 +259,13 @@ export async function POST(req: Request) {
                             `
                     });
 
-                    if (emailError) console.error("Resend Error:", emailError);
+                    if (emailError) {
+                        console.error("[Webhook] Resend API Error:", emailError);
+                    } else {
+                        console.log(`[Webhook] Welcome email sent successfully to ${email}. ID: ${emailData?.id}`);
+                    }
                 } catch (e: any) {
-                    console.error("Email Only Error (Non-fatal):", e);
+                    console.error("[Webhook] Email Sending CRITICAL Error:", e);
                     // Don't throw here, allowing transaction to complete
                 }
             } // Close else for auth fallback
@@ -264,10 +273,20 @@ export async function POST(req: Request) {
             // 2. Log Purchase (PurchaseRequest) - MOVED OUTSIDE to run for BOTH Existing and New Users
             if (targetUserId) {
                 const amount = session.amount_total || 0;
-                let detectedPlan = 'premium';
-                if (amount === 9800) detectedPlan = 'standard';
-                if (amount === 2980) detectedPlan = 'light';
-                if (amount === 1980) detectedPlan = 'partner';
+                let detectedPlan = 'premium'; // Default fallback
+
+                // Logic: Initial Payment = Monthly + System Fee (5980)
+                // Partner: 1980 + 5980 = 7960
+                // Light: 5980 + 5980 = 11960
+                // Standard: 12980 + 5980 = 18960
+                // Premium: 19800 + 5980 = 25780
+
+                // Also check for recurring amounts (just in case it's a renewal event, though this is checkout.session.completed)
+
+                if (amount === 18960 || amount === 12980) detectedPlan = 'standard';
+                if (amount === 11960 || amount === 5980) detectedPlan = 'light';
+                if (amount === 7960 || amount === 1980) detectedPlan = 'partner';
+                if (amount === 25780 || amount === 19800) detectedPlan = 'premium';
 
                 const { error: purchaseError } = await supabaseAdmin
                     .from('PurchaseRequest')
