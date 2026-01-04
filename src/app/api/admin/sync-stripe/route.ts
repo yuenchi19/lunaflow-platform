@@ -84,8 +84,9 @@ export async function GET(request: NextRequest) {
 
             let newStatus = 'inactive';
             let newSubStatus = 'none';
-            let stripeCustId = user.stripeCustomerId;
-            let stripeSubId = user.stripeSubscriptionId;
+            const u = user as any;
+            let stripeCustId = u.stripeCustomerId;
+            let stripeSubId = u.stripeSubscriptionId;
 
             if (stripeData) {
                 stripeCustId = stripeData.stripeCustomerId;
@@ -114,7 +115,9 @@ export async function GET(request: NextRequest) {
                 }
             }
 
-            if (user.status !== newStatus || user.subscriptionStatus !== newSubStatus || user.stripeSubscriptionId !== stripeSubId) {
+            // Cast to any to avoid TS errors if types are stale
+            const u = user as any;
+            if (u.status !== newStatus || u.subscriptionStatus !== newSubStatus || u.stripeSubscriptionId !== stripeSubId) {
                 // Update Prisma DB
                 await prisma.user.update({
                     where: { id: user.id },
@@ -123,7 +126,7 @@ export async function GET(request: NextRequest) {
                         subscriptionStatus: newSubStatus,
                         stripeCustomerId: stripeCustId,
                         stripeSubscriptionId: stripeSubId
-                    }
+                    } as any
                 });
                 updatedCount++;
                 if (debugEmail && userEmail === debugEmail) debugLog.push(`UPDATED DB to: ${newStatus} / ${newSubStatus}`);
