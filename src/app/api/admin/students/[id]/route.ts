@@ -47,7 +47,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             user: {
                 ...user,
                 // Add computed total if needed, or rely on frontend
-                lifetimePurchaseTotal: payments.reduce((sum, p) => sum + p.amount, 0)
+                lifetimePurchaseTotal: payments.reduce((sum, p) => sum + p.amount, 0),
+                registrationDate: user.createdAt.toISOString().split('T')[0] // Format YYYY-MM-DD
             },
             payments,
             progressLogs: [] // Placeholder until we confirm where logs are stored

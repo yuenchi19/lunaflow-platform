@@ -39,24 +39,27 @@ export default function EmailSettingsPage() {
                 {/* Main Settings */}
                 <div className="md:col-span-2 space-y-6">
                     <section className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm space-y-4">
-                        <div className="flex items-center gap-2 text-rose-800 font-bold mb-4">
+                        <div className="flex items-center gap-2 text-slate-800 font-bold mb-4">
                             <Mail className="w-5 h-5" />
-                            <span>Gmail 連携</span>
+                            <span>メール配信設定</span>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-bold mb-1">Gmailアドレス</label>
+                            <label className="block text-sm font-bold mb-1">送信元メールアドレス</label>
                             <input
                                 type="email"
                                 value={emailSettings.gmailAddress}
                                 onChange={(e) => setEmailSettings(s => ({ ...s, gmailAddress: e.target.value }))}
-                                className="w-full border border-slate-300 rounded px-4 py-2 focus:ring-2 focus:ring-rose-200 outline-none"
+                                placeholder="info@lunaflow.space"
+                                className="w-full border border-slate-300 rounded px-4 py-2 focus:ring-2 focus:ring-indigo-200 outline-none"
                             />
+                            <p className="text-xs text-slate-400 mt-1">※Resend等の配信サービスでVerified済みのドメインを使用してください。</p>
                         </div>
 
-                        <div>
+                        {/* App Password - Hidden/Optional for now as we prefer Resend */}
+                        {/* <div>
                             <label className="block text-sm font-bold mb-1 flex items-center gap-1">
-                                アプリパスワード
+                                SMTPパスワード (Gmail等の場合)
                                 <Info className="w-4 h-4 text-slate-400 cursor-help" />
                             </label>
                             <div className="relative">
@@ -64,12 +67,11 @@ export default function EmailSettingsPage() {
                                     type="password"
                                     value={emailSettings.appPassword}
                                     onChange={(e) => setEmailSettings(s => ({ ...s, appPassword: e.target.value }))}
-                                    className="w-full border border-slate-300 rounded px-4 py-2 focus:ring-2 focus:ring-rose-200 outline-none pr-10"
+                                    className="w-full border border-slate-300 rounded px-4 py-2 focus:ring-2 focus:ring-indigo-200 outline-none pr-10"
                                 />
                                 <Lock className="w-4 h-4 absolute right-3 top-3 text-slate-400" />
                             </div>
-                            <p className="text-xs text-slate-400 mt-1">※通常のログインパスワードではなく、アプリパスワードが必要です。</p>
-                        </div>
+                        </div> */}
 
                         <div className="pt-4">
                             <label className="block text-sm font-bold mb-1">送信者名</label>
@@ -107,25 +109,15 @@ export default function EmailSettingsPage() {
 
                 {/* Sidebar Tips */}
                 <div className="space-y-4">
-                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-lg">
-                        <h4 className="font-bold text-rose-900 mb-2 flex items-center gap-1">
+                    <div className="bg-slate-50 border border-slate-100 p-4 rounded-lg">
+                        <h4 className="font-bold text-slate-900 mb-2 flex items-center gap-1">
                             設定ガイド
                         </h4>
-                        <ol className="text-sm text-rose-800 space-y-2 list-decimal pl-4">
-                            <li>Googleアカウントの「2段階認証」を有効にする</li>
-                            <li>「アプリパスワード」を生成する</li>
-                            <li>生成された16桁のコードを上記に入力</li>
-                        </ol>
-                    </div>
-
-                    <div className="bg-slate-50 border border-slate-100 p-4 rounded-lg">
-                        <h4 className="font-bold text-slate-900 mb-2">
-                            同じアドレスで返信
-                        </h4>
-                        <p className="text-xs text-slate-600 leading-relaxed">
-                            Gmail連携を有効にすると、送信済みのメールはGmailの「送信済み」フォルダにも同期されます。<br /><br />
-                            受講生が返信した内容は、お客様のGmail受信トレイに届き、そのままやり取りを継続いただけます。
-                        </p>
+                        <ul className="text-sm text-slate-700 space-y-2 list-disc pl-4 leading-relaxed">
+                            <li>送信元アドレスは、DNS設定で許可されたドメイン（例: info@lunaflow.space）を使用してください。</li>
+                            <li>Gmail等のフリーアドレスは、到達率が低下する可能性があるため推奨されません。</li>
+                            <li>現在はシステム設定（Resend）が優先されます。</li>
+                        </ul>
                     </div>
                 </div>
             </div>

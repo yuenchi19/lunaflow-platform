@@ -66,7 +66,7 @@ export async function POST(req: Request) {
                 // Try to find user by email in 'User' table
                 const { data: userByEmail, error: userLookupError } = await supabaseAdmin
                     .from('User')
-                    .select('id')
+                    .select('id, initialPaymentDate')
                     .eq('email', email)
                     .single();
 
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
                 // Check existing role before updating
                 const { data: existingUser } = await supabaseAdmin
                     .from('User')
-                    .select('role')
+                    .select('role, initialPaymentDate')
                     .eq('id', targetUserId)
                     .single();
 
@@ -94,6 +94,7 @@ export async function POST(req: Request) {
                     zipCode: customerDetails?.address?.postal_code, // camelCase
                     role: newRole,
                     plan: 'premium',
+                    initialPaymentDate: existingUser?.initialPaymentDate || new Date().toISOString(),
                     // stripeCustomerId: session.customer as string, 
                     updatedAt: new Date().toISOString() // camelCase
                 }).eq('id', targetUserId);
@@ -165,6 +166,7 @@ export async function POST(req: Request) {
                             role: 'student',
                             plan: 'premium',
                             zipCode: customerDetails?.address?.postal_code, // camelCase
+                            initialPaymentDate: new Date().toISOString(),
                             updatedAt: new Date().toISOString() // camelCase
                         });
 
@@ -193,7 +195,7 @@ export async function POST(req: Request) {
 
                 try {
                     const { data: emailData, error: emailError } = await resend.emails.send({
-                        from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+                        from: process.env.RESEND_FROM_EMAIL || 'info@lunaflow.space',
                         to: email!,
                         subject: '【重要】Luna Flowへようこそ！アカウント登録が完了しました ✨',
                         html: `

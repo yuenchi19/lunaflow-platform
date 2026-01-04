@@ -527,7 +527,7 @@ export interface EmailSettings {
 }
 
 export const DEFAULT_EMAIL_SETTINGS: EmailSettings = {
-    gmailAddress: "admin@lunaflow.com",
+    gmailAddress: "info@lunaflow.space",
     appPassword: "",
     senderName: "LunaFlow 事務局",
     notificationEnabled: true,

@@ -69,6 +69,10 @@ export interface User {
     isLedgerEnabled?: boolean;
     lastLoginDate?: string;
     lineUserId?: string;
+    initialPaymentDate?: string;
+    githubId?: string;
+    githubUsername?: string;
+    githubInviteStatus?: 'none' | 'pending' | 'invited' | 'joined';
 }
 
 export interface StripeSettings {

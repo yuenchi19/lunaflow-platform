@@ -39,7 +39,7 @@ export async function POST(req: Request) {
         const tempPassword = "test-password-1234";
 
         const { data, error } = await resend.emails.send({
-            from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+            from: process.env.RESEND_FROM_EMAIL || 'info@lunaflow.space',
             to: user.email,
             subject: '【テスト】Luna Flowへようこそ！アカウント登録が完了しました ✨',
             html: `
