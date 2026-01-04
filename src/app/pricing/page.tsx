@@ -207,7 +207,7 @@ export default function PricingPage() {
                         </div>
                         <div className="mb-8">
                             <div className="flex items-end gap-1 mb-1">
-                                <span className="text-4xl font-black text-slate-900 tracking-tight">¥5,980</span>
+                                <span className="text-4xl font-black text-slate-900 tracking-tight">¥1,980</span>
                                 <span className="text-sm font-bold text-slate-500 mb-1.5">/ 月</span>
                             </div>
                             <p className="text-[10px] text-slate-400 font-bold">+ 初回システム料 ¥5,980</p>
