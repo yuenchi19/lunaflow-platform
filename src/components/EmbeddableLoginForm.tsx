@@ -37,29 +37,23 @@ function LoginFormContent() {
                 });
                 if (error) throw error;
 
-                // Check user plan to determine redirect
-                // Note: In a real app, you might want to fetch the user profile first or rely on server-side redirect
-                // For this client-side mock/hybrid, we'll assume standard flow or fetch profile if needed.
-                // Since supabase.auth.signIn doesn't return the profile, we might need a quick fetch or just redirect to a layout that handles it.
-                // However, for this specific request:
+                // Check user plan from metadata for immediate efficient redirect
                 const { data: { user } } = await supabase.auth.getUser();
-                // We'll fetch the profile from our API or DB to check the plan
-                // For speed/mock, let's try to fetch our own profile API
-                try {
-                    const profileRes = await fetch('/api/user/profile');
-                    if (profileRes.ok) {
-                        const profile = await profileRes.json();
-                        if (profile.plan === 'partner') {
-                            router.push("/affiliate/dashboard");
-                            return;
-                        }
-                    }
-                } catch (e) {
-                    console.error("Profile fetch error", e);
-                }
+                const plan = user?.user_metadata?.plan || 'student'; // Default fallback
 
-                router.push("/student/dashboard");
+                if (plan === 'partner') {
+                    router.push("/affiliate/dashboard");
+                } else {
+                    router.push("/student/dashboard");
+                }
                 router.refresh();
+
+                // Legacy profile fetch fallback removed as metadata is more reliable usually for this flow
+                /*
+                try {
+                // ... (Removed fetch logic)
+                } 
+                */
             } else {
                 const { error } = await supabase.auth.signUp({
                     email,

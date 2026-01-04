@@ -51,7 +51,8 @@ export async function middleware(request: NextRequest) {
     const path = requestPath;
     // Protected Routes List
     // Protect /student, /admin, /community, /settings
-    const protectedPrefixes = ['/student', '/admin', '/community', '/settings']
+    // Protected Routes List
+    const protectedPrefixes = ['/student', '/admin', '/community', '/settings', '/affiliate']
 
     const isProtected = protectedPrefixes.some(prefix => path.startsWith(prefix))
 
@@ -68,16 +69,39 @@ export async function middleware(request: NextRequest) {
     }
 
     // Strict Guard for Content Access (Paid Plan Check)
-    if (path.startsWith('/student/course/') && user) {
+    if (path.startsWith('/student') && user) {
         const userPlan = user.user_metadata?.plan || 'light';
         const userRole = user.user_metadata?.role || 'student';
+
+        // Redirect Partner to Affiliate Dashboard if they try to access Student Dashboard
+        if (userPlan === 'partner') {
+            const redirectUrl = request.nextUrl.clone()
+            redirectUrl.pathname = '/affiliate/dashboard'
+            return NextResponse.redirect(redirectUrl)
+        }
 
         // Admin/Staff/Accounting bypass plan checks
         if (['admin', 'staff', 'accounting'].includes(userRole)) {
             // Allowed
         } else if (userPlan === 'light' && userRole === 'student') {
+            // Light plan restrictions if any specific per-course logic is needed, 
+            // but strictly for /student/course/ access:
+            if (path.startsWith('/student/course/')) {
+                const redirectUrl = request.nextUrl.clone()
+                redirectUrl.pathname = '/pricing'
+                return NextResponse.redirect(redirectUrl)
+            }
+        }
+    }
+
+    // Partner Route Guard
+    if (path.startsWith('/affiliate') && user) {
+        const userPlan = user.user_metadata?.plan;
+        // Only 'partner' plan or admin can access
+        // If generic student tries to access /affiliate -> /student/dashboard
+        if (userPlan !== 'partner' && user.user_metadata?.role !== 'admin') {
             const redirectUrl = request.nextUrl.clone()
-            redirectUrl.pathname = '/pricing'
+            redirectUrl.pathname = '/student/dashboard'
             return NextResponse.redirect(redirectUrl)
         }
     }
@@ -85,30 +109,24 @@ export async function middleware(request: NextRequest) {
     // Role Based Access Control (RBAC)
     if (path.startsWith('/admin') && user) {
         const userRole = user.user_metadata?.role;
-        // If no role or student, they shouldn't be here (already covered by login redirect logic usually, but double check)
-        // Actually, normal users might login via admin/login if they try? Access control needed.
 
-        if (!userRole || userRole === 'student') {
-            // Redirect to student dashboard or home
+        // Strict Check: Unauthorized users (student/partner) -> Top Page
+        if (!userRole || userRole === 'student' || userRole === 'partner') { // Partner has student role usually, but explicitly checking
             const redirectUrl = request.nextUrl.clone()
-            redirectUrl.pathname = '/student/dashboard'
+            redirectUrl.pathname = '/'
             return NextResponse.redirect(redirectUrl)
         }
 
         // Staff: Allowed [Students, Community, Feedback, Staff(Self)]
-        // Block: [Inventory, Purchase Requests, Settings, Courses(Edit?), Sales?]
-        // User request: Staff = "Students, Community, Feedback/Assignments"
         if (userRole === 'staff') {
             const allowedPaths = [
                 '/admin/students',
                 '/admin/community',
                 '/admin/feedback',
-                '/admin/dashboard' // Dashboard usually needed
+                '/admin/dashboard'
             ];
-            // Allow subpaths
             const isAllowed = allowedPaths.some(p => path.startsWith(p));
             if (!isAllowed) {
-                // Redirect to their main workspace
                 const redirectUrl = request.nextUrl.clone()
                 redirectUrl.pathname = '/admin/students'
                 return NextResponse.redirect(redirectUrl)
@@ -116,7 +134,6 @@ export async function middleware(request: NextRequest) {
         }
 
         // Accounting: Allowed [Inventory, Purchase Requests, Community]
-        // User request: Accounting = "Inventory, Purchase Requests, Community"
         if (userRole === 'accounting') {
             const allowedPaths = [
                 '/admin/inventory',
