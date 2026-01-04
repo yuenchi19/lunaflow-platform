@@ -6,20 +6,39 @@ export async function GET() {
     try {
         console.log("[Sync] Starting Stripe Subscription Sync...");
 
-        // 1. Fetch ALL active subscriptions from Stripe
-        // Note: Stripe pagination defaults to 10 limits. Need to auto-paginate or fetch enough.
-        // For now, let's fetch 100 which should cover the "2 active users" scenario easily.
-        const subscriptions = await stripe.subscriptions.list({
-            limit: 100,
-            status: 'all', // We want to know about canceled ones too if possible, or usually just active to confirm who is active
-            expand: ['data.customer']
-        });
+        // 1. Fetch ALL subscriptions from Stripe (Pagination)
+        let hasMore = true;
+        let startingAfter: string | undefined = undefined;
+        const allSubs: any[] = [];
+
+        while (hasMore) {
+            const response = await stripe.subscriptions.list({
+                limit: 100,
+                status: 'all',
+                expand: ['data.customer'],
+                starting_after: startingAfter
+            });
+
+            allSubs.push(...response.data);
+
+            if (response.has_more && response.data.length > 0) {
+                startingAfter = response.data[response.data.length - 1].id;
+            } else {
+                hasMore = false;
+            }
+        }
+
+        console.log(`[Sync] Fetched total ${allSubs.length} subscriptions.`);
 
         const activeEmails = new Set<string>();
         const subMap = new Map<string, any>();
 
-        for (const sub of subscriptions.data) {
-            const customer = sub.customer as any; // Expanded
+        for (const sub of allSubs) {
+            const customer = sub.customer as any;
+            // Handle deleted customer case where customer might not have email field expanded or is null
+            // Check if customer object exists and has email, OR check deleted
+            if (!customer || customer.deleted) continue;
+
             const email = customer.email;
             if (email) {
                 const currentStatus = sub.status;
