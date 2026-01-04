@@ -310,56 +310,87 @@ export async function POST(req: Request) {
                 }
             }
 
-        } else if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
-            const subscription = event.data.object as Stripe.Subscription;
-            const stripeSubscriptionId = subscription.id;
-            const status = subscription.status; // active, past_due, canceled, unpaid, incomplete_expired, incomplete, trialing
+        }
+    } else if (event.type === 'invoice.payment_succeeded') {
+        const invoice = event.data.object as Stripe.Invoice;
+        // Only process non-subscription invoices (One-time purchases / Omakase)
+        // Unless user explicitly wants subscription fees to count? Usually NO for "Shiire" target.
+        if (!invoice.subscription) {
+            const email = invoice.customer_email;
+            const amount = invoice.amount_paid;
+            const stripeInvoiceId = invoice.id;
+            let targetUserId = null;
 
-            console.log(`[Webhook] Subscription event: ${event.type}, ID: ${stripeSubscriptionId}, Status: ${status}`);
-
-            // Map Stripe status to our DB status
-            // We'll keep 'active' for active/trialing, 'inactive' for others in the main 'status' field if we want,
-            // or just use 'subscriptionStatus' for detail.
-            // The user requested that canceled users allow login but maybe show as inactive?
-            // User request: "Stripeで削除（解約）したものを判別...現状有効なメンバーは2人だけでそれ以外は退会したという処理"
-            // So we should set 'subscriptionStatus' = canceled/active etc.
-
-            const updateData: any = {
-                subscriptionStatus: status,
-                updatedAt: new Date().toISOString()
-            };
-
-            // If completely canceled/deleted, we might want to update the main role or status if we had one.
-            // But 'plan' usually stays to indicate what they *were*.
-            // Let's rely on 'subscriptionStatus' for access control in the future.
-
-            // However, verify if we have a 'status' field on User? Yes: active/inactive.
-            if (status === 'active' || status === 'trialing') {
-                updateData.status = 'active';
-            } else {
-                updateData.status = 'inactive'; // canceled, unpaid, etc.
+            // Find User
+            if (email) {
+                const { data: user } = await supabaseAdmin.from('User').select('id').eq('email', email).single();
+                if (user) targetUserId = user.id;
             }
 
-            const { error: subUpdateError } = await supabaseAdmin
-                .from('User')
-                .update(updateData)
-                .eq('stripeSubscriptionId', stripeSubscriptionId);
-
-            if (subUpdateError) {
-                console.error(`[Webhook] Failed to update subscription status: ${subUpdateError.message}`);
-                // Try to find by customer ID if subscription ID missing (unlikely for matched user)
-            } else {
-                console.log(`[Webhook] User subscription updated to ${status}`);
+            if (targetUserId) {
+                console.log(`[Webhook] Invoice Paid: ${amount} by ${targetUserId}`);
+                const { error: purchaseError } = await supabaseAdmin.from('PurchaseRequest').insert({
+                    userId: targetUserId,
+                    stripeInvoiceId: stripeInvoiceId,
+                    amount: amount,
+                    plan: 'one_time', // or 'stock'
+                    status: 'paid',
+                    note: 'Invoice Payment'
+                });
+                if (purchaseError) console.error("Invoice Log Error:", purchaseError);
             }
-        } // Close event type check
+        }
 
-        return NextResponse.json({ received: true });
+    } else if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+        const subscription = event.data.object as Stripe.Subscription;
+        const stripeSubscriptionId = subscription.id;
+        const status = subscription.status; // active, past_due, canceled, unpaid, incomplete_expired, incomplete, trialing
 
-    } catch (err: any) {
-        console.error("Handler Logic Error:", err);
-        return NextResponse.json({
-            error: `Handler Check Failed`,
-            details: err.message
-        }, { status: 500 });
-    }
+        console.log(`[Webhook] Subscription event: ${event.type}, ID: ${stripeSubscriptionId}, Status: ${status}`);
+
+        // Map Stripe status to our DB status
+        // We'll keep 'active' for active/trialing, 'inactive' for others in the main 'status' field if we want,
+        // or just use 'subscriptionStatus' for detail.
+        // The user requested that canceled users allow login but maybe show as inactive?
+        // User request: "Stripeで削除（解約）したものを判別...現状有効なメンバーは2人だけでそれ以外は退会したという処理"
+        // So we should set 'subscriptionStatus' = canceled/active etc.
+
+        const updateData: any = {
+            subscriptionStatus: status,
+            updatedAt: new Date().toISOString()
+        };
+
+        // If completely canceled/deleted, we might want to update the main role or status if we had one.
+        // But 'plan' usually stays to indicate what they *were*.
+        // Let's rely on 'subscriptionStatus' for access control in the future.
+
+        // However, verify if we have a 'status' field on User? Yes: active/inactive.
+        if (status === 'active' || status === 'trialing') {
+            updateData.status = 'active';
+        } else {
+            updateData.status = 'inactive'; // canceled, unpaid, etc.
+        }
+
+        const { error: subUpdateError } = await supabaseAdmin
+            .from('User')
+            .update(updateData)
+            .eq('stripeSubscriptionId', stripeSubscriptionId);
+
+        if (subUpdateError) {
+            console.error(`[Webhook] Failed to update subscription status: ${subUpdateError.message}`);
+            // Try to find by customer ID if subscription ID missing (unlikely for matched user)
+        } else {
+            console.log(`[Webhook] User subscription updated to ${status}`);
+        }
+    } // Close event type check
+
+    return NextResponse.json({ received: true });
+
+} catch (err: any) {
+    console.error("Handler Logic Error:", err);
+    return NextResponse.json({
+        error: `Handler Check Failed`,
+        details: err.message
+    }, { status: 500 });
+}
 }
