@@ -12,7 +12,7 @@ export async function GET() {
         const allSubs: any[] = [];
 
         while (hasMore) {
-            const response = await stripe.subscriptions.list({
+            const response: any = await stripe.subscriptions.list({
                 limit: 100,
                 status: 'all',
                 expand: ['data.customer'],
