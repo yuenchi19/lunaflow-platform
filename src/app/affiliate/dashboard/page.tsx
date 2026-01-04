@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { User, AffiliateEarnings } from "@/types";
 import { hasAgreedToCompliance, getAffiliateEarnings, MOCK_USERS } from "@/lib/data";
 import ComplianceModal from "@/components/affiliate/ComplianceModal";
+import PayoutSettings from "@/components/affiliate/PayoutSettings";
 import Link from "next/link";
 import { LogOut, Copy, ExternalLink, TrendingUp, Users, DollarSign, Github, BookOpen } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -228,6 +229,9 @@ export default function PartnerDashboardPage() {
                                 )}
                             </div>
                         </div>
+
+                        {/* Payout Settings */}
+                        <PayoutSettings user={user} />
 
                         {/* Material Link */}
                         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:border-indigo-300 transition-colors group cursor-pointer" onClick={() => router.push('/student/course/course_1')}> {/* Assuming course_1 or specific ID */}
