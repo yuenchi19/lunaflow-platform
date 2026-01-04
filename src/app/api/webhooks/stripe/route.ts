@@ -235,7 +235,7 @@ export async function POST(req: Request) {
         } else if (event.type === 'invoice.payment_succeeded') {
             const invoice = event.data.object as Stripe.Invoice;
             // Only non-subscription invoices
-            if (!invoice.subscription) {
+            if (!(invoice as any).subscription) {
                 const email = invoice.customer_email;
                 const amount = invoice.amount_paid;
                 const stripeInvoiceId = invoice.id;
