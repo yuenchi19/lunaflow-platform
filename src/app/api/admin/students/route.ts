@@ -33,7 +33,7 @@ export async function GET() {
                 email: u.email,
                 role: u.role,
                 plan: u.plan,
-                subscriptionStatus: u.subscriptionStatus || (u.status === 'active' ? 'active' : 'inactive'),
+                subscriptionStatus: (u as any).subscriptionStatus || (u.status === 'active' ? 'active' : 'inactive'),
                 communityNickname: u.communityNickname,
                 registrationDate: u.createdAt,
                 lifetimePurchaseTotal: totalPurchase,
