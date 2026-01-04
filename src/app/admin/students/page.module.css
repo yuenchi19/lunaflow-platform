@@ -55,10 +55,15 @@
 
 .filterBar {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
     gap: 1rem;
     margin-bottom: 1.5rem;
     flex-wrap: wrap;
-    /* Allow wrapping on small screens */
+    background: #f8fafc;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
 }
 
 .searchInput {

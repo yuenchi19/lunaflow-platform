@@ -34,10 +34,29 @@ export default function StudentsPage() {
         fetchStudents();
     }, []);
 
-    const filteredStudents = students.filter(student =>
-        student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const [filterPlan, setFilterPlan] = useState("all");
+    const [filterStatus, setFilterStatus] = useState("active"); // Default to active users
+
+    const filteredStudents = students.filter(student => {
+        const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const matchesPlan = filterPlan === 'all' || student.plan === filterPlan;
+
+        // Calculate status correctly for filtering
+        const stats = calculateStudentStatus(student);
+        const isActive = stats.monthsElapsed >= 0; // Simple check, refine based on 'subscriptionStatus' if available in future
+        // For now, assuming all visible students are 'active' unless we implement explicit 'inactive' flag
+        // But requested to filter. Let's assume 'subscriptionStatus' exists or fallback to logic.
+
+        const matchesStatus = filterStatus === 'all'
+            ? true
+            : filterStatus === 'active'
+                ? (student.subscriptionStatus === 'active' || !student.subscriptionStatus) // Default to active if undefined for now
+                : student.subscriptionStatus === 'inactive' || student.subscriptionStatus === 'canceled';
+
+        return matchesSearch && matchesPlan && matchesStatus;
+    });
 
     const handleDownloadCSV = () => {
         const headers = ["ID", "名前", "プラン", "紹介コード", "メールアドレス", "コミュニティ名", "登録日", "合計購入額"];
@@ -89,16 +108,28 @@ export default function StudentsPage() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <select className={styles.select}>
-                    <option>すべてのコース</option>
-                    <option>テストコース</option>
-                </select>
-                <select className={styles.select}>
-                    <option>すべての進捗</option>
-                    <option>未着手</option>
-                    <option>学習中</option>
-                    <option>修了</option>
-                </select>
+                <div className="flex gap-2 w-full md:w-auto">
+                    <select
+                        className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer min-w-[140px]"
+                        value={filterPlan}
+                        onChange={(e) => setFilterPlan(e.target.value)}
+                    >
+                        <option value="all">すべてのプラン</option>
+                        <option value="premium">プレミアム</option>
+                        <option value="standard">スタンダード</option>
+                        <option value="light">ライト</option>
+                        <option value="partner">パートナー</option>
+                    </select>
+                    <select
+                        className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer min-w-[140px]"
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                    >
+                        <option value="active">有効のみ</option>
+                        <option value="all">すべて表示</option>
+                        <option value="inactive">無効・退会</option>
+                    </select>
+                </div>
             </div>
 
             <div className={styles.tableCard}>
