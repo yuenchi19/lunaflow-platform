@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
             }
 
             // Cast to any to avoid TS errors if types are stale
-            const u = user as any;
+            // const u = user as any; // Removed duplicate
             if (u.status !== newStatus || u.subscriptionStatus !== newSubStatus || u.stripeSubscriptionId !== stripeSubId) {
                 // Update Prisma DB
                 await prisma.user.update({
