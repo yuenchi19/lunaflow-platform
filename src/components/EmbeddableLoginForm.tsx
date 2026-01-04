@@ -36,6 +36,28 @@ function LoginFormContent() {
                     password,
                 });
                 if (error) throw error;
+
+                // Check user plan to determine redirect
+                // Note: In a real app, you might want to fetch the user profile first or rely on server-side redirect
+                // For this client-side mock/hybrid, we'll assume standard flow or fetch profile if needed.
+                // Since supabase.auth.signIn doesn't return the profile, we might need a quick fetch or just redirect to a layout that handles it.
+                // However, for this specific request:
+                const { data: { user } } = await supabase.auth.getUser();
+                // We'll fetch the profile from our API or DB to check the plan
+                // For speed/mock, let's try to fetch our own profile API
+                try {
+                    const profileRes = await fetch('/api/user/profile');
+                    if (profileRes.ok) {
+                        const profile = await profileRes.json();
+                        if (profile.plan === 'partner') {
+                            router.push("/affiliate/dashboard");
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Profile fetch error", e);
+                }
+
                 router.push("/student/dashboard");
                 router.refresh();
             } else {

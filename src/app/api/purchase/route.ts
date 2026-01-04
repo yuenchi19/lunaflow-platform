@@ -65,14 +65,14 @@ export async function POST(req: NextRequest) {
         let finalAmount = typeof amount === 'string' ? parseInt(amount.replace(/[^0-9]/g, '')) : amount;
         let offsetAmount = 0;
 
-        if (useReward && (user.plan === 'standard' || user.plan === 'premium') && user.affiliateCode) {
+        if (useReward && (user.plan === 'standard' || user.plan === 'premium' || user.plan === 'partner') && user.affiliateCode) {
             const directReferrals = await prisma.user.findMany({
                 where: { referredBy: user.affiliateCode },
                 select: { plan: true, affiliateCode: true }
             });
 
             let monthlyEarnings = 0;
-            const PLAN_PRICES: any = { premium: 29800, standard: 9800, light: 2980 };
+            const PLAN_PRICES: any = { premium: 29800, standard: 9800, light: 2980, partner: 0 };
 
             for (const direct of directReferrals) {
                 monthlyEarnings += Math.floor((PLAN_PRICES[direct.plan] || 0) * 0.07);

@@ -21,7 +21,8 @@ export async function GET() {
             studentCount: 0, // TODO: Implement real student count
             order: c.order,
             thumbnailUrl: c.thumbnailUrl,
-            published: c.published
+            published: c.published,
+            allowedPlans: c.allowedPlans
         }));
 
         return NextResponse.json(formatted);
@@ -35,7 +36,7 @@ export async function GET() {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { title, label, minTier } = body;
+        const { title, label, allowedPlans } = body;
 
         // Get max order to append at end
         const lastCourse = await prisma.course.findFirst({
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
             data: {
                 title,
                 label,
-                minTier: minTier ? parseInt(minTier) : 1,
+                allowedPlans: allowedPlans || ['light', 'standard', 'premium'], // Default all
                 order: newOrder,
                 published: true
             }

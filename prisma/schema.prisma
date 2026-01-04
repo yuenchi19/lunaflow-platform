@@ -63,7 +63,7 @@ model Course {
   published   Boolean    @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  minTier     Int        @default(1) // 1: Light, 2: Standard, 3: Premium
+  allowedPlans String[]   @default([]) // e.g. ["light", "standard", "premium"]
   categories  Category[]
 }
 

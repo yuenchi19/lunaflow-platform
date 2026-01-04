@@ -29,7 +29,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
         }
 
-        const allowedPlans = ['standard', 'premium'];
+        const allowedPlans = ['standard', 'premium', 'partner'];
         const isStaff = dbUser.role === 'admin' || dbUser.role === 'staff';
 
         if (!allowedPlans.includes(dbUser.plan) && !isStaff) {

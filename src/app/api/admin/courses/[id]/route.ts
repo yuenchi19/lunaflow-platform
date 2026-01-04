@@ -31,7 +31,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     try {
         const body = await req.json();
         // Allow updating title, label, etc.
-        const { title, label, description, published, order, minTier } = body;
+        const { title, label, description, published, order, allowedPlans } = body;
 
         const updated = await prisma.course.update({
             where: { id: params.id },
@@ -41,7 +41,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
                 description,
                 published,
                 order,
-                minTier: minTier ? parseInt(minTier) : undefined
+                allowedPlans
             }
         });
 

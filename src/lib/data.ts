@@ -200,6 +200,7 @@ export const MOCK_COURSES: Course[] = [
         description: "テスト講座へようこそ！まずは動画をご覧いただき、それから受講を開始してください！",
         thumbnailUrl: "https://picsum.photos/seed/course/800/450",
         expirationDate: "2026/03/21",
+        allowedPlans: ["light", "standard", "premium", "partner"],
     }
 ];
 
@@ -208,6 +209,7 @@ export const STRIPE_PRICES = {
     light: "price_1Sio8JEG3Sato8fA5bGnbvkD",
     standard: "price_1SMk15EG3Sato8fAltFsa5AQ",
     premium: "price_1Sio8pEG3Sato8fA1E7RxhW6",
+    partner: "price_1SlhUYEG3Sato8fA4tlzrUKx",
 };
 
 export const STRIPE_INITIAL_FEE_PRICE_ID = "price_1S0douEG3Sato8fAOcBAGw1X";
@@ -613,6 +615,16 @@ export function hasReadIntro2(userId: string): boolean {
 export function setReadIntro2(userId: string) {
     if (typeof window === 'undefined') return;
     localStorage.setItem(`luna_intro2_read_${userId}`, 'true');
+}
+
+export function hasAgreedToCompliance(userId: string): boolean {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(`luna_compliance_agreed_${userId}`) === 'true';
+}
+
+export function setComplianceAgreement(userId: string) {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(`luna_compliance_agreed_${userId}`, 'true');
 }
 
 export const MOCK_PAYMENTS: Payment[] = [

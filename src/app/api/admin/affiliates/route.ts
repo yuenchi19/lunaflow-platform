@@ -9,13 +9,14 @@ import { AffiliateEarnings, Plan } from '@/types';
 const PLAN_PRICES = {
     premium: 29800,
     standard: 9800,
-    light: 2980
+    light: 2980,
+    partner: 0
 };
 
 export async function GET() {
     try {
         // 1. Fetch ALL users to calculate relationships (we need everyone to know who referred whom)
-        // We only RETURN Standard/Premium users, but we need Light users to calculate earnings.
+        // We only RETURN Standard/Premium/Partner users, but we need Light users to calculate earnings.
         const allUsers = await prisma.user.findMany({
             select: {
                 id: true,
@@ -30,12 +31,12 @@ export async function GET() {
             }
         });
 
-        // 2. Identify Affiliates (Standard/Premium only)
+        // 2. Identify Affiliates (Standard/Premium/Partner only)
         // User request: Show them even if earnings 0.
         // Also we want to ensure they appear even if they don't have a code strictly yet? (Usually they should).
         // If they don't have a code, we'll just show empty code or handle it in UI.
         const affiliates = allUsers.filter(u =>
-            (u.plan === 'standard' || u.plan === 'premium') &&
+            (u.plan === 'standard' || u.plan === 'premium' || u.plan === 'partner') &&
             !u.email.endsWith('@example.com') // Exclude mock users
         );
 

@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 const PLAN_PRICES = {
     premium: 29800,
     standard: 9800,
-    light: 2980
+    light: 2980,
+    partner: 0
 };
 
 export async function GET(req: NextRequest) {
@@ -45,8 +46,8 @@ export async function GET(req: NextRequest) {
 
         if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-        // If user is not Standard/Premium, they might not have rewards access, but we return 0.
-        if (user.plan !== 'standard' && user.plan !== 'premium') {
+        // If user is not Standard/Premium/Partner, they might not have rewards access, but we return 0.
+        if (user.plan !== 'standard' && user.plan !== 'premium' && user.plan !== 'partner') {
             return NextResponse.json({ balance: 0, lifetimeEarnings: 0, totalUsed: 0 });
         }
         if (!user.affiliateCode) {

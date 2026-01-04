@@ -11,7 +11,7 @@ interface Course {
     label?: string;
     categoryCount: number;
     studentCount: number;
-    minTier?: number;
+    allowedPlans: string[]; // Changed from minTier
     published: boolean; // Added
 }
 
@@ -251,9 +251,12 @@ function SortableCourseItem({ course, openMenuId, setOpenMenuId, handleDeleteCou
                 <div className={styles.badges}>
                     <span className={styles.badgeId}>コースID: {course.id}</span>
                     {course.label && <span className={styles.badgeLabel}>{course.label}</span>}
-                    <span className={`${styles.badgeLabel} bg-slate-100 text-slate-600`}>
-                        {course.minTier === 3 ? '👑 プレミアム限定' : course.minTier === 2 ? '⭐ スタンダード以上' : '🟢 ライト以上'}
-                    </span>
+                    <div className="flex gap-1 flex-wrap">
+                        {course.allowedPlans?.includes('light') && <span className="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-800">Light</span>}
+                        {course.allowedPlans?.includes('standard') && <span className="px-2 py-0.5 rounded text-xs bg-sky-100 text-sky-800">Standard</span>}
+                        {course.allowedPlans?.includes('premium') && <span className="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">Premium</span>}
+                        {course.allowedPlans?.includes('partner') && <span className="px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-800">Partner</span>}
+                    </div>
 
                     {/* Toggle Switch */}
                     <div className={styles.toggleWrapper} onMouseDown={e => e.stopPropagation()} style={{ marginLeft: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -364,10 +367,11 @@ function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const formData = new FormData(e.target as HTMLFormElement);
+        const allowedPlans = Array.from(formData.getAll('allowedPlans')); // Get all checked values
         onSubmit({
             title: formData.get('title'),
             label: formData.get('label'),
-            minTier: formData.get('minTier'),
+            allowedPlans: allowedPlans.length > 0 ? allowedPlans : ['light', 'standard', 'premium'], // Default fallback if empty? Or validate.
         });
     };
 
@@ -451,16 +455,27 @@ function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
                             <div className={styles.formLabel}>
                                 公開範囲（プラン） <span className={styles.requiredBadge}>必須</span>
                             </div>
-                            <select
-                                name="minTier"
-                                className={styles.input}
-                                defaultValue="1"
-                                required
-                            >
-                                <option value="1">ライトプラン以上 (全員)</option>
-                                <option value="2">スタンダードプラン以上</option>
-                                <option value="3">プレミアムプランのみ</option>
-                            </select>
+                            <div className={styles.formLabel}>
+                                公開範囲（プラン） <span className={styles.requiredBadge}>必須</span>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="flex items-center gap-2">
+                                    <input type="checkbox" name="allowedPlans" value="light" defaultChecked />
+                                    ライトプラン (Light)
+                                </label>
+                                <label className="flex items-center gap-2">
+                                    <input type="checkbox" name="allowedPlans" value="standard" defaultChecked />
+                                    スタンダードプラン (Standard)
+                                </label>
+                                <label className="flex items-center gap-2">
+                                    <input type="checkbox" name="allowedPlans" value="premium" defaultChecked />
+                                    プレミアムプラン (Premium)
+                                </label>
+                                <label className="flex items-center gap-2">
+                                    <input type="checkbox" name="allowedPlans" value="partner" />
+                                    パートナープラン (Partner)
+                                </label>
+                            </div>
                         </div>
                     </div>
 

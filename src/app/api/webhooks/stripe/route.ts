@@ -88,12 +88,18 @@ export async function POST(req: Request) {
                 // Only update role to 'student' if current role is NOT admin/staff
                 const newRole = (currentRole === 'admin' || currentRole === 'staff') ? currentRole : 'student';
 
+                const amount = session.amount_total || 0;
+                let detectedPlan = 'premium'; // Default fallback
+                if (amount === 9800) detectedPlan = 'standard';
+                if (amount === 2980) detectedPlan = 'light';
+                if (amount === 1980) detectedPlan = 'partner';
+
                 // Update Existing User
                 const { error: updateError } = await supabaseAdmin.from('User').update({
                     name: customerDetails?.name,
                     zipCode: customerDetails?.address?.postal_code, // camelCase
                     role: newRole,
-                    plan: 'premium',
+                    plan: detectedPlan,
                     initialPaymentDate: existingUser?.initialPaymentDate || new Date().toISOString(),
                     // stripeCustomerId: session.customer as string, 
                     updatedAt: new Date().toISOString() // camelCase
@@ -118,6 +124,12 @@ export async function POST(req: Request) {
                 let authUserId = null;
                 const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
 
+                const amount = session.amount_total || 0;
+                let detectedPlan = 'premium'; // Default fallback
+                if (amount === 9800) detectedPlan = 'standard';
+                if (amount === 2980) detectedPlan = 'light';
+                if (amount === 1980) detectedPlan = 'partner';
+
                 // 1. Try Create
                 const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                     email: email!,
@@ -126,7 +138,7 @@ export async function POST(req: Request) {
                     user_metadata: {
                         name: customerDetails?.name || email!.split('@')[0],
                         role: 'student',
-                        plan: 'premium'
+                        plan: detectedPlan
                     }
                 });
 
@@ -164,7 +176,7 @@ export async function POST(req: Request) {
                             email: email!,
                             name: customerDetails?.name || email!.split('@')[0],
                             role: 'student',
-                            plan: 'premium',
+                            plan: detectedPlan,
                             zipCode: customerDetails?.address?.postal_code, // camelCase
                             initialPaymentDate: new Date().toISOString(),
                             updatedAt: new Date().toISOString() // camelCase
@@ -251,13 +263,19 @@ export async function POST(req: Request) {
 
             // 2. Log Purchase (PurchaseRequest) - MOVED OUTSIDE to run for BOTH Existing and New Users
             if (targetUserId) {
+                const amount = session.amount_total || 0;
+                let detectedPlan = 'premium';
+                if (amount === 9800) detectedPlan = 'standard';
+                if (amount === 2980) detectedPlan = 'light';
+                if (amount === 1980) detectedPlan = 'partner';
+
                 const { error: purchaseError } = await supabaseAdmin
                     .from('PurchaseRequest')
                     .insert({
                         userId: targetUserId,
                         stripeInvoiceId: session.invoice as string || session.id,
-                        amount: session.amount_total || 0,
-                        plan: 'premium',
+                        amount: amount,
+                        plan: detectedPlan,
                         status: 'paid',
                     });
 

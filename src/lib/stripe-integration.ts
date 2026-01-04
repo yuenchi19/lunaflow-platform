@@ -30,7 +30,7 @@ export function getPromoteKitReferralId(): string | null {
  * Mock function to Simulate creating a Stripe Checkout Session.
  * This demonstrates the Metadata payload requirement.
  */
-export async function createMockStripeSession(plan: 'light' | 'standard' | 'premium') {
+export async function createMockStripeSession(plan: 'light' | 'standard' | 'premium' | 'partner') {
     const referralId = getPromoteKitReferralId();
     const priceId = STRIPE_PRICES[plan];
 

@@ -35,27 +35,30 @@ export async function GET(req: NextRequest) {
             });
 
             if (user && user.plan) {
-                switch (user.plan.toLowerCase()) {
-                    case 'premium':
-                        userTier = 3;
-                        break;
-                    case 'standard':
-                        userTier = 2;
-                        break;
-                    case 'light':
-                    default:
-                        userTier = 1;
-                        break;
-                }
+                // Simply use the plan directly, no need for tier logic mapping anymore if we trust the plan strings
+                // But for safety/normalization we could still normalize it
+                userTier = 1; // Keeping userTier just in case downstream needs it, but mostly we need plan string
             }
         }
 
         // 3. Filter Courses
+        // We need to know the user's plan to check against allowedPlans
+        // But since we can't access 'user' here, we should fetch it properly or use a let variable
+
+        let currentUserPlan = 'light'; // Default
+        if (authUser && !authError) {
+            const user = await prisma.user.findUnique({
+                where: { email: authUser.email! },
+                select: { plan: true }
+            });
+            if (user?.plan) currentUserPlan = user.plan;
+        }
+
         const courses = await prisma.course.findMany({
             where: {
                 published: true,
-                minTier: {
-                    lte: userTier
+                allowedPlans: {
+                    has: currentUserPlan
                 }
             },
             orderBy: { order: 'asc' },
@@ -72,7 +75,7 @@ export async function GET(req: NextRequest) {
             description: c.description,
             thumbnailUrl: c.thumbnailUrl,
             categoryCount: c._count.categories,
-            minTier: c.minTier // Optional: pass to frontend so it knows why it sees it?
+            allowedPlans: c.allowedPlans
         }));
 
         return NextResponse.json(formatted);

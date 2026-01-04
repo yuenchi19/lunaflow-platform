@@ -45,7 +45,7 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
     const [isLoading, setIsLoading] = useState(true);
 
     // Course Edit State
-    const [editCourseData, setEditCourseData] = useState({ title: '', label: '', minTier: 1 });
+    const [editCourseData, setEditCourseData] = useState({ title: '', label: '', allowedPlans: [] as string[] });
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -199,7 +199,7 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
             setEditCourseData({
                 title: course.title,
                 label: course.label || '',
-                minTier: course.minTier || 1
+                allowedPlans: course.allowedPlans || []
             });
             setIsCourseEditModalOpen(true);
         }
@@ -240,10 +240,13 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
                     <button className={styles.editLinkBtn} onClick={openCourseEdit}>
                         <span className={styles.editIcon}>⚙️</span> 設定変更
                     </button>
-                    {course?.minTier && (
-                        <span className={`px-2 py-1 rounded text-sm ${course.minTier === 3 ? 'bg-amber-100 text-amber-800' : course.minTier === 2 ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-800'}`}>
-                            {course.minTier === 3 ? 'Premium' : course.minTier === 2 ? 'Standard+' : 'Light+'}
-                        </span>
+                    {course?.allowedPlans && (
+                        <div className="flex gap-1">
+                            {course.allowedPlans.includes('light') && <span className="px-2 py-1 rounded text-sm bg-slate-100 text-slate-800">Light</span>}
+                            {course.allowedPlans.includes('standard') && <span className="px-2 py-1 rounded text-sm bg-sky-100 text-sky-800">Standard</span>}
+                            {course.allowedPlans.includes('premium') && <span className="px-2 py-1 rounded text-sm bg-amber-100 text-amber-800">Premium</span>}
+                            {course.allowedPlans.includes('partner') && <span className="px-2 py-1 rounded text-sm bg-purple-100 text-purple-800">Partner</span>}
+                        </div>
                     )}
                 </div>
 
@@ -358,15 +361,60 @@ export default function CourseDetailPage({ params }: { params: { id: string } })
                             </div>
                             <div>
                                 <label className={styles.formLabel}>公開範囲 (Tier)</label>
-                                <select
-                                    className={styles.modalInput}
-                                    value={editCourseData.minTier}
-                                    onChange={e => setEditCourseData({ ...editCourseData, minTier: parseInt(e.target.value) })}
-                                >
-                                    <option value={1}>Tier 1 (Light+)</option>
-                                    <option value={2}>Tier 2 (Standard+)</option>
-                                    <option value={3}>Tier 3 (Premium)</option>
-                                </select>
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={editCourseData.allowedPlans.includes('light')}
+                                            onChange={e => {
+                                                const newPlans = e.target.checked
+                                                    ? [...editCourseData.allowedPlans, 'light']
+                                                    : editCourseData.allowedPlans.filter(p => p !== 'light');
+                                                setEditCourseData({ ...editCourseData, allowedPlans: newPlans });
+                                            }}
+                                        />
+                                        ライトプラン (Light)
+                                    </label>
+                                    <label className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={editCourseData.allowedPlans.includes('standard')}
+                                            onChange={e => {
+                                                const newPlans = e.target.checked
+                                                    ? [...editCourseData.allowedPlans, 'standard']
+                                                    : editCourseData.allowedPlans.filter(p => p !== 'standard');
+                                                setEditCourseData({ ...editCourseData, allowedPlans: newPlans });
+                                            }}
+                                        />
+                                        スタンダードプラン (Standard)
+                                    </label>
+                                    <label className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={editCourseData.allowedPlans.includes('premium')}
+                                            onChange={e => {
+                                                const newPlans = e.target.checked
+                                                    ? [...editCourseData.allowedPlans, 'premium']
+                                                    : editCourseData.allowedPlans.filter(p => p !== 'premium');
+                                                setEditCourseData({ ...editCourseData, allowedPlans: newPlans });
+                                            }}
+                                        />
+                                        プレミアムプラン (Premium)
+                                    </label>
+                                    <label className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={editCourseData.allowedPlans.includes('partner')}
+                                            onChange={e => {
+                                                const newPlans = e.target.checked
+                                                    ? [...editCourseData.allowedPlans, 'partner']
+                                                    : editCourseData.allowedPlans.filter(p => p !== 'partner');
+                                                setEditCourseData({ ...editCourseData, allowedPlans: newPlans });
+                                            }}
+                                        />
+                                        パートナープラン (Partner)
+                                    </label>
+                                </div>
                             </div>
                         </div>
                         <div className={styles.modalActions}>

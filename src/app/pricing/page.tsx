@@ -42,11 +42,25 @@ export default function PricingPage() {
                 "ハイスペック塗料伝授・還元祭無料招待"
             ],
             color: "bg-indigo-700",
+            initialFee: 5980,
             link: "https://buy.stripe.com/eVqfZhd5UcdfeRkdNHc7u03"
+        },
+        {
+            id: "partner",
+            name: "パートナープラン",
+            price: 1980,
+            description: "アフィリエイト活動を中心に行いたい方向けのプラン",
+            features: [
+                "学習サイト：アフィリエイト・マインドセットのみ", // Only affiliate/mindset
+                "参加権利：アフィリエイト活動"
+            ],
+            color: "bg-purple-600",
+            initialFee: 5000,
+            link: "https://buy.stripe.com/7sY4gzfe2b9bcJceRLc7u04"
         }
     ];
 
-    const SYSTEM_FEE = 5980;
+    const DEFAULT_SYSTEM_FEE = 5980;
 
     return (
         <div className="min-h-screen bg-[#FDFCFB]">
@@ -75,14 +89,14 @@ export default function PricingPage() {
                     <div className="space-y-2">
                         <h3 className="font-bold text-amber-900">お支払いについて（初回のみ）</h3>
                         <p className="text-sm text-amber-800 leading-relaxed">
-                            初回決済時のみ、システム使用料 <strong>¥{SYSTEM_FEE.toLocaleString()}</strong> が別途発生します。<br />
-                            （例：ライトプランの場合、初回 ¥{(5980 + SYSTEM_FEE).toLocaleString()}、2ヶ月目以降 ¥5,980）
+                            初回決済時のみ、システム使用料 <strong>¥{DEFAULT_SYSTEM_FEE.toLocaleString()}</strong>（パートナープランは¥5,000）が別途発生します。<br />
+                            （例：ライトプランの場合、初回 ¥{(5980 + DEFAULT_SYSTEM_FEE).toLocaleString()}、2ヶ月目以降 ¥5,980）
                         </p>
                     </div>
                 </div>
 
                 {/* Plans Grid */}
-                <div className="grid md:grid-cols-3 gap-8 items-start">
+                <div className="grid md:grid-cols-4 gap-4 items-start"> {/* Adjusted columns to 4 or flex? Grid 4 might be too tight. Maybe 2x2 or flex wrap. Let's try responsive grid. */}
                     {plans.map((plan) => (
                         <div
                             key={plan.id}
@@ -112,7 +126,7 @@ export default function PricingPage() {
                                         <span className="text-xs text-slate-500">/ 月</span>
                                     </div>
                                     <div className="text-[10px] text-slate-400">
-                                        + 初回システム料 ¥{SYSTEM_FEE.toLocaleString()}
+                                        + 初回システム料 ¥{(plan.initialFee || DEFAULT_SYSTEM_FEE).toLocaleString()}
                                     </div>
                                 </div>
 

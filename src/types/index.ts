@@ -73,6 +73,7 @@ export interface User {
     githubId?: string;
     githubUsername?: string;
     githubInviteStatus?: 'none' | 'pending' | 'invited' | 'joined';
+    complianceAgreed?: boolean;
 }
 
 export interface StripeSettings {
@@ -103,7 +104,7 @@ export interface SentEmail {
     status: 'waiting' | 'sent' | 'failed';
 }
 
-export type Plan = 'light' | 'standard' | 'premium';
+export type Plan = 'light' | 'standard' | 'premium' | 'partner';
 
 export interface Channel {
     id: string;
@@ -126,8 +127,9 @@ export interface Course {
     id: string;
     title: string;
     description: string;
-    thumbnailUrl?: string;
+    thumbnailUrl?: string; // Removed duplicate
     expirationDate?: string;
+    allowedPlans: Plan[]; // Changed from minTier
 }
 
 export interface Announcement {
