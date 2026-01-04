@@ -55,6 +55,7 @@ export default function AdminSidebar() {
                 { label: "受講生", href: "/admin/students", icon: "🎓" },
                 { label: "アフィリエイト", href: "/admin/affiliates", icon: "🤝" },
                 { label: "在庫管理 (Master)", href: "/admin/inventory", icon: "👜" },
+                { label: "報酬管理", href: "/admin/payouts", icon: "💰" },
                 { label: "仕入れ希望", href: "/admin/purchase-requests", icon: "📦", badge: pendingCount },
                 { label: "感想・課題", href: "/admin/feedback", icon: "📝" },
                 { label: "お知らせ", href: "/admin/news", icon: "📢" },
