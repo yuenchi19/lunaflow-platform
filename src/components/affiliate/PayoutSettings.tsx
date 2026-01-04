@@ -19,11 +19,13 @@ export default function PayoutSettings({ user }: PayoutSettingsProps) {
 
         const formData = new FormData(e.currentTarget);
         const data = {
+            name: formData.get('name'), // Added name update
             bankName: formData.get('bankName'),
             bankBranch: formData.get('bankBranch'),
             bankAccountType: formData.get('bankAccountType'),
             bankAccountNumber: formData.get('bankAccountNumber'),
             bankAccountHolder: formData.get('bankAccountHolder'),
+            invoiceRegistrationNumber: formData.get('invoiceRegistrationNumber'),
         };
 
         try {
@@ -54,6 +56,26 @@ export default function PayoutSettings({ user }: PayoutSettingsProps) {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
+
+                {/* Profile Edit Section (Requested) */}
+                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-6">
+                    <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                        <span>👤</span> プロフィール情報
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">お名前</label>
+                            <input
+                                name="name"
+                                type="text"
+                                defaultValue={user.name || ''}
+                                className="w-full p-2 border border-slate-200 rounded outline-none focus:border-indigo-500 text-sm"
+                            />
+                        </div>
+                        {/* TODO: Avatar upload is complex, for now simple text or skip */}
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Bank Name */}
                     <div>
@@ -117,6 +139,20 @@ export default function PayoutSettings({ user }: PayoutSettingsProps) {
                             placeholder="例）ヤマダ タロウ"
                             className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
                             required
+                        />
+                    </div>
+
+                    {/* Invoice Number (Optional) */}
+                    <div className="col-span-1 md:col-span-2">
+                        <label className="block text-sm font-bold text-slate-700 mb-2">
+                            インボイス登録番号 <span className="text-xs font-normal text-slate-400 ml-1">（任意 / Optional）</span>
+                        </label>
+                        <input
+                            name="invoiceRegistrationNumber"
+                            type="text"
+                            defaultValue={user.invoiceRegistrationNumber || ''}
+                            placeholder="例）T1234567890123"
+                            className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
                         />
                     </div>
                 </div>

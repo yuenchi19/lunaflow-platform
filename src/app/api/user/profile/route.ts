@@ -28,7 +28,8 @@ export async function PUT(req: NextRequest) {
                 bankBranch,
                 bankAccountType,
                 bankAccountNumber,
-                bankAccountHolder
+                bankAccountHolder,
+                invoiceRegistrationNumber
                 // Not updating email here to avoid desync with Auth
             }
         });

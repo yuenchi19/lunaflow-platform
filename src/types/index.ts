@@ -80,6 +80,7 @@ export interface User {
     bankAccountType?: string;
     bankAccountNumber?: string;
     bankAccountHolder?: string;
+    invoiceRegistrationNumber?: string;
 }
 
 export interface StripeSettings {

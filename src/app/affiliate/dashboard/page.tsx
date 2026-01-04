@@ -110,6 +110,27 @@ export default function PartnerDashboardPage() {
                     </div>
                 </div>
 
+                {/* Missing Info Alert */}
+                {(!user.bankName || !user.bankAccountNumber) && (
+                    <div
+                        onClick={() => {
+                            document.getElementById('payout-settings')?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="bg-rose-50 border border-rose-200 p-4 rounded-xl flex items-center gap-3 cursor-pointer hover:bg-rose-100 transition-colors group"
+                    >
+                        <div className="bg-rose-100 p-2 rounded-full text-rose-600 group-hover:bg-rose-200">
+                            <DollarSign className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-rose-800 text-sm">報酬を受け取るために、口座情報の登録が必要です。</h3>
+                            <p className="text-xs text-rose-600">ここをクリックして設定を行ってください。</p>
+                        </div>
+                        <div className="text-rose-400">
+                            →
+                        </div>
+                    </div>
+                )}
+
                 {/* Main Metrics Grid */}
                 <div className="grid md:grid-cols-3 gap-4">
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
@@ -231,7 +252,9 @@ export default function PartnerDashboardPage() {
                         </div>
 
                         {/* Payout Settings */}
-                        <PayoutSettings user={user} />
+                        <div id="payout-settings">
+                            <PayoutSettings user={user} />
+                        </div>
 
                         {/* Material Link */}
                         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:border-indigo-300 transition-colors group cursor-pointer" onClick={() => router.push('/student/course/course_1')}> {/* Assuming course_1 or specific ID */}
