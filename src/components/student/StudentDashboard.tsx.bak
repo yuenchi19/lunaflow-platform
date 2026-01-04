@@ -688,7 +688,61 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                             {/* LINE Integration */}
                             <div>
                                 {/* GitHub Integration */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">GitHub連携</label>
+                                    <div className="flex items-center justify-between bg-slate-900/5 border border-slate-900/10 rounded-lg p-3 mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-5 h-5 flex items-center justify-center bg-slate-800 text-white rounded-full">
+                                                <svg role="img" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-700">GitHub連携</p>
+                                                <p className="text-xs text-slate-500">
+                                                    {user.githubInviteStatus === 'joined' ? 'Organizationに参加済みです' :
+                                                        user.githubInviteStatus === 'invited' ? '招待メールを確認してください' :
+                                                            '教材リポジトリへのアクセス権を付与します'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {user.githubInviteStatus === 'joined' ? (
+                                            <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded border border-slate-200">
+                                                連携済み
+                                            </span>
+                                        ) : user.githubInviteStatus === 'invited' ? (
+                                            <span className="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded border border-amber-200">
+                                                招待中
+                                            </span>
+                                        ) : (
+                                            <button
+                                                onClick={async () => {
+                                                    const username = prompt("GitHubのユーザー名を入力してください");
+                                                    if (!username) return;
 
+                                                    try {
+                                                        const res = await fetch('/api/github/invite', {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ githubUsername: username })
+                                                        });
+                                                        const data = await res.json();
+                                                        if (res.ok) {
+                                                            alert(data.message || '招待を送りました。メールを確認するか、GitHubのNotificationsを確認して参加してください。');
+                                                            // Update local state loosely to reflect change until reload
+                                                            setUser(prev => ({ ...prev, githubInviteStatus: 'invited' }));
+                                                        } else {
+                                                            alert(`エラー: ${data.error}`);
+                                                        }
+                                                    } catch (e) {
+                                                        alert('通信エラーが発生しました');
+                                                    }
+                                                }}
+                                                className="text-xs font-bold text-white bg-slate-800 px-4 py-2 rounded hover:bg-slate-700 transition-colors shadow-sm"
+                                            >
+                                                連携する
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
 
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">SNS連携</label>
                                 <div className="flex items-center justify-between bg-[#06C755]/10 border border-[#06C755]/20 rounded-lg p-3">
