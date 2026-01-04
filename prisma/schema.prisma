@@ -37,6 +37,13 @@ model User {
   inventoryAssignments InventoryItem[]
   oneTimeTokens      OneTimeToken[]
   progress           UserProgress[]
+  
+  // Partner Payout Info
+  bankName           String?
+  bankBranch         String?
+  bankAccountType    String?             @default("ordinary") // ordinary, current
+  bankAccountNumber  String?
+  bankAccountHolder  String?
 }
 
 model OneTimeToken {

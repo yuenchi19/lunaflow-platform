@@ -74,6 +74,12 @@ export interface User {
     githubUsername?: string;
     githubInviteStatus?: 'none' | 'pending' | 'invited' | 'joined';
     complianceAgreed?: boolean;
+    // Payout Info
+    bankName?: string;
+    bankBranch?: string;
+    bankAccountType?: string;
+    bankAccountNumber?: string;
+    bankAccountHolder?: string;
 }
 
 export interface StripeSettings {
