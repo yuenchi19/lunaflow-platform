@@ -155,26 +155,7 @@ export async function GET(request: NextRequest) {
 
             } else {
                 if (debugEmail && userEmail === debugEmail) debugLog.push(`No DB Change Needed. Current: ${user.status} / ${user.subscriptionStatus}`);
-
-                // FORCE SYNC AUTH METADATA ANYWAY (To ensure consistency even if DB was right)
-                // Use a lighter check? Or just do it.
-                // Doing it for everyone might be slow (100+ users). But safe.
-                // Optimization: Only if needed? No, user explicitly requested "Force Sync".
-                const { createClient } = await import('@supabase/supabase-js');
-                if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-                    const supabaseAdmin = createClient(
-                        process.env.NEXT_PUBLIC_SUPABASE_URL,
-                        process.env.SUPABASE_SERVICE_ROLE_KEY,
-                        { auth: { autoRefreshToken: false, persistSession: false } }
-                    );
-                    try {
-                        await supabaseAdmin.auth.admin.updateUserById(user.id, {
-                            user_metadata: { subscriptionStatus: newSubStatus }
-                        });
-                    } catch (authErr) {
-                        // silently fail if user not found in auth
-                    }
-                }
+                // SKIP FORCE SYNC to prevent Timeout with large userbase
             }
         }
 
