@@ -72,7 +72,7 @@ export default function PricingPage() {
                 <span className="font-bold text-slate-800">トップへ戻る</span>
             </header>
 
-            <main className="max-w-5xl mx-auto px-4 py-12 md:py-20">
+            <main className="max-w-7xl mx-auto px-4 py-12 md:py-20">
 
                 <div className="text-center mb-16 space-y-4">
                     <h1 className="text-3xl md:text-4xl font-black text-slate-800">
@@ -96,12 +96,12 @@ export default function PricingPage() {
                 </div>
 
                 {/* Plans Grid */}
-                <div className="grid md:grid-cols-4 gap-4 items-start"> {/* Adjusted columns to 4 or flex? Grid 4 might be too tight. Maybe 2x2 or flex wrap. Let's try responsive grid. */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
                     {plans.map((plan) => (
                         <div
                             key={plan.id}
                             className={`
-                        relative bg-white rounded-2xl border transition-all duration-300
+                        relative bg-white rounded-2xl border transition-all duration-300 flex flex-col h-full
                         ${plan.featured
                                     ? "border-blue-500 shadow-xl scale-105 z-10"
                                     : "border-slate-200 shadow-sm hover:shadow-md"
@@ -114,10 +114,10 @@ export default function PricingPage() {
                                 </div>
                             )}
 
-                            <div className="p-8 space-y-6">
+                            <div className="p-6 xl:p-8 space-y-6 flex-1 flex flex-col">
                                 <div className="space-y-2">
                                     <h3 className="font-bold text-xl text-slate-800">{plan.name}</h3>
-                                    <p className="text-slate-500 text-xs">{plan.description}</p>
+                                    <p className="text-slate-500 text-xs min-h-[2.5em]">{plan.description}</p>
                                 </div>
 
                                 <div className="space-y-1">
@@ -130,7 +130,7 @@ export default function PricingPage() {
                                     </div>
                                 </div>
 
-                                <ul className="space-y-3 pt-4 border-t border-slate-100">
+                                <ul className="space-y-3 pt-4 border-t border-slate-100 flex-1">
                                     {plan.features.map((feature, i) => (
                                         <li key={i} className="flex items-center gap-3 text-sm text-slate-600">
                                             <Check className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -144,7 +144,7 @@ export default function PricingPage() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className={`
-                                w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98]
+                                w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98] mt-auto whitespace-nowrap
                                 ${plan.color}
                             `}
                                 >

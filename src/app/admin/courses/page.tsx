@@ -455,9 +455,6 @@ function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
                             <div className={styles.formLabel}>
                                 公開範囲（プラン） <span className={styles.requiredBadge}>必須</span>
                             </div>
-                            <div className={styles.formLabel}>
-                                公開範囲（プラン） <span className={styles.requiredBadge}>必須</span>
-                            </div>
                             <div className="space-y-2">
                                 <label className="flex items-center gap-2">
                                     <input type="checkbox" name="allowedPlans" value="light" defaultChecked />
