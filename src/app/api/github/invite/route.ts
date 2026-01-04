@@ -66,7 +66,7 @@ export async function POST(req: Request) {
                     username: githubUsername,
                 });
 
-                if (checkMembership.status === 204) {
+                if ((checkMembership.status as number) === 204) {
                     // Already a member
                     await supabase.from('User').update({
                         githubId: githubUser.id.toString(),
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
             return NextResponse.json({
                 success: true,
                 message: 'Invitation sent',
-                inviteUrl: invite.data.html_url
+                inviteUrl: (invite.data as any).html_url
             });
 
         } catch (e: any) {
