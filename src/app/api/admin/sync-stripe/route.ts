@@ -138,48 +138,39 @@ export async function GET(request: NextRequest) {
                     const existingCustomers = await stripe.customers.list({
                         email: userEmail,
                         limit: 1,
-                        expand: ['data.subscriptions'] // Efficiency: Get subs in one go
+                        expand: ['data.subscriptions']
                     });
 
-                    if (existingCustomers.data.length === 0) {
-                        // "Customer Not Found" -> Inactive
+                    if (existingCustomers.data.length > 0) {
+                        const foundCustomer = existingCustomers.data[0];
+                        stripeCustId = foundCustomer.id;
+
+                        // Check if this customer has subscriptions
+                        const subs = foundCustomer.subscriptions?.data || [];
+                        const validSub = subs.find((s: any) => ['active', 'trialing'].includes(s.status));
+
+                        if (validSub) {
+                            stripeSubId = validSub.id;
+                            newStatus = 'active';
+                            newSubStatus = validSub.status;
+                            if (debugEmail && userEmail === debugEmail) debugLog.push(`[Auto-Repair] Found Active Sub via Search! Linked ${stripeSubId}`);
+                        } else {
+                            // Customer exists but no active sub
+                            newStatus = 'inactive';
+                            newSubStatus = subs.length > 0 ? subs[0].status : 'none';
+                            stripeSubId = subs.length > 0 ? subs[0].id : stripeCustId; // Keep ID linked
+                            if (debugEmail && userEmail === debugEmail) debugLog.push(`[Auto-Repair] Found Customer but no Active Sub. Set Inactive.`);
+                        }
+                        // Safe to skip to avoid accidental nuke on API fail.
+                        continue;
+                    } else {
+                        // Truly Ghost
                         newStatus = 'inactive';
                         newSubStatus = 'none';
-                        if (debugEmail && userEmail === debugEmail) debugLog.push(`[Sync] Customer Not Found in Stripe -> Inactive`);
-                    } else {
-                        // Customer Valid. Check Subs.
-                        const customer = existingCustomers.data[0];
-                        stripeCustId = customer.id;
-
-                        // Check subs (Step 3: Check Result)
-                        const subs = customer.subscriptions?.data || [];
-                        const activeSub = subs.find((s: any) => ['active', 'trialing'].includes(s.status));
-
-                        if (activeSub) {
-                            // Actually found active sub? (Maybe map missed it? e.g. pagination or delay)
-                            stripeSubId = activeSub.id;
-                            newStatus = 'active';
-                            newSubStatus = activeSub.status;
-                            if (debugEmail && userEmail === debugEmail) debugLog.push(`[Sync] Found Active Sub via Search (Missed by Map?) -> Active`);
-                        } else {
-                            // Found User, but No Active Sub
-                            newStatus = 'inactive';
-                            // Use the most recent sub status if available
-                            if (subs.length > 0) {
-                                newSubStatus = subs[0].status; // e.g. canceled
-                                stripeSubId = subs[0].id;
-                            } else {
-                                newSubStatus = 'none';
-                            }
-                            if (debugEmail && userEmail === debugEmail) debugLog.push(`[Sync] Found Customer, No Active Sub -> Inactive`);
-                        }
+                        if (debugEmail && userEmail === debugEmail) debugLog.push(`[Ghost Check] No Customer found for email. Set Inactive.`);
                     }
-
-                } catch (stripeErr) {
-                    console.error(`[Sync] Stripe API Error for ${userEmail}:`, stripeErr);
-                    // On Error, assume inactive? Or skip?
-                    // Safe to skip to avoid accidental nuke on API fail.
-                    continue;
+                } catch (err) {
+                    console.error(`[Sync] Auto-Repair Error for ${userEmail}:`, err);
                 }
             }
 
