@@ -81,9 +81,7 @@ export async function GET() {
                         status: newStatus,
                         subscriptionStatus: newSubStatus,
                         stripeCustomerId: stripeCustId,
-                        stripeSubscriptionId: stripeSubId,
-                        // @ts-ignore
-                        subscriptionStatus: newSubStatus
+                        stripeSubscriptionId: stripeSubId
                     }
                 });
                 updatedCount++;
