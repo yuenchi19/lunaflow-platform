@@ -365,6 +365,7 @@ function CourseTopVideoModal({ onClose }: { onClose: () => void }) {
 
 function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmit: (data: any) => void }) {
     const handleSubmit = (e: React.FormEvent) => {
+        console.log("Submit button clicked, form submitting...");
         e.preventDefault();
         const formData = new FormData(e.target as HTMLFormElement);
         const allowedPlans = Array.from(formData.getAll('allowedPlans')); // Get all checked values
