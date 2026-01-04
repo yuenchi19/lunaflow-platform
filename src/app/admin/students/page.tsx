@@ -52,8 +52,8 @@ export default function StudentsPage() {
         const matchesStatus = filterStatus === 'all'
             ? true
             : filterStatus === 'active'
-                ? (student.subscriptionStatus === 'active' || !student.subscriptionStatus) // Default to active if undefined for now
-                : student.subscriptionStatus === 'inactive' || student.subscriptionStatus === 'canceled';
+                ? ['active', 'trialing'].includes(student.subscriptionStatus || '') || (!student.subscriptionStatus && student.status === 'active')
+                : !['active', 'trialing'].includes(student.subscriptionStatus || '');
 
         return matchesSearch && matchesPlan && matchesStatus;
     });
@@ -95,8 +95,18 @@ export default function StudentsPage() {
                     <h1 className={styles.title}>受講生管理</h1>
                 </div>
                 <div className={styles.actions}>
+                    <button
+                        onClick={async () => {
+                            if (confirm('Stripeとデータを完全同期しますか？')) {
+                                setLoading(true);
+                                try { await fetch('/api/admin/sync-stripe'); alert('同期完了しました'); window.location.reload(); } catch (e) { alert('エラー'); } finally { setLoading(false); }
+                            }
+                        }}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm font-bold mr-2"
+                    >
+                        🔄 データ同期
+                    </button>
                     <button onClick={handleDownloadCSV} className={styles.csvBtn}>CSV出力</button>
-                    {/* Removed "Add Individual Student" and Beta tag as requested */}
                 </div>
             </div>
 
