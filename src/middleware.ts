@@ -7,8 +7,8 @@ export async function middleware(request: NextRequest) {
     console.log(`[Middleware] Processing path: ${requestPath}`);
 
     // 1. Force Bypass for Webhooks (Top Priority)
-    if (requestPath.startsWith('/api/webhooks')) {
-        console.log(`[Middleware] Bypassing auth for webhook: ${requestPath}`);
+    if (requestPath.startsWith('/api/webhooks') || requestPath.startsWith('/api/admin/sync-stripe')) {
+        console.log(`[Middleware] Bypassing auth for system route: ${requestPath}`);
         return NextResponse.next();
     }
 

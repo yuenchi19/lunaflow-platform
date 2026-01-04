@@ -103,7 +103,9 @@ export async function POST(req: Request) {
                     role: newRole,
                     plan: detectedPlan,
                     initialPaymentDate: existingUser?.initialPaymentDate || new Date().toISOString(),
-                    // stripeCustomerId: session.customer as string, 
+                    stripeCustomerId: session.customer as string,
+                    stripeSubscriptionId: session.subscription as string,
+                    subscriptionStatus: 'active',
                     updatedAt: new Date().toISOString() // camelCase
                 }).eq('id', targetUserId);
 
@@ -183,6 +185,9 @@ export async function POST(req: Request) {
                             plan: detectedPlan,
                             zipCode: customerDetails?.address?.postal_code, // camelCase
                             initialPaymentDate: new Date().toISOString(),
+                            stripeCustomerId: session.customer as string,
+                            stripeSubscriptionId: session.subscription as string,
+                            subscriptionStatus: 'active',
                             updatedAt: new Date().toISOString() // camelCase
                         });
 
@@ -305,7 +310,48 @@ export async function POST(req: Request) {
                 }
             }
 
-        } // Close if (event.type === 'checkout.session.completed')
+        } else if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+            const subscription = event.data.object as Stripe.Subscription;
+            const stripeSubscriptionId = subscription.id;
+            const status = subscription.status; // active, past_due, canceled, unpaid, incomplete_expired, incomplete, trialing
+
+            console.log(`[Webhook] Subscription event: ${event.type}, ID: ${stripeSubscriptionId}, Status: ${status}`);
+
+            // Map Stripe status to our DB status
+            // We'll keep 'active' for active/trialing, 'inactive' for others in the main 'status' field if we want,
+            // or just use 'subscriptionStatus' for detail.
+            // The user requested that canceled users allow login but maybe show as inactive?
+            // User request: "Stripeで削除（解約）したものを判別...現状有効なメンバーは2人だけでそれ以外は退会したという処理"
+            // So we should set 'subscriptionStatus' = canceled/active etc.
+
+            const updateData: any = {
+                subscriptionStatus: status,
+                updatedAt: new Date().toISOString()
+            };
+
+            // If completely canceled/deleted, we might want to update the main role or status if we had one.
+            // But 'plan' usually stays to indicate what they *were*.
+            // Let's rely on 'subscriptionStatus' for access control in the future.
+
+            // However, verify if we have a 'status' field on User? Yes: active/inactive.
+            if (status === 'active' || status === 'trialing') {
+                updateData.status = 'active';
+            } else {
+                updateData.status = 'inactive'; // canceled, unpaid, etc.
+            }
+
+            const { error: subUpdateError } = await supabaseAdmin
+                .from('User')
+                .update(updateData)
+                .eq('stripeSubscriptionId', stripeSubscriptionId);
+
+            if (subUpdateError) {
+                console.error(`[Webhook] Failed to update subscription status: ${subUpdateError.message}`);
+                // Try to find by customer ID if subscription ID missing (unlikely for matched user)
+            } else {
+                console.log(`[Webhook] User subscription updated to ${status}`);
+            }
+        } // Close event type check
 
         return NextResponse.json({ received: true });
 
