@@ -55,7 +55,6 @@ export default function PricingPage() {
                 "参加権利：アフィリエイト活動"
             ],
             color: "bg-purple-600",
-            initialFee: 5000,
             link: "https://buy.stripe.com/7sY4gzfe2b9bcJceRLc7u04"
         }
     ];
@@ -63,7 +62,7 @@ export default function PricingPage() {
     const DEFAULT_SYSTEM_FEE = 5980;
 
     // Placeholder for handleSelectPlan to avoid errors, as it's not defined in the original context
-    const handleSelectPlan = (planId) => {
+    const handleSelectPlan = (planId: string) => {
         const selectedPlan = plans.find(p => p.id === planId);
         if (selectedPlan && selectedPlan.link) {
             window.open(selectedPlan.link, '_blank');
