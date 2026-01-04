@@ -48,7 +48,7 @@ export default function PricingPage() {
         {
             id: "partner",
             name: "パートナープラン",
-            price: 5980,
+            price: 1980,
             description: "アフィリエイト活動を中心に行いたい方向けのプラン",
             features: [
                 "学習サイト：アフィリエイト・マインドセットのみ", // Only affiliate/mindset
@@ -239,4 +239,4 @@ export default function PricingPage() {
         </div>
     );
 }
-```
+

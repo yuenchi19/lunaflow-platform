@@ -55,7 +55,7 @@ export default function ComplianceModal({ isOpen, onAgree, userId }: ComplianceM
                         <p>乙は、パートナーとしての権利（紹介リンクの発行、管理画面の利用、報酬の受領等）を維持するために、以下の費用を支払うものとする。</p>
                         <ul className="list-disc pl-5 mt-2 space-y-1">
                             <li><strong>初期登録費用</strong>：5,000円（税込）</li>
-                            <li><strong>システム利用料（月額）</strong>：5,980円（税込）</li>
+                            <li><strong>システム利用料（月額）</strong>：1,980円（税込）</li>
                         </ul>
                         <p className="mt-2 text-xs text-slate-500">※月額費用の支払いが滞った場合、甲は乙への報酬支払いを停止し、アカウントを一時停止または削除することができる。<br />支払い不可月に報酬が発生していた場合には、システム利用料を引いた金額の支払いで報酬を受け取ることが可能。</p>
                     </section>
