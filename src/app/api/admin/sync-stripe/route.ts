@@ -22,16 +22,38 @@ export async function GET() {
             const customer = sub.customer as any; // Expanded
             const email = customer.email;
             if (email) {
-                // If user has multiple subs, pick the most 'active' one or latest.
-                // Priority: active > trialing > past_due > canceled
-                if (sub.status === 'active' || sub.status === 'trialing') {
-                    activeEmails.add(email);
+                const currentStatus = sub.status;
+                const existingEntry = subMap.get(email);
+
+                const isActiveLike = (s: string) => ['active', 'trialing'].includes(s);
+
+                // Priority Logic:
+                // 1. If we already have an ACTIVE entry, don't overwrite it with a non-active one.
+                // 2. If the current sub is ACTIVE, definitely save it.
+                // 3. Otherwise (current is canceled/past_due etc), saves it only if we don't have an entry yet.
+                //    (Wait, if we have a canceled entry, and find another canceled one, it doesn't matter much.
+                //     But we want to capture the "most meaningful" status.)
+
+                let shouldUpdate = true;
+                if (existingEntry) {
+                    if (isActiveLike(existingEntry.status)) {
+                        shouldUpdate = false; // Already have active, keep it.
+                    } else if (isActiveLike(currentStatus)) {
+                        shouldUpdate = true; // New one is active, upgrade.
+                    } else {
+                        // Both are non-active. Maybe keep the latest?
+                        // For now, overwrite is fine.
+                        shouldUpdate = true;
+                    }
                 }
-                subMap.set(email, {
-                    stripeCustomerId: customer.id,
-                    stripeSubscriptionId: sub.id,
-                    status: sub.status
-                });
+
+                if (shouldUpdate) {
+                    subMap.set(email, {
+                        stripeCustomerId: customer.id,
+                        stripeSubscriptionId: sub.id,
+                        status: currentStatus
+                    });
+                }
             }
         }
 
