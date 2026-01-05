@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { stripe } from '@/lib/stripe';
 
 export async function GET() {
     try {
@@ -18,8 +19,7 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { name, description, price, image, stock, isVisible } = body;
 
-        // Initialize Stripe
-        const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+        // Note: stripe is already initialized in @/lib/stripe
 
         // 1. Create Product in Stripe (for appearance in Checkout)
         const stripeProduct = await stripe.products.create({
