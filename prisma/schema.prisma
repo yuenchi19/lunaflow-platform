@@ -276,4 +276,15 @@ model Product {
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  restockSubscriptions ProductRestockSubscription[]
+}
+
+model ProductRestockSubscription {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  userId    String?
+  email     String   // Can be guest or user
+  createdAt DateTime @default(now())
 }

@@ -50,7 +50,33 @@ export default function StudentStorePage() {
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-slate-500">Loading Store...</div>;
+    const handleRestockRequest = async (productId: string) => {
+        // Ideally prompt for email or use user's email. For now assuming user is logged in and we use their account email or prompt logic.
+        // Or simpler: Just tell them "Registered".
+        // Let's ask for email via a simple prompt or assume we fetch it? 
+        // User said "Student registers email".
+        // I'll make a simple prompt.
+        const email = prompt("通知を受け取るメールアドレスを入力してください:", "");
+        if (!email) return;
+
+        try {
+            const res = await fetch('/api/products/restock', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId, email })
+            });
+            if (res.ok) {
+                alert("再入荷通知登録が完了しました。");
+            } else {
+                alert("登録に失敗しました。");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("エラーが発生しました。");
+        }
+    };
+
+    if (loading) return <div className="min-h-screen bg-[#FDFCFB] flex items-center justify-center p-4"><div className="animate-spin h-10 w-10 border-4 border-[#1E3A8A] border-t-transparent rounded-full"></div></div>;
 
     return (
         <div className="p-4 md:p-8 min-h-screen bg-[#FDFCFB]">
@@ -79,20 +105,28 @@ export default function StudentStorePage() {
                                 <h3 className="font-bold text-xl text-slate-800 mb-2">{product.name}</h3>
                                 <p className="text-sm text-slate-500 mb-4 line-clamp-2 min-h-[40px]">{product.description}</p>
 
-                                <div className="flex items-end justify-between mt-4">
-                                    <div className="text-2xl font-bold text-slate-900 font-serif">
+                                <div className="flex flex-col items-start justify-between mt-4">
+                                    <div className="text-2xl font-bold text-slate-900 font-serif mb-4">
                                         ¥{product.price.toLocaleString()}
                                     </div>
-                                    <button
-                                        onClick={() => handleBuy(product.id)}
-                                        disabled={product.stock < 1}
-                                        className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all shadow-sm ${product.stock > 0
-                                                ? 'bg-gradient-to-r from-slate-800 to-slate-700 text-white hover:shadow-lg hover:-translate-y-0.5'
-                                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                            }`}
-                                    >
-                                        {product.stock > 0 ? '購入する' : '在庫切れ'}
-                                    </button>
+                                    {product.stock > 0 ? (
+                                        <button
+                                            onClick={() => handlePurchase(product.id)}
+                                            className="w-full bg-[#1E3A8A] text-white font-bold py-3 rounded-lg hover:bg-[#2C3E50] transition shadow-md"
+                                        >
+                                            購入手続きへ
+                                        </button>
+                                    ) : (
+                                        <div className="w-full space-y-2">
+                                            <button
+                                                onClick={() => handleRestockRequest(product.id)}
+                                                className="w-full bg-slate-200 text-slate-600 font-bold py-3 rounded-lg hover:bg-slate-300 transition"
+                                            >
+                                                再入荷通知を受け取る
+                                            </button>
+                                            <p className="text-center text-xs text-slate-500">※入荷時にメールでお知らせします</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

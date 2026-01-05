@@ -82,127 +82,71 @@ export async function POST(req: Request) {
             if (updateError) console.warn(`[StaffInvite] Auth Metadata update warning: ${updateError.message}`);
 
         } else {
-            // 2. Not in Public DB, try Create Auth User
-            console.log(`[StaffInvite] Creating new auth user for ${email}`);
-            const { data: userData, error: createError } = await supabase.auth.admin.createUser({
-                email: email,
-                email_confirm: true,
-                user_metadata: { name, role }
+            // 2. Auth User Management (Find or Create)
+            let authUser: any;
+
+            // A. Try to find existing Auth User by Email
+            const { data: { users: foundUsers }, error: listError } = await supabase.auth.admin.listUsers({
+                page: 1,
+                perPage: 100 // Minimal chance of overflow for staff, but safer to loop if huge. Assuming <100 staff/conflicts.
             });
 
-            if (createError) {
-                console.log(`[StaffInvite] Create failed: ${createError.message}`);
+            authUser = foundUsers?.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
-                // If "already registered" (Ghost User case), try to recover via generateLink
-                if (createError.message?.toLowerCase().includes("registered") || createError.status === 422 || createError.status === 400) {
-
-                    // 2. Generate Password Reset / Invite Link FIRST to get the User ID
-                    const origin = new URL(req.url).origin;
-                    const redirectUrl = `${origin}/admin/login`;
-
-                    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-                        type: 'recovery',
-                        email: email,
-                        options: { redirectTo: redirectUrl }
-                    });
-
-                    if (linkError) {
-                        // FIX for "User with this email not found" despite createUser saying "Registered"
-                        console.log(`[StaffInvite] Link Generation Check: ${linkError.message}`);
-
-                        // Fallback: This usually happens if the user exists but has a different state or the key doesn't have permissions to generate links for everyone (unlikely for service role).
-                        // Or if the user IS in Auth, but not queryable by the ID? 
-
-                        // Try to find them via ListUsers to confirm existence and update role.
-                        const { data: { users } } = await supabase.auth.admin.listUsers({ page: 1, perPage: 100 });
-                        // Case-insensitive match
-                        const foundUser = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-
-                        if (foundUser) {
-                            userId = foundUser.id;
-                            console.log(`[StaffInvite] Found existing Auth user via ListUsers: ${userId}`);
-                            // Update Metadata
-                            await supabase.auth.admin.updateUserById(userId, {
-                                user_metadata: { name, role }
-                            });
-                            // If we can't generate a link, we just assume they can login.
-                            // We suppress the error so the Admin UI doesn't crash.
-                            inviteLink = undefined;
-                        } else {
-                            // Truly not found?
-                            return NextResponse.json({ error: `User exists but cannot be found by email. Details: ${linkError.message}` }, { status: 500 });
-                        }
-                    }
-
-                    // CRITICAL: Use the ID from generateLink response if available
-                    if (linkData.user) {
-                        userId = linkData.user.id;
-                        console.log(`[StaffInvite] Recovered Ghost User ID via generateLink: ${userId}`);
-
-                        // Update Metadata for the recovered user
-                        await supabase.auth.admin.updateUserById(userId, {
-                            user_metadata: { name, role }
-                        });
-                    } else {
-                        // Fallback if generateLink didn't return user (unlikely but possible in some versions)
-                        // Try listUsers with filter? Not reliable.
-                        return NextResponse.json({
-                            error: 'User already exists in Auth, but could not retrieve ID. Please ask user to login manually.'
-                        }, { status: 400 });
-                    }
-
-                    // Assign inviteLink for later use
-                    inviteLink = linkData.properties.action_link;
-
-                } else {
-                    return NextResponse.json({ error: createError.message }, { status: 400 });
-                }
+            if (authUser) {
+                console.log(`[StaffInvite] Found existing Auth User: ${authUser.id}`);
+                userId = authUser.id;
             } else {
-                userId = userData.user.id;
+                // B. Not found, Create new Auth User
+                console.log(`[StaffInvite] Creating NEW Auth User for ${email}`);
+                const { data: createData, error: createError } = await supabase.auth.admin.createUser({
+                    email: email,
+                    email_confirm: true,
+                    user_metadata: { name, role }
+                });
+
+                if (createError) {
+                    // Edge Case: ListUsers didn't see it, but Create says specific error?
+                    console.error(`[StaffInvite] FATAL: CreateUser failed but ListUsers didn't find match. ${createError.message}`);
+                    return NextResponse.json({ error: `招待処理に失敗しました。管理者へお問い合わせください。(Create Error: ${createError.message})` }, { status: 400 });
+                }
+
+                const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+                    type: 'recovery',
+                    email: email,
+                    options: { redirectTo: redirectUrl }
+                });
+
+                if (linkError) return NextResponse.json({ error: `Link Generation Failed: ${linkError.message}` }, { status: 500 });
+                inviteLink = linkData.properties.action_link;
             }
-        }
 
-        // If we didn't generate link yet (Clean Create Path)
-        if (typeof inviteLink === 'undefined') {
-            const origin = new URL(req.url).origin;
-            const redirectUrl = `${origin}/admin/login`;
+            // 3. Upsert to Public DB
+            const { error: dbError } = await supabase
+                .from('User')
+                .upsert({
+                    id: userId,
+                    email: email,
+                    name: name,
+                    role: role,
+                    status: status || 'active',
+                    updatedAt: new Date().toISOString()
+                });
 
-            const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-                type: 'recovery',
-                email: email,
-                options: { redirectTo: redirectUrl }
-            });
+            if (dbError) {
+                return NextResponse.json({ error: dbError.message }, { status: 500 });
+            }
 
-            if (linkError) return NextResponse.json({ error: `Link Generation Failed: ${linkError.message}` }, { status: 500 });
-            inviteLink = linkData.properties.action_link;
-        }
+            // 4. Send Email via Resend
+            if (resendApiKey) {
+                const { Resend } = await import('resend');
+                const resend = new Resend(resendApiKey);
 
-        // 3. Upsert to Public DB
-        const { error: dbError } = await supabase
-            .from('User')
-            .upsert({
-                id: userId,
-                email: email,
-                name: name,
-                role: role,
-                status: status || 'active',
-                updatedAt: new Date().toISOString()
-            });
-
-        if (dbError) {
-            return NextResponse.json({ error: dbError.message }, { status: 500 });
-        }
-
-        // 4. Send Email via Resend
-        if (resendApiKey) {
-            const { Resend } = await import('resend');
-            const resend = new Resend(resendApiKey);
-
-            await resend.emails.send({
-                from: process.env.RESEND_FROM_EMAIL || 'info@lunaflow.space',
-                to: email,
-                subject: '【LunaFlow】運営スタッフへの招待！',
-                html: `
+                await resend.emails.send({
+                    from: process.env.RESEND_FROM_EMAIL || 'info@lunaflow.space',
+                    to: email,
+                    subject: '【LunaFlow】運営スタッフへの招待！',
+                    html: `
 <div style="font-family: sans-serif; padding: 20px; line-height: 1.6;">
     <p>LunaFlow事務局です。</p>
     <p>あなたを当システムの運営スタッフとして招待しました。<br>
@@ -225,13 +169,13 @@ export async function POST(req: Request) {
     </p>
 </div>
                 `
-            });
+                });
+            }
+
+            return NextResponse.json({ success: true, userId });
+
+        } catch (e: any) {
+            console.error("Staff Invite Error:", e);
+            return NextResponse.json({ error: e.message }, { status: 500 });
         }
-
-        return NextResponse.json({ success: true, userId });
-
-    } catch (e: any) {
-        console.error("Staff Invite Error:", e);
-        return NextResponse.json({ error: e.message }, { status: 500 });
     }
-}

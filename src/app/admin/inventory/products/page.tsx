@@ -23,8 +23,7 @@ export default function AdminProductPage() {
 
     // Form inputs
     const [formData, setFormData] = useState({
-        name: '', description: '', price: 0, image: '', stock: 0, isVisible: true,
-        brand: '', category: '', condition: '', accessories: [] as string[]
+        name: '', description: '', price: 0, image: '', stock: 0, isVisible: true
     });
 
     useEffect(() => {
@@ -72,8 +71,7 @@ export default function AdminProductPage() {
 
     const resetForm = () => {
         setFormData({
-            name: '', description: '', price: 0, image: '', stock: 0, isVisible: true,
-            brand: '', category: '', condition: '', accessories: []
+            name: '', description: '', price: 0, image: '', stock: 0, isVisible: true
         });
     };
 
@@ -85,11 +83,7 @@ export default function AdminProductPage() {
             price: product.price,
             image: product.image,
             stock: product.stock,
-            isVisible: product.isVisible,
-            brand: (product as any).brand || '',
-            category: (product as any).category || '',
-            condition: (product as any).condition || '',
-            accessories: (product as any).accessories || []
+            isVisible: product.isVisible
         });
         setIsAddModalOpen(true);
     };
@@ -155,15 +149,11 @@ export default function AdminProductPage() {
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
                                         {p.image && <img src={p.image} className="w-10 h-10 object-cover rounded bg-slate-100" />}
-                                        <div>
-                                            <div className="font-bold text-slate-800">{p.name}</div>
-                                            <div className="text-xs text-slate-400">ランク: {(p as any).condition || '-'}</div>
-                                        </div>
+                                        <div className="font-bold text-slate-800">{p.name}</div>
                                     </div>
                                 </td>
-                                <td className="px-6 py-4 text-slate-600">
-                                    <div className="text-sm font-bold">{(p as any).brand || '-'}</div>
-                                    <div className="text-xs text-slate-400">{(p as any).category || '-'}</div>
+                                <td className="px-6 py-4 text-slate-500 text-xs max-w-xs truncate">
+                                    {p.description}
                                 </td>
                                 <td className="px-6 py-4 text-slate-600">¥{p.price.toLocaleString()}</td>
                                 <td className="px-6 py-4 text-slate-600">{p.stock}</td>
@@ -234,81 +224,9 @@ export default function AdminProductPage() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">ブランド名 *</label>
-                                    <input
-                                        type="text"
-                                        placeholder="例: Chanel"
-                                        className="w-full border border-slate-200 rounded-lg p-3 outline-none focus:border-indigo-500"
-                                        value={formData.brand}
-                                        onChange={e => setFormData({ ...formData, brand: e.target.value })}
-                                        list="brand-list"
-                                    />
-                                    <datalist id="brand-list">
-                                        {brandsList.map(b => <option key={b} value={b} />)}
-                                    </datalist>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">商品名 / 型番 *</label>
-                                    <input
-                                        type="text"
-                                        placeholder="例: マトラッセ"
-                                        required
-                                        className="w-full border border-slate-200 rounded-lg p-3 outline-none focus:border-indigo-500"
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">カテゴリ *</label>
-                                    <select
-                                        className="w-full border border-slate-200 rounded-lg p-3 outline-none focus:border-indigo-500 bg-white"
-                                        value={formData.category}
-                                        onChange={e => setFormData({ ...formData, category: e.target.value })}
-                                    >
-                                        <option value="">選択してください</option>
-                                        <option value="バッグ">バッグ</option>
-                                        <option value="財布">財布</option>
-                                        <option value="アクセサリー">アクセサリー</option>
-                                        <option value="アパレル">アパレル</option>
-                                        <option value="その他">その他</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">コンディションランク</label>
-                                    <select
-                                        className="w-full border border-slate-200 rounded-lg p-3 outline-none focus:border-indigo-500 bg-white"
-                                        value={formData.condition}
-                                        onChange={e => setFormData({ ...formData, condition: e.target.value })}
-                                    >
-                                        <option value="">選択してください</option>
-                                        {conditionsList.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">付属品</label>
-                                <div className="flex flex-wrap gap-2">
-                                    {accessoriesList.map(acc => (
-                                        <button
-                                            key={acc}
-                                            type="button"
-                                            onClick={() => toggleAccessory(acc)}
-                                            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${formData.accessories.includes(acc)
-                                                    ? 'bg-slate-800 text-white border-slate-800'
-                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                                                }`}
-                                        >
-                                            {acc}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                            {/* Removed Brand and Product Name section */}
+                            {/* Removed Category and Condition section */}
+                            {/* Removed Accessories section */}
 
                             <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                                 <div className="grid grid-cols-2 gap-6">
