@@ -32,7 +32,7 @@ export default function StudentStorePage() {
         fetchProducts();
     }, []);
 
-    const handleBuy = async (productId: string) => {
+    const handlePurchase = async (productId: string) => {
         try {
             const res = await fetch('/api/products/checkout', {
                 method: 'POST',
