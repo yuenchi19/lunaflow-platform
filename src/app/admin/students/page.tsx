@@ -85,8 +85,82 @@ export default function StudentsPage() {
         document.body.removeChild(link);
     };
 
+    // Password Reset Modal State
+    const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+    const [selectedUserForPassword, setSelectedUserForPassword] = useState<any>(null);
+    const [newPassword, setNewPassword] = useState("");
+    const [passwordLoading, setPasswordLoading] = useState(false);
+
+    const openPasswordModal = (user: any) => {
+        setSelectedUserForPassword(user);
+        setNewPassword("");
+        setPasswordModalOpen(true);
+    };
+
+    const handlePasswordReset = async () => {
+        if (!newPassword || newPassword.length < 6) {
+            alert("パスワードは6文字以上で入力してください。");
+            return;
+        }
+        if (!confirm(`${selectedUserForPassword.name}さんのパスワードを変更してもよろしいですか？`)) return;
+
+        setPasswordLoading(true);
+        try {
+            const res = await fetch(`/api/admin/users/${selectedUserForPassword.id}/password`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: newPassword }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert("パスワードを変更しました。");
+                setPasswordModalOpen(false);
+            } else {
+                alert(`エラー: ${data.error}`);
+            }
+        } catch (e: any) {
+            alert(`通信エラー: ${e.message}`);
+        } finally {
+            setPasswordLoading(false);
+        }
+    };
+
     return (
         <div className={styles.container}>
+            {/* Password Modal */}
+            {passwordModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-xl w-96">
+                        <h3 className="text-lg font-bold mb-4">パスワード変更</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            {selectedUserForPassword?.name} ({selectedUserForPassword?.email}) の新しいパスワードを設定します。
+                        </p>
+                        <input
+                            type="text"
+                            className="w-full border p-2 rounded mb-4"
+                            placeholder="新しいパスワード (6文字以上)"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                        />
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setPasswordModalOpen(false)}
+                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                            >
+                                キャンセル
+                            </button>
+                            <button
+                                onClick={handlePasswordReset}
+                                disabled={passwordLoading}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                                {passwordLoading ? '変更中...' : '変更する'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className={styles.header}>
                 <div>
                     <div className={styles.breadcrumb}>
@@ -161,7 +235,6 @@ export default function StudentsPage() {
                                 <tr key={st.id}>
                                     <td>
                                         <div className={styles.studentInfo}>
-                                            {/* Removed Avatar Icon as requested */}
                                             <div>
                                                 <div className="font-bold flex items-center gap-2">
                                                     {st.name}
@@ -233,7 +306,6 @@ export default function StudentsPage() {
                                                 </span>
                                             )}
 
-                                            {/* Graduation/Change logic based on Active status AND Duration/Purchase */}
                                             {(st.subscriptionStatus === 'active' || st.subscriptionStatus === 'trialing') && stats.isDurationOk && stats.isPurchaseOk && (
                                                 <span className="inline-flex items-center w-fit px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-100 text-indigo-700 animate-pulse">
                                                     🎓 卒業/変更可
@@ -241,7 +313,14 @@ export default function StudentsPage() {
                                             )}
                                         </div>
                                     </td>
-                                    <td>
+                                    <td className="flex gap-2">
+                                        <button
+                                            onClick={() => openPasswordModal(st)}
+                                            className="px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 rounded flex items-center gap-1 border border-slate-200"
+                                            title="パスワード変更"
+                                        >
+                                            🔓 <span className="hidden md:inline">Pass</span>
+                                        </button>
                                         <Link href={`/admin/students/${st.id}`} className={styles.detailBtn}>詳細</Link>
                                     </td>
                                 </tr>
@@ -249,7 +328,7 @@ export default function StudentsPage() {
                         })}
                         {filteredStudents.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="p-0">
+                                <td colSpan={6} className="p-0">
                                     <EmptyState
                                         title="受講生が見つかりません"
                                         description="検索条件を変更するか、新しい受講生が登録されるのをお待ちください。"
