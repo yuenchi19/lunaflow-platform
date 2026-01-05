@@ -8,7 +8,10 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
-        const targetEmail = searchParams.get('email') || 'yuenchi1991+light@gmail.com';
+        // Handle URL encoding issues (space instead of +)
+        const rawEmail = searchParams.get('email') || 'yuenchi1991+light@gmail.com';
+        const targetEmail = rawEmail.replace(/ /g, '+');
+
         const targetPlan = searchParams.get('plan') || 'light';
         const targetAddress = searchParams.get('address') || '〒100-0001 東京都千代田区1-1 (Universal Fix)';
         const targetZip = searchParams.get('zip') || '100-0001';
