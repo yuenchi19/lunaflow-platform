@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { checkAndNotifyRestock } from '@/lib/restock';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-01-27.acacia' });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-12-18.acacia' });
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
     try {

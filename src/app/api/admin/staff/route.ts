@@ -21,7 +21,7 @@ export async function GET() {
         const { data: users, error } = await supabase
             .from('User')
             .select('*')
-            .in('role', ['admin', 'staff', 'accounting']) // Include accounting as staff-like
+            .in('role', ['admin', 'staff', 'accounting'])
             .order('createdAt', { ascending: false });
 
         if (error) {
@@ -64,81 +64,58 @@ export async function POST(req: Request) {
         let userId: string;
         let inviteLink: string | undefined;
 
-        // 1. Check Public User Table First (Source of Truth for Platform)
-        const { data: existingPublicUser } = await supabase
-            .from('User')
-            .select('id, role')
-            .eq('email', email)
-            .single();
+        console.log(`[StaffInvite] Processing invite for: ${email}`);
 
-        if (existingPublicUser) {
-            userId = existingPublicUser.id;
-            console.log(`[StaffInvite] Found existing public user: ${userId}`);
+        // 1. Try to create new Auth User
+        const { data: createData, error: createError } = await supabase.auth.admin.createUser({
+            email: email,
+            email_confirm: true,
+            user_metadata: { name, role }
+        });
 
-            // Update Auth Metadata first to ensure consistency
-            const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
-                user_metadata: { role: role }
-            });
-            if (updateError) console.warn(`[StaffInvite] Auth Metadata update warning: ${updateError.message}`);
+        if (createError) {
+            // If error is NOT "Email already registered" (approximate check), return error
+            // Supabase error message for existing user varies, check status or message
+            console.log(`[StaffInvite] CreateUser result: ${createError.message}`);
 
-        } else {
-            // 2. Auth User Management (Find or Create)
-            let authUser: any;
-
-            // A. Try to find existing Auth User by Email
+            // Fallback: Check if user exists
             const { data: { users: foundUsers }, error: listError } = await supabase.auth.admin.listUsers({
                 page: 1,
-                perPage: 100 // Minimal chance of overflow for staff, but safer to loop if huge. Assuming <100 staff/conflicts.
+                perPage: 100
             });
+            const existingUser = foundUsers?.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
-            authUser = foundUsers?.find(u => u.email?.toLowerCase() === email.toLowerCase());
-
-            if (authUser) {
-                console.log(`[StaffInvite] Found existing Auth User: ${authUser.id}`);
-                userId = authUser.id;
+            if (existingUser) {
+                console.log(`[StaffInvite] User already exists: ${existingUser.id}. Updating role.`);
+                userId = existingUser.id;
+                // Update role
+                await supabase.auth.admin.updateUserById(userId, { user_metadata: { role } });
             } else {
-                // B. Not found, Create new Auth User
-                console.log(`[StaffInvite] Creating NEW Auth User for ${email}`);
-                const { data: createData, error: createError } = await supabase.auth.admin.createUser({
-                    email: email,
-                    email_confirm: true,
-                    user_metadata: { name, role }
-                });
-
-                if (createError) {
-                    // Edge Case: ListUsers didn't see it, but Create says specific error?
-                    console.error(`[StaffInvite] FATAL: CreateUser failed but ListUsers didn't find match. ${createError.message}`);
-                    return NextResponse.json({ error: `招待処理に失敗しました。管理者へお問い合わせください。(Create Error: ${createError.message})` }, { status: 400 });
-                }
-
-                const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-                    type: 'recovery',
-                    email: email,
-                    options: { redirectTo: redirectUrl }
-                });
-
-                if (linkError) return NextResponse.json({ error: `Link Generation Failed: ${linkError.message}` }, { status: 500 });
-                inviteLink = linkData.properties.action_link;
+                // Real error
+                console.error(`[StaffInvite] Failed to create and failed to find user.`);
+                return NextResponse.json({ error: createError.message }, { status: 400 });
             }
-
+        } else {
+            userId = createData.user.id;
+            console.log(`[StaffInvite] Created new user: ${userId}`);
         }
 
-        // --- Common Logic for Both Paths ---
+        // 2. Generate Link (Always)
+        const origin = new URL(req.url).origin;
+        const redirectUrl = `${origin}/student/dashboard`; // Redirect to dashboard or admin login? Admin login seems safer for staff.
+        // Actually for setup password, it might go to a specific update-password page?
+        // Using common logic:
+        const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+            type: 'recovery',
+            email: email,
+            options: { redirectTo: `${origin}/admin/login` }
+        });
 
-        // If we didn't generate link yet (e.g. Existing Public User or Found Auth User), generate one now.
-        if (typeof inviteLink === 'undefined') {
-            const origin = new URL(req.url).origin;
-            const redirectUrl = `${origin}/admin/login`;
-
-            const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-                type: 'recovery',
-                email: email,
-                options: { redirectTo: redirectUrl }
-            });
-
-            if (linkError) return NextResponse.json({ error: `Link Generation Failed: ${linkError.message}` }, { status: 500 });
-            inviteLink = linkData.properties.action_link;
+        if (linkError) {
+            console.error(`[StaffInvite] Link generation failed: ${linkError.message}`);
+            return NextResponse.json({ error: '招待リンクの生成に失敗しました' }, { status: 500 });
         }
+        inviteLink = linkData.properties.action_link;
 
         // 3. Upsert to Public DB
         const { error: dbError } = await supabase
@@ -148,11 +125,12 @@ export async function POST(req: Request) {
                 email: email,
                 name: name,
                 role: role,
-                status: status || 'active',
+                status: status || 'pending', // Mark as pending if new
                 updatedAt: new Date().toISOString()
             });
 
         if (dbError) {
+            console.error(`[StaffInvite] DB Upsert failed: ${dbError.message}`);
             return NextResponse.json({ error: dbError.message }, { status: 500 });
         }
 
@@ -169,7 +147,7 @@ export async function POST(req: Request) {
 <div style="font-family: sans-serif; padding: 20px; line-height: 1.6;">
     <p>LunaFlow事務局です。</p>
     <p>あなたを当システムの運営スタッフとして招待しました。<br>
-    以下のリンクよりパスワードを設定し、管理画面へログインしてください。</p>
+    以下のリンクよりパスワードを設定し、システムへログインしてください。</p>
     
     <div style="margin: 30px 0;">
         <a href="${inviteLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
