@@ -158,7 +158,10 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 .then(res => res.json())
                 .then(data => {
                     if (data.affiliateCode) {
-                        setUser(prev => ({ ...prev, affiliateCode: data.affiliateCode }));
+                        setUser(prev => {
+                            if (!prev) return null;
+                            return { ...prev, affiliateCode: data.affiliateCode };
+                        });
                     }
                 })
                 .catch(err => console.error("Failed to generate affiliate code", err));
