@@ -10,7 +10,7 @@ export async function getUserProfile() {
 
     if (!user) return null;
 
-    // Fetch Profile from DB
+    // Ensure fresh data
     const { data: profile } = await supabase
         .from('User')
         .select('*')

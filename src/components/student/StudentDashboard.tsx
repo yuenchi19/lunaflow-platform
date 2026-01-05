@@ -781,8 +781,16 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                                 />
                             </div>
 
-                            {/* Address (Simplified for brevity in refill) */}
+                            {/* Address & Zip */}
                             <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">郵便番号</label>
+                                <input
+                                    type="text"
+                                    value={zipCode}
+                                    onChange={(e) => setZipCode(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-rose-500 transition-colors mb-4"
+                                    placeholder="000-0000"
+                                />
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">住所</label>
                                 <textarea
                                     value={address}
