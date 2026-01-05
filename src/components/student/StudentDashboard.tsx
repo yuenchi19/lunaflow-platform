@@ -334,12 +334,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
             <div className="pt-4 pb-4 px-4 md:pt-6 md:pb-6 text-center">
                 <div className="flex flex-col items-center justify-center gap-1 mb-1">
                     <h2 className="font-bold text-xl text-slate-800">{user.name}</h2>
-                    <div className="flex flex-col items-center">
-                        <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full uppercase">Contract: {user.plan} (v2)</span>
-                        <div className="mt-1 p-1 bg-red-100 text-red-600 text-[10px] font-mono rounded text-center">
-                            DEBUG: {user.plan} / {user.address ? 'Addr:Yes' : 'Addr:NULL'}
-                        </div>
-                    </div>
+                    <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full uppercase">Contract: {user.plan}</span>
                 </div>
                 <div className="mt-6 flex justify-center">
                     <button

@@ -126,6 +126,7 @@ export async function GET(request: NextRequest) {
             // Step 3: Update based on result
             // ---------------------------------------------------------
 
+            const u = user as any; // Cast early for access
             const userEmail = user.email.toLowerCase();
             let newStatus = 'inactive';
             let newSubStatus = 'none';
@@ -167,6 +168,13 @@ export async function GET(request: NextRequest) {
                         const foundCustomer = existingCustomers.data[0];
                         stripeCustId = foundCustomer.id;
 
+                        // EXTRACT ADDRESS FROM SEARCH RESULT
+                        const custAddr = foundCustomer.address;
+                        const foundAddress = custAddr ?
+                            `${custAddr.state || ''}${custAddr.city || ''}${custAddr.line1 || ''}${custAddr.line2 || ''}`
+                            : '';
+                        const foundZip = custAddr?.postal_code || '';
+
                         // Check if this customer has subscriptions
                         const subs = foundCustomer.subscriptions?.data || [];
                         const validSub = subs.find((s: any) => ['active', 'trialing'].includes(s.status));
@@ -202,8 +210,23 @@ export async function GET(request: NextRequest) {
                             stripeSubId = subs.length > 0 ? subs[0].id : stripeCustId; // Keep ID linked
                             if (debugEmail && userEmail === debugEmail) debugLog.push(`[Auto-Repair] Found Customer but no Active Sub. Set Inactive.`);
                         }
-                        // Safe to skip to avoid accidental nuke on API fail.
-                        continue;
+
+                        // Update DB
+                        await prisma.user.update({
+                            where: { id: user.id },
+                            data: {
+                                status: newStatus,
+                                subscriptionStatus: newSubStatus,
+                                stripeCustomerId: stripeCustId,
+                                stripeSubscriptionId: stripeSubId,
+                                plan: detectedPlan,
+                                address: foundAddress || u.address, // Prefer found, fallback to existing
+                                zipCode: foundZip || u.zipCode
+                            }
+                        });
+                        updatedCount++;
+                        if (debugEmail && userEmail === debugEmail) debugLog.push(`[Sync-Search] UPDATED DB with Address.`);
+                        continue; // Skip the main update loop as we handled it here specific to search
                     } else {
                         // Truly Ghost
                         newStatus = 'inactive';
