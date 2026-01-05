@@ -7,7 +7,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
     try {
-        const targetEmail = 'yuenchi1991+light@gmail.com';
+        const { searchParams } = new URL(req.url);
+        const targetEmail = searchParams.get('email') || 'yuenchi1991+light@gmail.com';
+        const targetPlan = searchParams.get('plan') || 'light';
+        const targetAddress = searchParams.get('address') || '〒100-0001 東京都千代田区1-1 (Universal Fix)';
+        const targetZip = searchParams.get('zip') || '100-0001';
 
         // Admin Client for Auth Updates
         const supabaseAdmin = createClient(
@@ -17,15 +21,18 @@ export async function GET(req: NextRequest) {
 
         // 1. Fetch Current DB State
         const beforeDB = await prisma.user.findUnique({ where: { email: targetEmail } });
+        if (!beforeDB) {
+            return NextResponse.json({ error: `User not found: ${targetEmail}` }, { status: 404 });
+        }
 
         // 2. Force Update DB
         const updatedDB = await prisma.user.update({
             where: { email: targetEmail },
             data: {
-                plan: 'light', // MUST BE LIGHT
+                plan: targetPlan,
                 subscriptionStatus: 'active',
-                address: '〒344-0023 埼玉県春日部市 (Manual synced via Force Fix)',
-                zipCode: '344-0023'
+                address: targetAddress,
+                zipCode: targetZip
             }
         });
 
@@ -42,7 +49,7 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        // Fallback: List scan if ID mismatch (unlikely but safe)
+        // Fallback: List scan if ID mismatch
         if (!authUser) {
             const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
             authUser = users?.find(u => u.email === targetEmail) || null;
@@ -53,14 +60,15 @@ export async function GET(req: NextRequest) {
         if (authUser) {
             const { data: updatedAuth, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
                 authUser.id,
-                { user_metadata: { plan: 'light' } }
+                { user_metadata: { plan: targetPlan } } // Sync plan to metadata
             );
             if (updateError) throw updateError;
             authUpdateResult = updatedAuth.user.user_metadata;
         }
 
         return NextResponse.json({
-            message: 'Emergency Fix Executed (DB + Auth Metadata)',
+            message: `Universal Fix Executed for ${targetEmail}`,
+            params: { targetPlan, targetAddress },
             db: {
                 before: { plan: beforeDB?.plan },
                 after: { plan: updatedDB.plan, address: updatedDB.address }
