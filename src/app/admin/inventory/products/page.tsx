@@ -203,6 +203,7 @@ export default function AdminProductPage() {
                         <form onSubmit={handleSubmit} className="space-y-6">
 
 
+
                             <div className="grid grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-2">① メイン写真 *</label>
@@ -237,18 +238,29 @@ export default function AdminProductPage() {
                                         )}
                                     </div>
                                 </div>
-                                <div>
-                                    {/* Placeholder for Damage Image logic if needed in future, currently just space filler or Description */}
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">商品説明 / メモ</label>
-                                    <textarea
-                                        className="w-full h-[180px] border border-slate-200 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none resize-none"
-                                        placeholder="商品の状態や特記事項を入力..."
-                                        value={formData.description}
-                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                    />
+                                <div className="flex flex-col gap-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">商品名 *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            className="w-full border border-slate-200 rounded-lg p-3 text-sm focus:border-indigo-500 outline-none"
+                                            placeholder="商品名を入力"
+                                            value={formData.name}
+                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">商品説明 / メモ</label>
+                                        <textarea
+                                            className="w-full h-[120px] border border-slate-200 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none resize-none"
+                                            placeholder="商品の状態や特記事項を入力..."
+                                            value={formData.description}
+                                            onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                        />
+                                    </div>
                                 </div>
                             </div>
-
                             {/* Removed Brand and Product Name section */}
                             {/* Removed Category and Condition section */}
                             {/* Removed Accessories section */}

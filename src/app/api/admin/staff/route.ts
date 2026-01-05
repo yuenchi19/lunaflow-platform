@@ -118,6 +118,18 @@ export async function POST(req: Request) {
         inviteLink = linkData.properties.action_link;
 
         // 3. Upsert to Public DB
+        // First, check for potential conflict (Orphaned user record with same email but different ID)
+        const { data: existingPublicUser } = await supabase
+            .from('User')
+            .select('id')
+            .eq('email', email)
+            .single();
+
+        if (existingPublicUser && existingPublicUser.id !== userId) {
+            console.log(`[StaffInvite] Found orphaned public user (${existingPublicUser.id}) for email ${email}. Deleting to allow new link.`);
+            await supabase.from('User').delete().eq('id', existingPublicUser.id);
+        }
+
         const { error: dbError } = await supabase
             .from('User')
             .upsert({
