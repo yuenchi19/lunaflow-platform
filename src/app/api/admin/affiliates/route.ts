@@ -35,9 +35,13 @@ export async function GET() {
         // User request: Show them even if earnings 0.
         // Also we want to ensure they appear even if they don't have a code strictly yet? (Usually they should).
         // If they don't have a code, we'll just show empty code or handle it in UI.
-        const affiliates = allUsers.filter(u =>
-            (u.plan === 'standard' || u.plan === 'premium' || u.plan === 'partner') &&
-            !u.email.endsWith('@example.com') // Exclude mock users
+        // 2. Identify Affiliates (Standard/Premium/Partner OR High Earners)
+        // Rule: "Standard+ OR (Unpaid Reward >= Monthly Fee)"
+        // Note: We calculate earnings for ALL first, then filter.
+
+        // Let's filter broadly first (anyone with code or Standard+)
+        const potentialAffiliates = allUsers.filter(u =>
+            u.plan === 'standard' || u.plan === 'premium' || u.plan === 'partner' || u.affiliateCode
         );
 
         // 3. Fetch Payouts for current month
@@ -56,7 +60,8 @@ export async function GET() {
         });
 
         // 4. Calculate Earnings for each Affiliate
-        const stats = affiliates.map(affiliate => {
+        // 4. Calculate Earnings
+        const stats = potentialAffiliates.map(affiliate => {
             let directCount = 0;
             let indirectCount = 0;
             let monthlyEarnings = 0;
@@ -103,10 +108,23 @@ export async function GET() {
             };
         });
 
-        // Sort by earnings desc
-        stats.sort((a, b) => b.earnings.monthlyEarnings - a.earnings.monthlyEarnings);
+        // 5. Final Filter: Standard+ OR Self-Sustaining
+        const finalAffiliates = stats.filter(aff => {
+            const plan = aff.plan as Plan;
+            const isStandardPlus = plan === 'standard' || plan === 'premium' || plan === 'partner';
 
-        return NextResponse.json(stats);
+            // If Standard+, always show.
+            if (isStandardPlus) return true;
+
+            // If Light/Student, show ONLY if Earnings >= Plan Price
+            const planPrice = PLAN_PRICES[plan] || 0;
+            return aff.earnings.monthlyEarnings >= planPrice;
+        });
+
+        // Sort by earnings desc
+        finalAffiliates.sort((a, b) => b.earnings.monthlyEarnings - a.earnings.monthlyEarnings);
+
+        return NextResponse.json(finalAffiliates);
 
     } catch (e: any) {
         console.error("Affiliate API Error:", e);

@@ -123,12 +123,16 @@ export async function POST(req: Request) {
             }
         }
 
+        // Determine Redirect URL (Dynamic for Local/Prod)
+        const origin = new URL(req.url).origin;
+        const redirectUrl = `${origin}/admin/login`;
+
         // 2. Generate Password Reset / Invite Link
         const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
             type: 'recovery',
             email: email,
             options: {
-                redirectTo: 'https://lunaflow.space/admin/login' // Redirect to admin login after password set
+                redirectTo: redirectUrl
             }
         });
 
