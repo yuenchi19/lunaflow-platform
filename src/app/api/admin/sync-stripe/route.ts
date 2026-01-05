@@ -50,14 +50,9 @@ export async function GET(request: NextRequest) {
 
                 const isActiveLike = (s: string) => ['active', 'trialing'].includes(s);
 
-                let shouldUpdate = true;
-                if (existingEntry) {
-                    if (isActiveLike(existingEntry.status)) {
-                        shouldUpdate = false;
-                    } else if (isActiveLike(currentStatus)) {
-                        shouldUpdate = true;
-                    }
-                }
+                // Optimization Removed: Always update to ensure Plan/Address changes are captured.
+                // The DB update loop later checks if values changed before writing to DB.
+                const shouldUpdate = true;
 
                 if (shouldUpdate) {
                     // Calc Plan
@@ -72,10 +67,18 @@ export async function GET(request: NextRequest) {
 
 
                     const customer = sub.customer as any;
-                    const address = customer.address ?
-                        `${customer.address.state || ''}${customer.address.city || ''}${customer.address.line1 || ''}${customer.address.line2 || ''}`
+                    const shipping = customer.shipping;
+
+                    // Address Priority: Customer Address -> Shipping Address -> Empty
+                    let addrObj = customer.address;
+                    if (!addrObj || (!addrObj.line1 && !addrObj.city)) {
+                        if (shipping?.address) addrObj = shipping.address;
+                    }
+
+                    const address = addrObj ?
+                        `${addrObj.state || ''}${addrObj.city || ''}${addrObj.line1 || ''}${addrObj.line2 || ''}`
                         : '';
-                    const zipCode = customer.address?.postal_code || '';
+                    const zipCode = addrObj?.postal_code || '';
 
                     subMap.set(email, {
                         stripeCustomerId: customer.id,
@@ -170,10 +173,17 @@ export async function GET(request: NextRequest) {
 
                         // EXTRACT ADDRESS FROM SEARCH RESULT
                         const custAddr = foundCustomer.address;
-                        const foundAddress = custAddr ?
-                            `${custAddr.state || ''}${custAddr.city || ''}${custAddr.line1 || ''}${custAddr.line2 || ''}`
+                        const custShipping = foundCustomer.shipping;
+
+                        let addrObj = custAddr;
+                        if (!addrObj || (!addrObj.line1 && !addrObj.city)) {
+                            if (custShipping?.address) addrObj = custShipping.address;
+                        }
+
+                        const foundAddress = addrObj ?
+                            `${addrObj.state || ''}${addrObj.city || ''}${addrObj.line1 || ''}${addrObj.line2 || ''}`
                             : '';
-                        const foundZip = custAddr?.postal_code || '';
+                        const foundZip = addrObj?.postal_code || '';
 
                         // Check if this customer has subscriptions
                         const subs = foundCustomer.subscriptions?.data || [];
