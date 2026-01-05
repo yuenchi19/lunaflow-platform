@@ -39,13 +39,14 @@ export default function AdminSidebar() {
             label: "ホーム",
             items: [
                 { label: "ホーム", href: "/admin/dashboard", icon: "🏠" },
-                { label: "Community", href: "/community", icon: "💬" },
             ]
         },
         {
-            label: "コース",
+            label: "メイン",
             items: [
                 { label: "コース", href: "/admin/courses", icon: "📚" },
+                { label: "コミュニティ", href: "/community", icon: "💬" },
+                { label: "感想・課題", href: "/admin/feedback", icon: "📝" },
             ]
         },
         {
@@ -54,11 +55,15 @@ export default function AdminSidebar() {
                 { label: "スタッフ", href: "/admin/staff", icon: "👥" },
                 { label: "受講生", href: "/admin/students", icon: "🎓" },
                 { label: "アフィリエイト", href: "/admin/affiliates", icon: "🤝" },
-                { label: "在庫管理 (Master)", href: "/admin/inventory", icon: "👜" },
                 { label: "報酬管理", href: "/admin/payouts", icon: "💰" },
+            ]
+        },
+        {
+            label: "商品管理",
+            items: [
+                { label: "在庫管理", href: "/admin/inventory", icon: "👜" },
                 { label: "仕入れ希望", href: "/admin/purchase-requests", icon: "📦", badge: pendingCount },
-                { label: "感想・課題", href: "/admin/feedback", icon: "📝" },
-                { label: "お知らせ", href: "/admin/news", icon: "📢" },
+                { label: "商品管理", href: "/admin/inventory/products", icon: "🏷️" },
             ]
         },
         {
