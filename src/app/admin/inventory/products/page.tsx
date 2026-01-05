@@ -100,20 +100,7 @@ export default function AdminProductPage() {
         }
     };
 
-    const toggleAccessory = (acc: string) => {
-        setFormData(prev => {
-            const current = prev.accessories || [];
-            if (current.includes(acc)) {
-                return { ...prev, accessories: current.filter(a => a !== acc) };
-            } else {
-                return { ...prev, accessories: [...current, acc] };
-            }
-        });
-    };
 
-    const accessoriesList = ["箱", "保存袋", "ギャランティーカード", "ショルダーストラップ", "レシート", "その他"];
-    const conditionsList = ["S (新品同様)", "A (美品)", "B (良品)", "C (使用感あり)", "D (ジャンク)"];
-    const brandsList = ["Chanel", "Hermes", "Louis Vuitton", "Gucci", "Prada", "Dior", "Others"];
 
     return (
         <div className="p-8 bg-[#FDFCFB] min-h-screen">
