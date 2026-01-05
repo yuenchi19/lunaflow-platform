@@ -122,51 +122,50 @@ export async function POST(req: Request) {
             }
 
         }
-    }
 
         // --- Common Logic for Both Paths ---
 
         // If we didn't generate link yet (e.g. Existing Public User or Found Auth User), generate one now.
         if (typeof inviteLink === 'undefined') {
-        const origin = new URL(req.url).origin;
-        const redirectUrl = `${origin}/admin/login`;
+            const origin = new URL(req.url).origin;
+            const redirectUrl = `${origin}/admin/login`;
 
-        const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-            type: 'recovery',
-            email: email,
-            options: { redirectTo: redirectUrl }
-        });
+            const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+                type: 'recovery',
+                email: email,
+                options: { redirectTo: redirectUrl }
+            });
 
-        if (linkError) return NextResponse.json({ error: `Link Generation Failed: ${linkError.message}` }, { status: 500 });
-        inviteLink = linkData.properties.action_link;
-    }
+            if (linkError) return NextResponse.json({ error: `Link Generation Failed: ${linkError.message}` }, { status: 500 });
+            inviteLink = linkData.properties.action_link;
+        }
 
-    // 3. Upsert to Public DB
-    const { error: dbError } = await supabase
-        .from('User')
-        .upsert({
-            id: userId,
-            email: email,
-            name: name,
-            role: role,
-            status: status || 'active',
-            updatedAt: new Date().toISOString()
-        });
+        // 3. Upsert to Public DB
+        const { error: dbError } = await supabase
+            .from('User')
+            .upsert({
+                id: userId,
+                email: email,
+                name: name,
+                role: role,
+                status: status || 'active',
+                updatedAt: new Date().toISOString()
+            });
 
-    if (dbError) {
-        return NextResponse.json({ error: dbError.message }, { status: 500 });
-    }
+        if (dbError) {
+            return NextResponse.json({ error: dbError.message }, { status: 500 });
+        }
 
-    // 4. Send Email via Resend
-    if (resendApiKey) {
-        const { Resend } = await import('resend');
-        const resend = new Resend(resendApiKey);
+        // 4. Send Email via Resend
+        if (resendApiKey) {
+            const { Resend } = await import('resend');
+            const resend = new Resend(resendApiKey);
 
-        await resend.emails.send({
-            from: process.env.RESEND_FROM_EMAIL || 'info@lunaflow.space',
-            to: email,
-            subject: '【LunaFlow】運営スタッフへの招待！',
-            html: `
+            await resend.emails.send({
+                from: process.env.RESEND_FROM_EMAIL || 'info@lunaflow.space',
+                to: email,
+                subject: '【LunaFlow】運営スタッフへの招待！',
+                html: `
 <div style="font-family: sans-serif; padding: 20px; line-height: 1.6;">
     <p>LunaFlow事務局です。</p>
     <p>あなたを当システムの運営スタッフとして招待しました。<br>
@@ -189,13 +188,13 @@ export async function POST(req: Request) {
     </p>
 </div>
                 `
-        });
+            });
+        }
+
+        return NextResponse.json({ success: true, userId });
+
+    } catch (e: any) {
+        console.error("Staff Invite Error:", e);
+        return NextResponse.json({ error: e.message }, { status: 500 });
     }
-
-    return NextResponse.json({ success: true, userId });
-
-} catch (e: any) {
-    console.error("Staff Invite Error:", e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
 }
-    }
