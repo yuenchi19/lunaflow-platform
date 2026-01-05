@@ -16,7 +16,22 @@ interface StudentDashboardProps {
 
 export default function StudentDashboard({ initialUser }: StudentDashboardProps) {
     const supabase = createClient();
-    const [user, setUser] = useState<User>(initialUser || MOCK_USERS[0]);
+    // STRICT: Unsafe to fallback to Mock User (which is Premium).
+    // If no initialUser, we must assume loading or unauthenticated.
+    // However, if called from Server Component, initialUser should be present if logged in.
+    const [user, setUser] = useState<User | null>(initialUser || null);
+
+    // Redirect if no user found (and not just loading)
+    useEffect(() => {
+        if (!initialUser) {
+            // Optional: trigger client side fetch or redirect
+            // For now, let's allow null and show Loading... to prevent "Premium" flash
+        }
+    }, [initialUser]);
+
+    if (!user) {
+        return <div className="min-h-screen flex items-center justify-center">Loading User Profile...</div>;
+    }
     const [courses, setCourses] = useState<Course[]>([]);
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [affiliateEarnings, setAffiliateEarnings] = useState({ directReferrals: 0, indirectReferrals: 0, monthlyEarnings: 0 });

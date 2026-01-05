@@ -70,12 +70,21 @@ export async function GET(request: NextRequest) {
                     };
                     const detectedPlan = PLAN_MAP[amount] || 'student';
 
+
+                    const customer = sub.customer as any;
+                    const address = customer.address ?
+                        `${customer.address.state || ''}${customer.address.city || ''}${customer.address.line1 || ''}${customer.address.line2 || ''}`
+                        : '';
+                    const zipCode = customer.address?.postal_code || '';
+
                     subMap.set(email, {
                         stripeCustomerId: customer.id,
                         stripeSubscriptionId: sub.id,
                         status: currentStatus,
                         cancelAtPeriodEnd: sub.cancel_at_period_end,
-                        plan: detectedPlan
+                        plan: detectedPlan,
+                        address: address, // Store address
+                        zipCode: zipCode // Store zip
                     });
                 }
 
@@ -224,7 +233,9 @@ export async function GET(request: NextRequest) {
                         subscriptionStatus: newSubStatus,
                         stripeCustomerId: stripeCustId,
                         stripeSubscriptionId: stripeSubId,
-                        plan: detectedPlan
+                        plan: detectedPlan,
+                        address: mapEntry?.address || u.address, // Update if available from map
+                        zipCode: mapEntry?.zipCode || u.zipCode
                     } as any
                 });
                 updatedCount++;

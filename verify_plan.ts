@@ -12,6 +12,8 @@ async function main() {
             console.log(`User: ${email}`);
             console.log(`  ID: ${user.id}`);
             console.log(`  Plan: ${user.plan} (Expected: light)`);
+            console.log(`  Address: ${user.address}`);
+            console.log(`  Zip: ${user.zipCode}`);
             console.log(`  StripeCust: ${user.stripeCustomerId}`);
             console.log(`  SubStatus: ${user.subscriptionStatus}`);
             console.log('-----------------------------------');
