@@ -83,9 +83,9 @@ export default function StaffManagementPage() {
             await fetchStaff();
             setIsAddModalOpen(false);
 
-        } catch (error) {
-            alert('保存に失敗しました。');
+        } catch (error: any) {
             console.error(error);
+            alert(`保存に失敗しました: ${error.message}`);
         }
     };
 

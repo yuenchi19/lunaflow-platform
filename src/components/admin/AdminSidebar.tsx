@@ -34,9 +34,27 @@ export default function AdminSidebar() {
         // Let's stick to mount for now to be safe.
     }, []);
 
+    // State for collapsible sections (defaulting all to open initially, or specific ones?)
+    // User asked "Arrow click hides content", implying they want toggle.
+    // Let's default all to OPEN.
+    const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+        "ホーム": true,
+        "メイン": true,
+        "管理": true,
+        "商品管理": true,
+        "設定": true
+    });
+
+    const toggleSection = (label: string) => {
+        setOpenSections(prev => ({
+            ...prev,
+            [label]: !prev[label]
+        }));
+    };
+
     const menuSections = [
         {
-            label: "ホーム",
+            label: "ホーム", // Home usually doesn't toggle if it has no header, but ours does?
             items: [
                 { label: "ホーム", href: "/admin/dashboard", icon: "🏠" },
             ]
@@ -86,13 +104,30 @@ export default function AdminSidebar() {
             <nav className={styles.menu}>
                 {menuSections.map((section) => (
                     <div key={section.label} className={styles.menuSection}>
-                        {section.label !== "ホーム" && section.label !== "コース" && (
-                            <div className={styles.sectionHeader}>
-                                {section.label}
-                                <span className={styles.arrow}>⌄</span>
-                            </div>
-                        )}
-                        <div className={styles.sectionItems}>
+                        {/* Always show header if not Home/Courses? User said arrow click. */
+                            /* Actually user logic: "Main -> Arrow -> Contents". */
+                            /* Previous logic hid headers for Home/Courses. */
+                            /* Let's show headers for ALL except maybe Home if it only has 1 item and no arrow? */
+                            /* Request: "Arrow click -> Hide". So every section with items should be collapsible. */
+                        }
+
+                        <div
+                            className={`${styles.sectionHeader} cursor-pointer hover:bg-slate-100/5 transition-colors select-none flex justify-between items-center pr-4`}
+                            onClick={() => toggleSection(section.label)}
+                        >
+                            <span className="font-bold">{section.label}</span>
+                            <span className={`transform transition-transform duration-200 ${openSections[section.label] ? 'rotate-0' : '-rotate-90'}`}>
+                                ⌄
+                            </span>
+                        </div>
+
+                        <div
+                            className={`${styles.sectionItems} overflow-hidden transition-all duration-300 ease-in-out`}
+                            style={{
+                                maxHeight: openSections[section.label] ? '500px' : '0',
+                                opacity: openSections[section.label] ? 1 : 0
+                            }}
+                        >
                             {section.items.map((item) => (
                                 <Link
                                     key={item.label}

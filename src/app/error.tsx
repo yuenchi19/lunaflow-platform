@@ -1,6 +1,7 @@
-'use client';
 
-import { useEffect } from 'react';
+"use client";
+
+import { useEffect } from "react";
 
 export default function Error({
     error,
@@ -10,20 +11,16 @@ export default function Error({
     reset: () => void;
 }) {
     useEffect(() => {
-        // Log the error to an error reporting service
         console.error(error);
     }, [error]);
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center p-4">
-            <h2 className="text-2xl font-bold mb-4 text-red-600">Something went wrong!</h2>
-            <p className="mb-4 text-gray-600">An unexpected error occurred.</p>
+        <div className="flex min-h-screen flex-col items-center justify-center p-4 text-center">
+            <h2 className="mb-4 text-2xl font-bold text-slate-800">Something went wrong!</h2>
+            <p className="mb-6 text-slate-500">{error.message || "An unexpected error occurred."}</p>
             <button
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                onClick={
-                    // Attempt to recover by trying to re-render the segment
-                    () => reset()
-                }
+                onClick={() => reset()}
+                className="rounded-lg bg-indigo-600 px-6 py-2 font-bold text-white hover:bg-indigo-700"
             >
                 Try again
             </button>

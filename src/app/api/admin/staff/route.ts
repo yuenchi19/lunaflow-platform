@@ -62,6 +62,7 @@ export async function POST(req: Request) {
         const { email, name, role, status } = body;
 
         let userId: string;
+        let inviteLink: string | undefined;
 
         // 1. Check Public User Table First (Source of Truth for Platform)
         const { data: existingPublicUser } = await supabase
@@ -90,31 +91,45 @@ export async function POST(req: Request) {
             });
 
             if (createError) {
-                // If it says "already registered" but wasn't in Public DB, it means they are in Auth but not Public (Ghost)
-                // OR my previous public check failed?
                 console.log(`[StaffInvite] Create failed: ${createError.message}`);
 
+                // If "already registered" (Ghost User case), try to recover via generateLink
                 if (createError.message?.toLowerCase().includes("registered") || createError.status === 422 || createError.status === 400) {
-                    // Try to find in Auth List
-                    const { data: { users } } = await supabase.auth.admin.listUsers(); // Warning: Pagination limit 50
-                    // Note: listUsers is bad if >50 users. 
-                    // But we have no getUserByEmail? 
-                    // Wait, we can't do much if listUsers misses them.
-                    // But if they weren't in Public User, they probably aren't active students.
-                    // Let's try to match.
-                    const found = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
-                    if (found) {
-                        userId = found.id;
-                        // Update Metadata
+                    // 2. Generate Password Reset / Invite Link FIRST to get the User ID
+                    const origin = new URL(req.url).origin;
+                    const redirectUrl = `${origin}/admin/login`;
+
+                    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+                        type: 'recovery',
+                        email: email,
+                        options: { redirectTo: redirectUrl }
+                    });
+
+                    if (linkError) {
+                        return NextResponse.json({ error: `User exists but Link Generation Failed: ${linkError.message}` }, { status: 500 });
+                    }
+
+                    // CRITICAL: Use the ID from generateLink response if available
+                    if (linkData.user) {
+                        userId = linkData.user.id;
+                        console.log(`[StaffInvite] Recovered Ghost User ID via generateLink: ${userId}`);
+
+                        // Update Metadata for the recovered user
                         await supabase.auth.admin.updateUserById(userId, {
-                            user_metadata: { role: role }
+                            user_metadata: { name, role }
                         });
                     } else {
+                        // Fallback if generateLink didn't return user (unlikely but possible in some versions)
+                        // Try listUsers with filter? Not reliable.
                         return NextResponse.json({
-                            error: 'User exists in Auth but not found in List (Limit 50). Please ask user to login first or contact dev.'
+                            error: 'User already exists in Auth, but could not retrieve ID. Please ask user to login manually.'
                         }, { status: 400 });
                     }
+
+                    // Assign inviteLink for later use
+                    inviteLink = linkData.properties.action_link;
+
                 } else {
                     return NextResponse.json({ error: createError.message }, { status: 400 });
                 }
@@ -123,24 +138,20 @@ export async function POST(req: Request) {
             }
         }
 
-        // Determine Redirect URL (Dynamic for Local/Prod)
-        const origin = new URL(req.url).origin;
-        const redirectUrl = `${origin}/admin/login`;
+        // If we didn't generate link yet (Clean Create Path)
+        if (typeof inviteLink === 'undefined') {
+            const origin = new URL(req.url).origin;
+            const redirectUrl = `${origin}/admin/login`;
 
-        // 2. Generate Password Reset / Invite Link
-        const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-            type: 'recovery',
-            email: email,
-            options: {
-                redirectTo: redirectUrl
-            }
-        });
+            const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+                type: 'recovery',
+                email: email,
+                options: { redirectTo: redirectUrl }
+            });
 
-        if (linkError) {
-            return NextResponse.json({ error: `Link Generation Failed: ${linkError.message}` }, { status: 500 });
+            if (linkError) return NextResponse.json({ error: `Link Generation Failed: ${linkError.message}` }, { status: 500 });
+            inviteLink = linkData.properties.action_link;
         }
-
-        const inviteLink = linkData.properties.action_link;
 
         // 3. Upsert to Public DB
         const { error: dbError } = await supabase

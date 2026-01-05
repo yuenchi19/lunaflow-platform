@@ -157,6 +157,9 @@ export default function Header() {
                                     </span>
                                 )}
                             </Link>
+                            <Link href="/student/store" className={styles.navLink}>
+                                ストア
+                            </Link>
                             <Link href="/manual" className={styles.navLink}>
                                 マニュアル
                             </Link>
@@ -211,6 +214,9 @@ export default function Header() {
                                                     {unreadCount}
                                                 </span>
                                             )}
+                                        </Link>
+                                        <Link href="/student/store" className={styles.drawerNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                                            ストア
                                         </Link>
                                         <Link href="/manual" className={styles.drawerNavLink} onClick={() => setIsMobileMenuOpen(false)}>
                                             マニュアル
