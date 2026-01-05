@@ -26,6 +26,36 @@ export default function AdminProductPage() {
         name: '', description: '', price: 0, image: '', stock: 0, isVisible: true
     });
 
+    const [isUploading, setIsUploading] = useState(false);
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        const file = e.target.files[0];
+
+        setIsUploading(true);
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', file);
+
+        try {
+            const res = await fetch('/api/admin/upload', {
+                method: 'POST',
+                body: uploadFormData
+            });
+            const data = await res.json();
+            if (res.ok && data.url) {
+                setFormData(prev => ({ ...prev, image: data.url }));
+                showToast("画像をアップロードしました", "success");
+            } else {
+                throw new Error(data.error || 'Upload failed');
+            }
+        } catch (e) {
+            showToast("画像のアップロードに失敗しました", "error");
+            console.error(e);
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     useEffect(() => {
         fetchProducts();
     }, []);
@@ -172,136 +202,104 @@ export default function AdminProductPage() {
 
                         <form onSubmit={handleSubmit} className="space-y-6">
 
-    // ... inside component ...
-                            const [isUploading, setIsUploading] = useState(false);
 
-                            const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files || e.target.files.length === 0) return;
-                                const file = e.target.files[0];
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">① メイン写真 *</label>
+                                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition-colors relative">
+                                        {isUploading && (
+                                            <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+                                                <div className="animate-spin h-8 w-8 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
+                                            </div>
+                                        )}
+                                        {formData.image ? (
+                                            <div className="relative">
+                                                <img src={formData.image} alt="Main" className="h-40 mx-auto object-contain rounded" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, image: '' })}
+                                                    className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600"
+                                                >×</button>
+                                            </div>
+                                        ) : (
+                                            <div className="py-8">
+                                                <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
+                                                    <span className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg text-sm font-bold mb-2">画像を選択</span>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                        onChange={handleImageUpload}
+                                                    />
+                                                    <p className="text-xs text-slate-400">またはファイルをドロップ<br />(10MB以下)</p>
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div>
+                                    {/* Placeholder for Damage Image logic if needed in future, currently just space filler or Description */}
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">商品説明 / メモ</label>
+                                    <textarea
+                                        className="w-full h-[180px] border border-slate-200 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none resize-none"
+                                        placeholder="商品の状態や特記事項を入力..."
+                                        value={formData.description}
+                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                    />
+                                </div>
+                            </div>
 
-                                setIsUploading(true);
-                                const uploadFormData = new FormData();
-                                uploadFormData.append('file', file);
+                            {/* Removed Brand and Product Name section */}
+                            {/* Removed Category and Condition section */}
+                            {/* Removed Accessories section */}
 
-                                try {
-            const res = await fetch('/api/admin/upload', {
-                                    method: 'POST',
-                                body: uploadFormData
-            });
-                                const data = await res.json();
-                                if (res.ok && data.url) {
-                                    setFormData(prev => ({ ...prev, image: data.url }));
-                                showToast("画像をアップロードしました", "success");
-            } else {
-                throw new Error(data.error || 'Upload failed');
-            }
-        } catch (e) {
-                                    showToast("画像のアップロードに失敗しました", "error");
-                                console.error(e);
-        } finally {
-                                    setIsUploading(false);
-        }
-    };
-
-                                // ...
-
+                            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                                 {/* Images Section */}
                                 <div className="grid grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">① メイン写真 *</label>
-                                        <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition-colors relative">
-                                            {isUploading && (
-                                                <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
-                                                    <div className="animate-spin h-8 w-8 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
-                                                </div>
-                                            )}
-                                            {formData.image ? (
-                                                <div className="relative">
-                                                    <img src={formData.image} alt="Main" className="h-40 mx-auto object-contain rounded" />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setFormData({ ...formData, image: '' })}
-                                                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600"
-                                                    >×</button>
-                                                </div>
-                                            ) : (
-                                                <div className="py-8">
-                                                    <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
-                                                        <span className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg text-sm font-bold mb-2">画像を選択</span>
-                                                        <input
-                                                            type="file"
-                                                            accept="image/*"
-                                                            className="hidden"
-                                                            onChange={handleImageUpload}
-                                                        />
-                                                        <p className="text-xs text-slate-400">またはファイルをドロップ<br />(10MB以下)</p>
-                                                    </label>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        {/* Placeholder for Damage Image logic if needed in future, currently just space filler or Description */}
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">商品説明 / メモ</label>
-                                        <textarea
-                                            className="w-full h-[180px] border border-slate-200 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none resize-none"
-                                            placeholder="商品の状態や特記事項を入力..."
-                                            value={formData.description}
-                                            onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Removed Brand and Product Name section */}
-                                {/* Removed Category and Condition section */}
-                                {/* Removed Accessories section */}
-
-                                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div>
-                                            <label className="block text-sm font-bold text-slate-700 mb-2">販売価格 (円) *</label>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-slate-400 font-bold">¥</span>
-                                                <input
-                                                    type="number"
-                                                    required
-                                                    className="w-full bg-white border border-slate-200 rounded-lg p-3 outline-none focus:border-indigo-500 font-mono text-lg"
-                                                    value={formData.price}
-                                                    onChange={e => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
-                                                />
-                                            </div>
-                                            <p className="text-[10px] text-slate-400 mt-1">※Stripeにも自動反映されます</p>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-bold text-slate-700 mb-2">在庫数</label>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">販売価格 (円) *</label>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-slate-400 font-bold">¥</span>
                                             <input
                                                 type="number"
                                                 required
                                                 className="w-full bg-white border border-slate-200 rounded-lg p-3 outline-none focus:border-indigo-500 font-mono text-lg"
-                                                value={formData.stock}
-                                                onChange={e => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                                                value={formData.price}
+                                                onChange={e => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
                                             />
                                         </div>
+                                        <p className="text-[10px] text-slate-400 mt-1">※Stripeにも自動反映されます</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">在庫数</label>
+                                        <input
+                                            type="number"
+                                            required
+                                            className="w-full bg-white border border-slate-200 rounded-lg p-3 outline-none focus:border-indigo-500 font-mono text-lg"
+                                            value={formData.stock}
+                                            onChange={e => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                                        />
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className="flex items-center gap-2 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
-                                    <input
-                                        type="checkbox"
-                                        id="isVisible"
-                                        className="w-5 h-5 text-indigo-600 rounded bg-white border-gray-300"
-                                        checked={formData.isVisible}
-                                        onChange={e => setFormData({ ...formData, isVisible: e.target.checked })}
-                                    />
-                                    <label htmlFor="isVisible" className="text-sm font-bold text-yellow-800 cursor-pointer select-none">ストアに公開する</label>
-                                </div>
+                            <div className="flex items-center gap-2 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                                <input
+                                    type="checkbox"
+                                    id="isVisible"
+                                    className="w-5 h-5 text-indigo-600 rounded bg-white border-gray-300"
+                                    checked={formData.isVisible}
+                                    onChange={e => setFormData({ ...formData, isVisible: e.target.checked })}
+                                />
+                                <label htmlFor="isVisible" className="text-sm font-bold text-yellow-800 cursor-pointer select-none">ストアに公開する</label>
+                            </div>
 
-                                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                                    <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-6 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">キャンセル</button>
-                                    <button type="submit" className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-lg shadow-indigo-200 transition-colors">
-                                        {editingProduct ? '更新して保存' : '商品を登録'}
-                                    </button>
-                                </div>
+                            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                                <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-6 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">キャンセル</button>
+                                <button type="submit" className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-lg shadow-indigo-200 transition-colors">
+                                    {editingProduct ? '更新して保存' : '商品を登録'}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
