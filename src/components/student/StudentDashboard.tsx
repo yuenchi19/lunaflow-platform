@@ -138,7 +138,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
     // Affiliate Code Auto-Generation
     useEffect(() => {
-        if (!user.affiliateCode && (user.plan === 'standard' || user.plan === 'premium')) {
+        if (!user.affiliateCode && (user.plan === 'standard' || user.plan === 'premium' || user.plan === 'partner')) {
             fetch('/api/student/affiliate/generate', { method: 'POST' })
                 .then(res => res.json())
                 .then(data => {
@@ -402,7 +402,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     };
 
     const renderAffiliateCard = () => {
-        const hasPlan = user.plan === 'standard' || user.plan === 'premium';
+        const hasPlan = ['standard', 'premium', 'partner'].includes(user.plan || '');
         const isUnlocked = hasPlan && unlocks.affiliate;
 
         // Determine Lock Message

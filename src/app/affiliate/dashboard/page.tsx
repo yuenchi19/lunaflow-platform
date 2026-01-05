@@ -33,10 +33,20 @@ export default function PartnerDashboardPage() {
                 const res = await fetch('/api/user/profile');
                 if (res.ok) {
                     const profile = await res.json();
-                    if (profile.plan !== 'partner') {
-                        setError("このアカウントはパートナープランではありません。");
+
+                    // STRICT PERMISSION CHECK
+                    const ALLOWED_PLANS = ['standard', 'premium', 'partner'];
+                    if (!ALLOWED_PLANS.includes(profile.plan)) {
+                        setError("このプラン（Light等）ではアフィリエイト機能をご利用いただけません。スタンダードプラン以上へのアップグレードが必要です。");
                         return;
                     }
+
+                    if (profile.plan !== 'partner' && profile.plan !== 'standard' && profile.plan !== 'premium') {
+                        // Redundant safety check 
+                        setError("権限がありません。");
+                        return;
+                    }
+
                     setUser(profile);
 
                     // Check Compliance

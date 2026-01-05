@@ -123,25 +123,45 @@ export async function POST(req: Request) {
                 const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
 
                 const amount = session.amount_total || 0;
-                let detectedPlan = 'premium';
 
-                if (amount === 18960 || amount === 12980) detectedPlan = 'standard';
-                if (amount === 11960 || amount === 5980) detectedPlan = 'light';
-                if (amount === 7960 || amount === 1980) detectedPlan = 'partner';
-                if (amount === 25780 || amount === 19800) detectedPlan = 'premium';
+                // STRICT PLAN MAPPING (Lock Down)
+                // Premium: 25780, 19800, 29800
+                // Standard: 18960, 12980, 9800
+                // Light: 11960, 5980, 2980
+                // Partner: 7960, 1980
+                let detectedPlan = 'student'; // Default fallback (safe)
 
-                // 1. Try Create
-                let isNewAccount = false; // Track new account status
+                const PLAN_MAP: Record<number, string> = {
+                    29800: 'premium', 25780: 'premium', 19800: 'premium',
+                    9800: 'standard', 18960: 'standard', 12980: 'standard',
+                    2980: 'light', 11960: 'light', 5980: 'light',
+                    1980: 'partner', 7960: 'partner'
+                };
+
+                if (PLAN_MAP[amount]) {
+                    detectedPlan = PLAN_MAP[amount];
+                } else {
+                    console.warn(`[Webhook] Warning: Unknown amount ${amount}. Defaulting to 'student' (Access Restricted).`);
+                }
+
+                console.log(`[Webhook] Amount: ${amount} => Detected Plan: ${detectedPlan}`);
+
+                // 1. Try Create or Get
+                let isNewAccount = false;
+
+                // Prepare metadata
+                const userMetadata = {
+                    name: customerDetails?.name || email!.split('@')[0],
+                    role: detectedPlan === 'partner' ? 'staff' : 'student', // Auto-promote partner to staff if needed, or keep student? User said 'Standard/Premium/Partner' are distinct. Let's keep role 'student' mostly but plan is key.
+                    plan: detectedPlan,
+                    subscriptionStatus: 'active'
+                };
+
                 const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                     email: email!,
                     password: tempPassword,
                     email_confirm: true,
-                    user_metadata: {
-                        name: customerDetails?.name || email!.split('@')[0],
-                        role: 'student',
-                        plan: detectedPlan,
-                        subscriptionStatus: 'active'
-                    }
+                    user_metadata: userMetadata
                 });
 
                 if (newUser?.user) {
@@ -167,29 +187,40 @@ export async function POST(req: Request) {
 
                 if (authUserId) {
                     targetUserId = authUserId;
-                    // Insert into 'User' table
-                    const { error: profileInsertError } = await supabaseAdmin
+
+                    // FORCE METADATA UPDATE (Even if user exists)
+                    // This ensures Auth Session has the latest plan immediately.
+                    await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+                        user_metadata: userMetadata
+                    });
+                    console.log(`[Webhook] Auth Metadata updated for ${targetUserId} to plan: ${detectedPlan}`);
+
+                    // Upsert into 'User' table (Insert or Update)
+                    const { error: profileUpsertError } = await supabaseAdmin
                         .from('User')
-                        .insert({
+                        .upsert({
                             id: targetUserId,
                             email: email!,
                             name: customerDetails?.name || email!.split('@')[0],
                             role: 'student',
                             plan: detectedPlan,
                             zipCode: customerDetails?.address?.postal_code,
+                            address: `${customerDetails?.address?.state || ''}${customerDetails?.address?.city || ''}${customerDetails?.address?.line1 || ''}${customerDetails?.address?.line2 || ''}`,
                             initialPaymentDate: new Date().toISOString(),
                             stripeCustomerId: session.customer as string,
                             stripeSubscriptionId: session.subscription as string,
                             subscriptionStatus: 'active',
                             updatedAt: new Date().toISOString()
-                        });
+                        }, { onConflict: 'id' }); // Conflict on ID -> Update
 
-                    if (profileInsertError) {
-                        console.error("[Webhook] Failed to create public User profile:", profileInsertError);
+                    if (profileUpsertError) {
+                        console.error("[Webhook] Failed to upsert public User profile:", profileUpsertError);
                     } else {
-                        console.log(`[Webhook] Public User profile created/restored!`);
+                        console.log(`[Webhook] Public User profile synced (Upsert)!`);
                     }
                 }
+
+
 
                 // Send Email Logic
                 const { Resend } = await import('resend');

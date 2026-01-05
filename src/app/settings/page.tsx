@@ -8,28 +8,48 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function SettingsPage() {
     const defaultUser = MOCK_USERS[0];
-    const [email, setEmail] = useState(defaultUser.email);
-    const [address, setAddress] = useState(defaultUser.address || "");
-    const [phoneNumber, setPhoneNumber] = useState(defaultUser.phoneNumber || "");
+    const [email, setEmail] = useState("");
+    const [address, setAddress] = useState("");
+    const [zipCode, setZipCode] = useState(""); // Added ZipCode State
+    const [phoneNumber, setPhoneNumber] = useState("");
     const [isSaved, setIsSaved] = useState(false);
 
     useEffect(() => {
-        // Load from storage, fallback to mock user default if not in storage (for demo continuity)
-        const storedEmail = localStorage.getItem("user_email");
-        const storedAddress = localStorage.getItem("user_address");
-        const storedPhone = localStorage.getItem("user_phone");
-
-        if (storedEmail) setEmail(storedEmail);
-        if (storedAddress) setAddress(storedAddress);
-        if (storedPhone) setPhoneNumber(storedPhone);
+        // Fetch real user data
+        const fetchProfile = async () => {
+            try {
+                const res = await fetch('/api/user/profile');
+                if (res.ok) {
+                    const data = await res.json();
+                    setEmail(data.email || "");
+                    setAddress(data.address || "");
+                    setZipCode(data.zipCode || ""); // Sync ZipCode
+                    setPhoneNumber(data.phoneNumber || "");
+                }
+            } catch (e) {
+                console.error("Failed to fetch profile", e);
+            }
+        };
+        fetchProfile();
     }, []);
 
-    const handleSave = () => {
-        localStorage.setItem("user_email", email);
-        localStorage.setItem("user_address", address);
-        localStorage.setItem("user_phone", phoneNumber);
-        setIsSaved(true);
-        setTimeout(() => setIsSaved(false), 3000);
+    const handleSave = async () => {
+        try {
+            const res = await fetch('/api/user/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, address, zipCode, phoneNumber })
+            });
+
+            if (res.ok) {
+                setIsSaved(true);
+                setTimeout(() => setIsSaved(false), 3000);
+            } else {
+                alert("保存に失敗しました");
+            }
+        } catch (e) {
+            alert("エラーが発生しました");
+        }
     };
 
     return (
@@ -129,12 +149,22 @@ export default function SettingsPage() {
                                 />
                             </div>
                             <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">郵便番号</label>
+                                <input
+                                    type="text"
+                                    value={zipCode}
+                                    onChange={(e) => setZipCode(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-emerald-500 transition-colors"
+                                    placeholder="000-0000"
+                                />
+                            </div>
+                            <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">ご住所</label>
                                 <textarea
                                     value={address}
                                     onChange={(e) => setAddress(e.target.value)}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-emerald-500 transition-colors min-h-[120px] resize-none"
-                                    placeholder="〒000-0000 東京都..."
+                                    placeholder="東京都..."
                                 />
                             </div>
                         </div>
