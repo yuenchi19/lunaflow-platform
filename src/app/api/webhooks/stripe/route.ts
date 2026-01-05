@@ -203,7 +203,45 @@ export async function POST(req: Request) {
                             from: process.env.RESEND_FROM_EMAIL || 'info@lunaflow.space',
                             to: email!,
                             subject: '【重要】Luna Flowへようこそ！アカウント登録が完了しました ✨',
-                            html: `<p>Welcome...</p>` // Truncated for brevity, normally includes full HTML
+                            html: `
+<div style="font-family: sans-serif; color: #333; line-height: 1.6;">
+    <h2>${customerDetails?.name || '受講生'} 様</h2>
+    <p>この度は、<strong>Luna Flow</strong> にお申し込みいただき、誠にありがとうございます。<br>
+    アカウントの開設が完了いたしました。</p>
+    
+    <p>以下のボタンをクリックして、学習プラットフォームにログインしてください。</p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="${magicLinkUrl}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Luna Flow にログインする
+        </a>
+    </div>
+    
+    <p>※上記ボタンが機能しない場合は、以下のURLをブラウザに貼り付けてください：<br>
+    <a href="${magicLinkUrl}">${magicLinkUrl}</a></p>
+    
+    <h3>🚀 今後のステップ</h3>
+    <ol>
+        <li>ログイン後、画面左側のメニューから<strong>「コース」</strong>を選択してください。</li>
+        <li><strong>「はじめに」</strong>カテゴリの動画を必ず視聴し、コミュニティのルールをご確認ください。</li>
+        <li><strong>「公式LINE」</strong>との連携を行うと、新着通知を受け取ることができます。</li>
+    </ol>
+    
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+    
+    <p style="font-size: 0.9em; color: #666;">
+        ご不明な点がございましたら、このメールに返信するか、コミュニティ内の「お悩み相談」チャンネルよりご連絡ください。<br>
+        今後とも Luna Flow をよろしくお願いいたします。
+    </p>
+    
+    <p style="font-size: 0.9em; color: #999;">
+        --------------------------------------------------<br>
+        <strong>Luna Flow 事務局</strong><br>
+        公式サイト: <a href="https://lunaflow.space">https://lunaflow.space</a><br>
+        --------------------------------------------------
+    </p>
+</div>
+`
                         });
                         console.log(`[Webhook] Welcome email sent to ${email}`);
                     } catch (e) {
