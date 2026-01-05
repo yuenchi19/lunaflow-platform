@@ -63,33 +63,64 @@ export async function POST(req: Request) {
 
         let userId: string;
 
-        // 1. Ensure Auth User Exists or Create
-        const { data: userData, error: createError } = await supabase.auth.admin.createUser({
-            email: email,
-            email_confirm: true,
-            user_metadata: { name, role }
-        });
+        // 1. Check Public User Table First (Source of Truth for Platform)
+        const { data: existingPublicUser } = await supabase
+            .from('User')
+            .select('id, role')
+            .eq('email', email)
+            .single();
 
-        if (createError) {
-            if (createError.message.includes("already registered")) {
-                // User exists, find them
-                const { data: users } = await supabase.auth.admin.listUsers();
-                // @ts-ignore
-                const existing = users.users.find(u => u.email === email);
-                if (!existing) {
-                    return NextResponse.json({ error: 'User reported existing but not found.' }, { status: 500 });
-                }
-                userId = existing.id;
+        if (existingPublicUser) {
+            userId = existingPublicUser.id;
+            console.log(`[StaffInvite] Found existing public user: ${userId}`);
 
-                // Update Metadata
-                await supabase.auth.admin.updateUserById(userId, {
-                    user_metadata: { role: role }
-                });
-            } else {
-                return NextResponse.json({ error: createError.message }, { status: 400 });
-            }
+            // Update Auth Metadata first to ensure consistency
+            const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+                user_metadata: { role: role }
+            });
+            if (updateError) console.warn(`[StaffInvite] Auth Metadata update warning: ${updateError.message}`);
+
         } else {
-            userId = userData.user.id;
+            // 2. Not in Public DB, try Create Auth User
+            console.log(`[StaffInvite] Creating new auth user for ${email}`);
+            const { data: userData, error: createError } = await supabase.auth.admin.createUser({
+                email: email,
+                email_confirm: true,
+                user_metadata: { name, role }
+            });
+
+            if (createError) {
+                // If it says "already registered" but wasn't in Public DB, it means they are in Auth but not Public (Ghost)
+                // OR my previous public check failed?
+                console.log(`[StaffInvite] Create failed: ${createError.message}`);
+
+                if (createError.message?.toLowerCase().includes("registered") || createError.status === 422 || createError.status === 400) {
+                    // Try to find in Auth List
+                    const { data: { users } } = await supabase.auth.admin.listUsers(); // Warning: Pagination limit 50
+                    // Note: listUsers is bad if >50 users. 
+                    // But we have no getUserByEmail? 
+                    // Wait, we can't do much if listUsers misses them.
+                    // But if they weren't in Public User, they probably aren't active students.
+                    // Let's try to match.
+                    const found = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+                    if (found) {
+                        userId = found.id;
+                        // Update Metadata
+                        await supabase.auth.admin.updateUserById(userId, {
+                            user_metadata: { role: role }
+                        });
+                    } else {
+                        return NextResponse.json({
+                            error: 'User exists in Auth but not found in List (Limit 50). Please ask user to login first or contact dev.'
+                        }, { status: 400 });
+                    }
+                } else {
+                    return NextResponse.json({ error: createError.message }, { status: 400 });
+                }
+            } else {
+                userId = userData.user.id;
+            }
         }
 
         // 2. Generate Password Reset / Invite Link
