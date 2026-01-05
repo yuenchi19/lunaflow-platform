@@ -247,7 +247,7 @@ export async function GET(request: NextRequest) {
             }
 
             // Update DB
-            const u = user as any;
+            // const u = user as any; // Already defined at top
             if (u.status !== newStatus || u.subscriptionStatus !== newSubStatus || u.stripeCustomerId !== stripeCustId || u.stripeSubscriptionId !== stripeSubId) {
                 await prisma.user.update({
                     where: { id: user.id },
