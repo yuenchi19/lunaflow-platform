@@ -49,6 +49,7 @@ export async function GET() {
 export async function POST(req: Request) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const resendApiKey = process.env.RESEND_API_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
         return NextResponse.json({ error: 'Server Config Error' }, { status: 500 });
@@ -60,22 +61,53 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { email, name, role, status } = body;
 
-        // 1. Create Auth User (Invite)
-        const { data: authData, error: authError } = await supabase.auth.admin.inviteUserByEmail(email, {
-            data: { name, role }
+        let userId: string;
+
+        // 1. Ensure Auth User Exists or Create
+        const { data: userData, error: createError } = await supabase.auth.admin.createUser({
+            email: email,
+            email_confirm: true,
+            user_metadata: { name, role }
         });
 
-        if (authError) {
-            // If user already exists, we might just want to update their role in DB if they are not staff yet?
-            // For now, return error.
-            return NextResponse.json({ error: authError.message }, { status: 400 });
+        if (createError) {
+            if (createError.message.includes("already registered")) {
+                // User exists, find them
+                const { data: users } = await supabase.auth.admin.listUsers();
+                // @ts-ignore
+                const existing = users.users.find(u => u.email === email);
+                if (!existing) {
+                    return NextResponse.json({ error: 'User reported existing but not found.' }, { status: 500 });
+                }
+                userId = existing.id;
+
+                // Update Metadata
+                await supabase.auth.admin.updateUserById(userId, {
+                    user_metadata: { role: role }
+                });
+            } else {
+                return NextResponse.json({ error: createError.message }, { status: 400 });
+            }
+        } else {
+            userId = userData.user.id;
         }
 
-        // 2. Ensure DB entry exists (Trigger usually handles this, but we update role)
-        // Check if user exists in public.User
-        const userId = authData.user.id;
+        // 2. Generate Password Reset / Invite Link
+        const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+            type: 'recovery',
+            email: email,
+            options: {
+                redirectTo: 'https://lunaflow.space/admin/login' // Redirect to admin login after password set
+            }
+        });
 
-        // Upsert to User table to ensure Role is set
+        if (linkError) {
+            return NextResponse.json({ error: `Link Generation Failed: ${linkError.message}` }, { status: 500 });
+        }
+
+        const inviteLink = linkData.properties.action_link;
+
+        // 3. Upsert to Public DB
         const { error: dbError } = await supabase
             .from('User')
             .upsert({
@@ -91,9 +123,45 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: dbError.message }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true, user: authData.user });
+        // 4. Send Email via Resend
+        if (resendApiKey) {
+            const { Resend } = await import('resend');
+            const resend = new Resend(resendApiKey);
+
+            await resend.emails.send({
+                from: process.env.RESEND_FROM_EMAIL || 'info@lunaflow.space',
+                to: email,
+                subject: '【LunaFlow】運営スタッフへの招待！',
+                html: `
+<div style="font-family: sans-serif; padding: 20px; line-height: 1.6;">
+    <p>LunaFlow事務局です。</p>
+    <p>あなたを当システムの運営スタッフとして招待しました。<br>
+    以下のリンクよりパスワードを設定し、管理画面へログインしてください。</p>
+    
+    <div style="margin: 30px 0;">
+        <a href="${inviteLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+            パスワードを設定してログイン
+        </a>
+    </div>
+    
+    <p style="font-size: 0.9em; color: #666;">
+        リンクURL: <br>
+        <a href="${inviteLink}">${inviteLink}</a>
+    </p>
+
+    <p style="font-size: 0.8em; color: #999; margin-top: 40px;">
+        ※本メールに心当たりがない場合は破棄してください。<br>
+        ※リンク有効期限: 24時間
+    </p>
+</div>
+                `
+            });
+        }
+
+        return NextResponse.json({ success: true, userId });
 
     } catch (e: any) {
+        console.error("Staff Invite Error:", e);
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
 }
