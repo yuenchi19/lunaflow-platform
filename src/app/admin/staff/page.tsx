@@ -76,7 +76,11 @@ export default function StaffManagementPage() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: newName, email: newEmail, role: newRole, status: newStatus })
                 });
-                if (!res.ok) throw new Error('Create failed');
+
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.error || 'Create failed');
+                }
             }
 
             // Refresh list
