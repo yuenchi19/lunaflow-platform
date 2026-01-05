@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
             const response: any = await stripe.subscriptions.list({
                 limit: 100,
                 status: 'all',
-                expand: ['data.customer'],
+                expand: ['data.customer', 'data.items.data.price'],
                 starting_after: startingAfter
             });
 
@@ -60,16 +60,27 @@ export async function GET(request: NextRequest) {
                 }
 
                 if (shouldUpdate) {
+                    // Calc Plan
+                    const amount = sub.items?.data[0]?.price?.unit_amount || 0;
+                    const PLAN_MAP: Record<number, string> = {
+                        29800: 'premium', 25780: 'premium', 19800: 'premium',
+                        9800: 'standard', 18960: 'standard', 12980: 'standard',
+                        2980: 'light', 11960: 'light', 5980: 'light',
+                        1980: 'partner', 7960: 'partner'
+                    };
+                    const detectedPlan = PLAN_MAP[amount] || 'student';
+
                     subMap.set(email, {
                         stripeCustomerId: customer.id,
                         stripeSubscriptionId: sub.id,
                         status: currentStatus,
-                        cancelAtPeriodEnd: sub.cancel_at_period_end
+                        cancelAtPeriodEnd: sub.cancel_at_period_end,
+                        plan: detectedPlan
                     });
                 }
 
                 if (debugEmail && email === debugEmail) {
-                    debugLog.push(`Found Stripe Sub: ${sub.id}, Status: ${currentStatus}, CancelAtPeriodEnd: ${sub.cancel_at_period_end}`);
+                    debugLog.push(`Found Stripe Sub: ${sub.id}, Status: ${currentStatus}`);
                 }
             }
         }
@@ -111,6 +122,7 @@ export async function GET(request: NextRequest) {
             let newSubStatus = 'none';
             let stripeCustId = user.stripeCustomerId;
             let stripeSubId = user.stripeSubscriptionId;
+            let detectedPlan = user.plan; // Default to current plan, update if sub found
 
             // Check Map first (Fast Path for Active Users)
             // If user is in subMap, we KNOW they are Valid + Active (or whatever status map has)
@@ -123,7 +135,8 @@ export async function GET(request: NextRequest) {
                 stripeSubId = mapEntry.stripeSubscriptionId;
                 newStatus = 'active';
                 newSubStatus = mapEntry.status;
-                if (debugEmail && userEmail === debugEmail) debugLog.push(`[Sync] Found in Active Map. Status: ${newStatus}`);
+                detectedPlan = mapEntry.plan; // APPLY STRICT PLAN FROM MAP
+                if (debugEmail && userEmail === debugEmail) debugLog.push(`[Sync] Found in Active Map. Status: ${newStatus}, Plan: ${detectedPlan}`);
             } else {
                 // Not in Active Map. Two possibilities:
                 // 1. Ghost (Not in Stripe) -> Inactive
@@ -153,7 +166,26 @@ export async function GET(request: NextRequest) {
                             stripeSubId = validSub.id;
                             newStatus = 'active';
                             newSubStatus = validSub.status;
-                            if (debugEmail && userEmail === debugEmail) debugLog.push(`[Auto-Repair] Found Active Sub via Search! Linked ${stripeSubId}`);
+
+                            // STRICT PLAN SYNC
+                            // Fetch full sub to get items amount
+                            const fullSub = await stripe.subscriptions.retrieve(validSub.id, { expand: ['items.data.price'] });
+                            const amount = fullSub.items.data[0]?.price.unit_amount || 0;
+
+                            const PLAN_MAP: Record<number, string> = {
+                                29800: 'premium', 25780: 'premium', 19800: 'premium',
+                                9800: 'standard', 18960: 'standard', 12980: 'standard',
+                                2980: 'light', 11960: 'light', 5980: 'light',
+                                1980: 'partner', 7960: 'partner'
+                            };
+
+                            if (PLAN_MAP[amount]) {
+                                detectedPlan = PLAN_MAP[amount];
+                            } else {
+                                detectedPlan = 'student'; // Fallback
+                            }
+
+                            if (debugEmail && userEmail === debugEmail) debugLog.push(`[Auto-Repair] Found Active Sub! Amount: ${amount} => Plan: ${detectedPlan}`);
                         } else {
                             // Customer exists but no active sub
                             newStatus = 'inactive';
@@ -191,7 +223,8 @@ export async function GET(request: NextRequest) {
                         status: newStatus,
                         subscriptionStatus: newSubStatus,
                         stripeCustomerId: stripeCustId,
-                        stripeSubscriptionId: stripeSubId
+                        stripeSubscriptionId: stripeSubId,
+                        plan: detectedPlan
                     } as any
                 });
                 updatedCount++;
