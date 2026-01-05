@@ -4,20 +4,19 @@ import { createClient } from "@/lib/supabase/server";
 import { User, ProgressDetail, Payment } from "@/types";
 import { MOCK_USERS } from "./data"; // Fallback for now
 
+import { prisma } from "@/lib/prisma";
+
 export async function getUserProfile() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) return null;
 
-    // Ensure fresh data
-    const { data: profile } = await supabase
-        .from('User')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+    // Use Prisma for direct DB access (Bypassing Supabase RLS/Cache)
+    const profile = await prisma.user.findUnique({
+        where: { id: user.id }
+    });
 
-    // Map DB profile to User type
     if (profile) {
         return {
             id: profile.id,
@@ -25,17 +24,14 @@ export async function getUserProfile() {
             name: profile.name,
             role: profile.role,
             plan: profile.plan,
-            // phoneNumber: profile.phone_number, // Not in schema currently? or use metadata? Sticking to schema.
-            address: profile.address,
-            zipCode: profile.zipCode, // camelCase in schema
-            communityNickname: profile.communityNickname, // camelCase
-            avatarUrl: profile.avatarUrl, // Assuming consistency if it existed, skipping if not in schema.
-            // stripeCustomerId: profile.stripeCustomerId, // Not in schema shown
-            affiliateCode: profile.affiliateCode,
+            address: profile.address || "",
+            zipCode: profile.zipCode || "",
+            communityNickname: profile.communityNickname || "",
+            // avatarUrl: profile.avatarUrl || "", // Not in Prisma Schema
+            affiliateCode: profile.affiliateCode || "",
             payoutPreference: profile.payoutPreference,
-            // Defaults/Calculated
-            registrationDate: profile.createdAt,
-            subscriptionStatus: 'active',
+            registrationDate: profile.createdAt.toISOString(),
+            subscriptionStatus: profile.subscriptionStatus || 'active',
         } as User;
     }
 
