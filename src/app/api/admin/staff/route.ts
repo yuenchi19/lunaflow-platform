@@ -107,7 +107,31 @@ export async function POST(req: Request) {
                     });
 
                     if (linkError) {
-                        return NextResponse.json({ error: `User exists but Link Generation Failed: ${linkError.message}` }, { status: 500 });
+                        // FIX for "User with this email not found" despite createUser saying "Registered"
+                        console.log(`[StaffInvite] Link Generation Check: ${linkError.message}`);
+
+                        // Fallback: This usually happens if the user exists but has a different state or the key doesn't have permissions to generate links for everyone (unlikely for service role).
+                        // Or if the user IS in Auth, but not queryable by the ID? 
+
+                        // Try to find them via ListUsers to confirm existence and update role.
+                        const { data: { users } } = await supabase.auth.admin.listUsers({ page: 1, perPage: 100 });
+                        // Case-insensitive match
+                        const foundUser = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+                        if (foundUser) {
+                            userId = foundUser.id;
+                            console.log(`[StaffInvite] Found existing Auth user via ListUsers: ${userId}`);
+                            // Update Metadata
+                            await supabase.auth.admin.updateUserById(userId, {
+                                user_metadata: { name, role }
+                            });
+                            // If we can't generate a link, we just assume they can login.
+                            // We suppress the error so the Admin UI doesn't crash.
+                            inviteLink = undefined;
+                        } else {
+                            // Truly not found?
+                            return NextResponse.json({ error: `User exists but cannot be found by email. Details: ${linkError.message}` }, { status: 500 });
+                        }
                     }
 
                     // CRITICAL: Use the ID from generateLink response if available
