@@ -152,7 +152,7 @@ export async function POST(req: Request) {
                 // Prepare metadata
                 const userMetadata = {
                     name: customerDetails?.name || email!.split('@')[0],
-                    role: detectedPlan === 'partner' ? 'staff' : 'student', // Auto-promote partner to staff if needed, or keep student? User said 'Standard/Premium/Partner' are distinct. Let's keep role 'student' mostly but plan is key.
+                    role: 'student', // FORCE STUDENT ROLE. Never auto-promote.
                     plan: detectedPlan,
                     subscriptionStatus: 'active'
                 };

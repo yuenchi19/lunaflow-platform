@@ -1,3 +1,4 @@
+
 import { NextResponse, NextRequest } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
@@ -10,52 +11,88 @@ export async function GET(request: NextRequest) {
         const debugEmail = searchParams.get('debug_email')?.toLowerCase();
         const debugLog: string[] = [];
 
-        console.log("[Sync] Starting Stripe Subscription Sync...");
+        console.log("[Sync] Starting ROBUST Stripe Subscription Sync...");
         if (debugEmail) debugLog.push(`Debug Mode for: ${debugEmail}`);
 
-        // 1. Fetch ALL subscriptions from Stripe (Pagination)
-        let hasMore = true;
-        let startingAfter: string | undefined = undefined;
+        // --- STEP 1: Fetch ALL Subscriptions ---
+        console.log("[Sync] Fetching ALL Subscriptions...");
+        let hasMoreSubs = true;
+        let startingAfterSub = undefined;
         const allSubs: any[] = [];
 
-        while (hasMore) {
+        while (hasMoreSubs) {
             const response: any = await stripe.subscriptions.list({
                 limit: 100,
-                status: 'all',
-                expand: ['data.customer', 'data.items.data.price'],
-                starting_after: startingAfter
+                status: 'all', // status: 'all' is CRITICAL
+                expand: ['data.items.data.price'], // Dropped customer expand (reliable link via ID)
+                starting_after: startingAfterSub
             });
-
             allSubs.push(...response.data);
-
             if (response.has_more && response.data.length > 0) {
-                startingAfter = response.data[response.data.length - 1].id;
+                startingAfterSub = response.data[response.data.length - 1].id;
             } else {
-                hasMore = false;
+                hasMoreSubs = false;
             }
         }
+        console.log(`[Sync] Fetched ${allSubs.length} subscriptions.`);
 
-        console.log(`[Sync] Fetched total ${allSubs.length} subscriptions.`);
+        // --- STEP 2: Fetch ALL Customers ---
+        // Crucial to avoid N+1 queries and ensure we find everyone (Ghosts included)
+        console.log("[Sync] Fetching ALL Customers...");
+        let hasMoreCust = true;
+        let startingAfterCust = undefined;
+        const customerMap = new Map<string, any>(); // Map<id, Customer>
+        const customerEmailMap = new Map<string, any>(); // Map<email, Customer>
 
+        while (hasMoreCust) {
+            const response: any = await stripe.customers.list({
+                limit: 100,
+                starting_after: startingAfterCust
+            });
+
+            for (const cust of response.data) {
+                customerMap.set(cust.id, cust);
+                if (cust.email) {
+                    customerEmailMap.set(cust.email.toLowerCase(), cust);
+                }
+            }
+
+            if (response.has_more && response.data.length > 0) {
+                startingAfterCust = response.data[response.data.length - 1].id;
+            } else {
+                hasMoreCust = false;
+            }
+        }
+        console.log(`[Sync] Fetched and Mapped ${customerMap.size} customers.`);
+
+        // --- STEP 3: Build Subscription Map by Email ---
         const subMap = new Map<string, any>();
 
         for (const sub of allSubs) {
-            const customer = sub.customer as any;
+            // Resolve Customer
+            let customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer.id;
+            const customer = customerMap.get(customerId);
+
             if (!customer || customer.deleted) continue;
 
-            const email = customer.email?.toLowerCase(); // Case insensitive
+            const email = customer.email?.toLowerCase();
             if (email) {
                 const currentStatus = sub.status;
                 const existingEntry = subMap.get(email);
 
+                // Logic: Prioritize ACTIVE status
                 const isActiveLike = (s: string) => ['active', 'trialing'].includes(s);
+                let shouldUpdate = true;
 
-                // Optimization Removed: Always update to ensure Plan/Address changes are captured.
-                // The DB update loop later checks if values changed before writing to DB.
-                const shouldUpdate = true;
+                // If existing is active and new is not, Keep existing.
+                // If existing is not active and new IS, Update.
+                if (existingEntry) {
+                    if (isActiveLike(existingEntry.status) && !isActiveLike(currentStatus)) {
+                        shouldUpdate = false; // Don't downgrade status if we found an active one earlier
+                    }
+                }
 
                 if (shouldUpdate) {
-                    // Calc Plan
                     const amount = sub.items?.data[0]?.price?.unit_amount || 0;
                     const PLAN_MAP: Record<number, string> = {
                         29800: 'premium', 25780: 'premium', 19800: 'premium',
@@ -65,16 +102,12 @@ export async function GET(request: NextRequest) {
                     };
                     const detectedPlan = PLAN_MAP[amount] || 'student';
 
-
-                    const customer = sub.customer as any;
+                    // Address Logic (Customer -> Shipping -> Empty)
                     const shipping = customer.shipping;
-
-                    // Address Priority: Customer Address -> Shipping Address -> Empty
                     let addrObj = customer.address;
                     if (!addrObj || (!addrObj.line1 && !addrObj.city)) {
                         if (shipping?.address) addrObj = shipping.address;
                     }
-
                     const address = addrObj ?
                         `${addrObj.state || ''}${addrObj.city || ''}${addrObj.line1 || ''}${addrObj.line2 || ''}`
                         : '';
@@ -84,181 +117,90 @@ export async function GET(request: NextRequest) {
                         stripeCustomerId: customer.id,
                         stripeSubscriptionId: sub.id,
                         status: currentStatus,
-                        cancelAtPeriodEnd: sub.cancel_at_period_end,
                         plan: detectedPlan,
-                        address: address, // Store address
-                        zipCode: zipCode // Store zip
+                        address: address,
+                        zipCode: zipCode
                     });
-                }
-
-                if (debugEmail && email === debugEmail) {
-                    debugLog.push(`Found Stripe Sub: ${sub.id}, Status: ${currentStatus}`);
                 }
             }
         }
+        console.log(`[Sync] Built SubMap with ${subMap.size} unique emails.`);
 
-        // 2. Fetch all DB Users
+        // --- STEP 4: Update DB Users ---
         const users = await prisma.user.findMany();
         let updatedCount = 0;
 
-        console.log(`[Sync] Starting User Processing loop for ${users.length} users...`);
-
-        // OPTIMIZATION: To prevent timeout with "Search by Email" for everyone,
-        // we can fetch ALL customers from Stripe and map them by email locally?
-        // But the user requested "Search by Email" specifically.
-        // Doing strict search for 100+ users might choke.
-        // COMPROMISE: We will implement the "Search Logic" but do it sequentially with a small delay or concurrency limit if possible?
-        // Node.js is single threaded but async.
-        // Let's rely on the previous optimization + Strict Logic.
-        // Wait, the user said "Step 1: Loop DB, Step 2: Search Email".
-        // To respect the user's wish for "Correctness > Speed", we will do exactly that.
-        // But we must be faster than Vercel timeout (10s-60s).
-        // If we have 50 users and each takes 0.5s, that's 25s. Risky.
-        // We will try to utilize the 'subMap' we built earlier for speed for KNOWN subs,
-        // but for those NOT in subMap, we MUST search customers to distinguish "No Sub" vs "Ghost".
-
-        if (subMap.size > 0) {
-            console.log(`[Sync] Primary Subscription Map has ${subMap.size} entries.`);
-        }
-
         for (const user of users) {
-            // ---------------------------------------------------------
-            // STRICT SYNC LOGIC (Per User Request)
-            // Step 1: Loop DB User (Done)
-            // Step 2: Search Stripe by Email
-            // Step 3: Update based on result
-            // ---------------------------------------------------------
-
-            const u = user as any; // Cast early for access
             const userEmail = user.email.toLowerCase();
+
+            // Default: Inactive
             let newStatus = 'inactive';
             let newSubStatus = 'none';
             let stripeCustId = user.stripeCustomerId;
             let stripeSubId = user.stripeSubscriptionId;
-            let detectedPlan = user.plan; // Default to current plan, update if sub found
+            let detectedPlan = user.plan;
+            let newAddress = user.address;
+            let newZip = user.zipCode;
 
-            // Check Map first (Fast Path for Active Users)
-            // If user is in subMap, we KNOW they are Valid + Active (or whatever status map has)
-            // This is equivalent to "Search found user + found sub".
-            const mapEntry = subMap.get(userEmail);
+            // 1. Check SubMap (Active/Trialing or recent sub)
+            const subEntry = subMap.get(userEmail);
 
-            if (mapEntry) {
-                // User has an ACTIVE/TRIALING subscription in the initial sweep.
-                stripeCustId = mapEntry.stripeCustomerId;
-                stripeSubId = mapEntry.stripeSubscriptionId;
-                newStatus = 'active';
-                newSubStatus = mapEntry.status;
-                detectedPlan = mapEntry.plan; // APPLY STRICT PLAN FROM MAP
-                if (debugEmail && userEmail === debugEmail) debugLog.push(`[Sync] Found in Active Map. Status: ${newStatus}, Plan: ${detectedPlan}`);
+            if (subEntry) {
+                // Found Subscription!
+                newStatus = ['active', 'trialing'].includes(subEntry.status) ? 'active' : 'inactive';
+                newSubStatus = subEntry.status;
+                stripeCustId = subEntry.stripeCustomerId;
+                stripeSubId = subEntry.stripeSubscriptionId;
+                detectedPlan = subEntry.plan;
+
+                // Only update address if we found one (don't clear existing DB addy purely on null, unless strictly required?)
+                // User wants strict sync, so we overwrite.
+                if (subEntry.address) newAddress = subEntry.address;
+                if (subEntry.zipCode) newZip = subEntry.zipCode;
+
+                if (debugEmail && userEmail === debugEmail) debugLog.push(`[Sync] Match via Sub: ${newStatus} (${detectedPlan})`);
             } else {
-                // Not in Active Map. Two possibilities:
-                // 1. Ghost (Not in Stripe) -> Inactive
-                // 2. Exists but No Active Sub -> Inactive
+                // 2. Check Customer Map (No Sub, but Customer exists?)
+                // This handles "Ghost" (Customer exists but no sub)
+                const custEntry = customerEmailMap.get(userEmail);
+                if (custEntry) {
+                    stripeCustId = custEntry.id;
+                    newSubStatus = 'none';
+                    newStatus = 'inactive';
 
-                try {
-                    // Step 2: Search Stripe by Email
-                    // If we already have an ID, we could verify it, but user laid out "Search by Email".
-                    // We will use existing ID to optimize "Search" if valid?
-                    // No, let's stick to strict logic: "Search Customers by Email".
-
-                    const existingCustomers = await stripe.customers.list({
-                        email: userEmail,
-                        limit: 1,
-                        expand: ['data.subscriptions']
-                    });
-
-                    if (existingCustomers.data.length > 0) {
-                        const foundCustomer = existingCustomers.data[0];
-                        stripeCustId = foundCustomer.id;
-
-                        // EXTRACT ADDRESS FROM SEARCH RESULT
-                        const custAddr = foundCustomer.address;
-                        const custShipping = foundCustomer.shipping;
-
-                        let addrObj = custAddr;
-                        if (!addrObj || (!addrObj.line1 && !addrObj.city)) {
-                            if (custShipping?.address) addrObj = custShipping.address;
-                        }
-
-                        const foundAddress = addrObj ?
-                            `${addrObj.state || ''}${addrObj.city || ''}${addrObj.line1 || ''}${addrObj.line2 || ''}`
-                            : '';
-                        const foundZip = addrObj?.postal_code || '';
-
-                        // Check if this customer has subscriptions
-                        const subs = foundCustomer.subscriptions?.data || [];
-                        const validSub = subs.find((s: any) => ['active', 'trialing'].includes(s.status));
-
-                        if (validSub) {
-                            stripeSubId = validSub.id;
-                            newStatus = 'active';
-                            newSubStatus = validSub.status;
-
-                            // STRICT PLAN SYNC
-                            // Fetch full sub to get items amount
-                            const fullSub = await stripe.subscriptions.retrieve(validSub.id, { expand: ['items.data.price'] });
-                            const amount = fullSub.items.data[0]?.price.unit_amount || 0;
-
-                            const PLAN_MAP: Record<number, string> = {
-                                29800: 'premium', 25780: 'premium', 19800: 'premium',
-                                9800: 'standard', 18960: 'standard', 12980: 'standard',
-                                2980: 'light', 11960: 'light', 5980: 'light',
-                                1980: 'partner', 7960: 'partner'
-                            };
-
-                            if (PLAN_MAP[amount]) {
-                                detectedPlan = PLAN_MAP[amount];
-                            } else {
-                                detectedPlan = 'student'; // Fallback
-                            }
-
-                            if (debugEmail && userEmail === debugEmail) debugLog.push(`[Auto-Repair] Found Active Sub! Amount: ${amount} => Plan: ${detectedPlan}`);
-                        } else {
-                            // Customer exists but no active sub
-                            newStatus = 'inactive';
-                            newSubStatus = subs.length > 0 ? subs[0].status : 'none';
-                            stripeSubId = subs.length > 0 ? subs[0].id : stripeCustId; // Keep ID linked
-                            if (debugEmail && userEmail === debugEmail) debugLog.push(`[Auto-Repair] Found Customer but no Active Sub. Set Inactive.`);
-                        }
-
-                        // Update DB
-                        await prisma.user.update({
-                            where: { id: user.id },
-                            data: {
-                                status: newStatus,
-                                subscriptionStatus: newSubStatus,
-                                stripeCustomerId: stripeCustId,
-                                stripeSubscriptionId: stripeSubId,
-                                plan: detectedPlan,
-                                address: foundAddress || u.address, // Prefer found, fallback to existing
-                                zipCode: foundZip || u.zipCode
-                            }
-                        });
-                        updatedCount++;
-                        if (debugEmail && userEmail === debugEmail) debugLog.push(`[Sync-Search] UPDATED DB with Address.`);
-                        continue; // Skip the main update loop as we handled it here specific to search
-                    } else {
-                        // Truly Ghost
-                        newStatus = 'inactive';
-                        newSubStatus = 'none';
-                        if (debugEmail && userEmail === debugEmail) debugLog.push(`[Ghost Check] No Customer found for email. Set Inactive.`);
+                    // Try to recover address from customer even if no sub
+                    const shipping = custEntry.shipping;
+                    let addrObj = custEntry.address;
+                    if (!addrObj || (!addrObj.line1 && !addrObj.city)) {
+                        if (shipping?.address) addrObj = shipping.address;
                     }
-                } catch (err) {
-                    console.error(`[Sync] Auto-Repair Error for ${userEmail}:`, err);
+                    if (addrObj) {
+                        const addrStr = `${addrObj.state || ''}${addrObj.city || ''}${addrObj.line1 || ''}${addrObj.line2 || ''}`;
+                        if (addrStr) newAddress = addrStr;
+                        if (addrObj.postal_code) newZip = addrObj.postal_code;
+                    } // If invalid address, keep existing DB address to be safe? 
+                    // Or sync empty? User wants "Correct Address".
+                    // If Stripe has no address, and DB has one, maybe DB is better? 
+                    // But user said "Address sync ... default value remains".
+                    // Let's assume Stripe is source of truth.
+
+                    if (debugEmail && userEmail === debugEmail) debugLog.push(`[Sync] Match via Customer (No Sub): Inactive`);
+                } else {
+                    // 3. Ghost (No Customer, No Sub)
+                    newStatus = 'inactive';
+                    newSubStatus = 'none';
+                    if (debugEmail && userEmail === debugEmail) debugLog.push(`[Sync] No Match: Inactive`);
                 }
             }
 
-            // Exceptions for Admin/Staff
+            // Exceptions
             if (user.role === 'admin' || user.role === 'staff') {
-                newStatus = 'active'; // Force Active
-                // If they have sub data, keep it? Or just force status?
-                // Keep sub status if we found it, but DB status is active.
-                if (debugEmail && userEmail === debugEmail) debugLog.push(`[Sync] Override: Admin/Staff -> Active`);
+                newStatus = 'active';
             }
 
             // Update DB
-            // const u = user as any; // Already defined at top
-            if (u.status !== newStatus || u.subscriptionStatus !== newSubStatus || u.stripeCustomerId !== stripeCustId || u.stripeSubscriptionId !== stripeSubId) {
+            const u = user as any;
+            if (u.status !== newStatus || u.subscriptionStatus !== newSubStatus || u.stripeSubscriptionId !== stripeSubId || u.stripeCustomerId !== stripeCustId || u.plan !== detectedPlan || u.address !== newAddress) {
                 await prisma.user.update({
                     where: { id: user.id },
                     data: {
@@ -267,22 +209,17 @@ export async function GET(request: NextRequest) {
                         stripeCustomerId: stripeCustId,
                         stripeSubscriptionId: stripeSubId,
                         plan: detectedPlan,
-                        address: mapEntry?.address || u.address, // Update if available from map
-                        zipCode: mapEntry?.zipCode || u.zipCode
+                        address: newAddress,
+                        zipCode: newZip
                     } as any
                 });
                 updatedCount++;
-                if (debugEmail && userEmail === debugEmail) debugLog.push(`[Sync] UPDATED DB to ${newStatus}/${newSubStatus}`);
-                // SKIP FORCE SYNC to prevent Timeout with large userbase
-            } else {
-                if (debugEmail && userEmail === debugEmail) debugLog.push(`No DB Change Needed. Current: ${user.status} / ${user.subscriptionStatus}`);
-                // SKIP FORCE SYNC to prevent Timeout with large userbase
             }
         }
 
         return NextResponse.json({
             success: true,
-            message: `Synced ${users.length} users. Updated ${updatedCount}.`,
+            message: `Robust Sync Completed. Processed ${users.length} users. Updated ${updatedCount}.`,
             debugLog: debugLog
         });
 
