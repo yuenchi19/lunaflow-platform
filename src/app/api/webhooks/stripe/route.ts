@@ -131,6 +131,7 @@ export async function POST(req: Request) {
                 if (amount === 25780 || amount === 19800) detectedPlan = 'premium';
 
                 // 1. Try Create
+                let isNewAccount = false; // Track new account status
                 const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                     email: email!,
                     password: tempPassword,
@@ -145,6 +146,7 @@ export async function POST(req: Request) {
 
                 if (newUser?.user) {
                     authUserId = newUser.user.id;
+                    isNewAccount = true; // Mark as new
                     console.log(`[Webhook] New Auth User created! ID: ${authUserId}`);
                 } else if (createError && createError.message.includes("already registered")) {
                     console.log("[Webhook] Auth User already exists. Linking...");
@@ -189,8 +191,7 @@ export async function POST(req: Request) {
                     }
                 }
 
-                // Send Email Logic (Simplified/Skipped for brevity as it was working)
-                // Assuming it's the same logic, preserving functionality.
+                // Send Email Logic
                 const { Resend } = await import('resend');
                 const { generateLineMagicLinkUrl } = await import('@/lib/line-auth');
 
@@ -199,47 +200,44 @@ export async function POST(req: Request) {
                     const magicLinkUrl = await generateLineMagicLinkUrl(targetUserId);
 
                     try {
+                        const passwordSection = isNewAccount
+                            ? `<p>・初期パスワード : <strong>${tempPassword}</strong></p>`
+                            : `<p>・パスワード : (既存のパスワードをご利用ください)</p>`;
+
                         await resend.emails.send({
                             from: process.env.RESEND_FROM_EMAIL || 'info@lunaflow.space',
                             to: email!,
                             subject: '【重要】Luna Flowへようこそ！アカウント登録が完了しました ✨',
                             html: `
 <div style="font-family: sans-serif; color: #333; line-height: 1.6;">
-    <h2>${customerDetails?.name || '受講生'} 様</h2>
-    <p>この度は、<strong>Luna Flow</strong> にお申し込みいただき、誠にありがとうございます。<br>
-    アカウントの開設が完了いたしました。</p>
+    <p>${customerDetails?.name || '受講生'} 様</p>
+    <p>Luna Flowへの入会誠にありがとうございます。<br>
+    お客様のアカウント作成が完了いたしました！</p>
     
-    <p>以下のボタンをクリックして、学習プラットフォームにログインしてください。</p>
+    <p>これからの新しい一歩を、私たちが全力でサポートいたします。<br>
+    理想の毎日を一緒に叶えていきましょう！</p>
+
+    <p style="margin-top: 20px;"><strong>▼ 面倒な入力なしで、今すぐスタート！</strong><br>
+    以下のボタンを押すだけで、自動的にログインし、同時にLINE連携も完了します。<br>
+    (推奨：スマートフォンからタップしてください)</p>
     
     <div style="text-align: center; margin: 30px 0;">
-        <a href="${magicLinkUrl}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-            Luna Flow にログインする
+        <a href="${magicLinkUrl}" style="background-color: #ea580c; color: white; padding: 15px 30px; text-decoration: none; border-radius: 9999px; font-weight: bold; display: inline-block;">
+            🚀 今すぐ学習を始める
         </a>
     </div>
     
-    <p>※上記ボタンが機能しない場合は、以下のURLをブラウザに貼り付けてください：<br>
-    <a href="${magicLinkUrl}">${magicLinkUrl}</a></p>
+    <p style="text-align: center; font-size: 0.8em; color: #666;">※このリンクはセキュリティのため72時間有効です。</p>
     
-    <h3>🚀 今後のステップ</h3>
-    <ol>
-        <li>ログイン後、画面左側のメニューから<strong>「コース」</strong>を選択してください。</li>
-        <li><strong>「はじめに」</strong>カテゴリの動画を必ず視聴し、コミュニティのルールをご確認ください。</li>
-        <li><strong>「公式LINE」</strong>との連携を行うと、新着通知を受け取ることができます。</li>
-    </ol>
-    
-    <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
-    
-    <p style="font-size: 0.9em; color: #666;">
-        ご不明な点がございましたら、このメールに返信するか、コミュニティ内の「お悩み相談」チャンネルよりご連絡ください。<br>
-        今後とも Luna Flow をよろしくお願いいたします。
-    </p>
-    
-    <p style="font-size: 0.9em; color: #999;">
-        --------------------------------------------------<br>
-        <strong>Luna Flow 事務局</strong><br>
-        公式サイト: <a href="https://lunaflow.space">https://lunaflow.space</a><br>
-        --------------------------------------------------
-    </p>
+    <div style="margin-top: 40px; background-color: #f9fafb; padding: 20px; border-radius: 8px;">
+        <h3 style="margin-top: 0; font-size: 1em;">■ 通常のログイン情報（PCやリンク切れの場合）</h3>
+        <p style="font-size: 0.9em; margin-bottom: 5px;">もし上記ボタンから入れない場合は、以下の情報でログインしてください。</p>
+        <div style="font-size: 0.9em; background-color: #fff; padding: 15px; border-radius: 4px; border: 1px solid #ddd;">
+            <p style="margin: 5px 0;">・ログインURL : <a href="https://lunaflow.space">https://lunaflow.space</a></p>
+            <p style="margin: 5px 0;">・メールアドレス : ${email}</p>
+            ${passwordSection}
+        </div>
+    </div>
 </div>
 `
                         });
