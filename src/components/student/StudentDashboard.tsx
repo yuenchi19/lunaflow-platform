@@ -55,6 +55,21 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     // Purchase Form States
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
+
+    const [unlocks, setUnlocks] = useState({ affiliate: false, inventory: false });
+
+    useEffect(() => {
+        // Fetch Unlock Status
+        fetch('/api/student/unlock-status')
+            .then(res => res.json())
+            .then(data => {
+                if (data && !data.error) {
+                    setUnlocks(data);
+                }
+            })
+            .catch(err => console.error("Failed to fetch unlock status", err));
+    }, []);
+
     useEffect(() => {
         const isUnlocked = user.isLedgerEnabled || unlocks.inventory;
         if (searchParams.get('openPurchase') === 'true' && isUnlocked) {
@@ -371,19 +386,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         </div>
     );
 
-    const [unlocks, setUnlocks] = useState({ affiliate: false, inventory: false });
 
-    useEffect(() => {
-        // Fetch Unlock Status
-        fetch('/api/student/unlock-status')
-            .then(res => res.json())
-            .then(data => {
-                if (data && !data.error) {
-                    setUnlocks(data);
-                }
-            })
-            .catch(err => console.error("Failed to fetch unlock status", err));
-    }, []);
 
     const renderPurchaseTracker = () => {
         const isUnlocked = user.isLedgerEnabled || unlocks.inventory;
