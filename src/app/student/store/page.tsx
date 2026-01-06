@@ -25,7 +25,7 @@ export default function StudentStorePage() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const res = await fetch('/api/products');
+                const res = await fetch('/api/products', { cache: 'no-store' });
                 if (res.ok) setProducts(await res.json());
             } catch (e) {
                 console.error(e);
