@@ -9,8 +9,6 @@ export const revalidate = 0;
 
 export async function POST(req: NextRequest) {
     noStore();
-
-    // Lazy init Stripe to prevent build-time crash if env is missing
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string || 'mock_key_for_build');
 
     let response = NextResponse.next({
@@ -22,16 +20,10 @@ export async function POST(req: NextRequest) {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             cookies: {
-                getAll() {
-                    return req.cookies.getAll()
-                },
+                getAll() { return req.cookies.getAll() },
                 setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) =>
-                        req.cookies.set(name, value)
-                    )
-                    cookiesToSet.forEach(({ name, value, options }) =>
-                        response.cookies.set(name, value, options)
-                    )
+                    cookiesToSet.forEach(({ name, value, options }) => req.cookies.set(name, value))
+                    cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
                 },
             },
         }
@@ -45,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json();
-        const { amount, scheduledDate, note, plan, carrier, useReward } = body;
+        const { amount: omakaseAmountInput, scheduledDate, note, plan, carrier, useReward, items } = body;
 
         const user = await prisma.user.findUnique({
             where: { email: authUser.email! },
@@ -59,79 +51,159 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "This feature is currently locked for your account." }, { status: 403 });
         }
 
-        // --- Address Sync Logic (Skipping complexity, user data assumed valid or handled elsewhere) ---
+        // 1. Calculate Totals
+        // Omakase Amount
+        let omakaseAmount = typeof omakaseAmountInput === 'string' ? parseInt(omakaseAmountInput.replace(/[^0-9]/g, '')) : (omakaseAmountInput || 0);
 
-        // --- Reward Logic ---
-        let finalAmount = typeof amount === 'string' ? parseInt(amount.replace(/[^0-9]/g, '')) : amount;
-        let offsetAmount = 0;
+        // EC Cart Items Calculation & Validation
+        let cartTotal = 0;
+        let cartLineItems: any[] = [];
+        let validItems: any[] = []; // To store product details for DB creation
 
-        if (useReward && (user.plan === 'standard' || user.plan === 'premium') && user.affiliateCode) {
-            // Simplified Balance Calculation: Sum of all transactions (Earnings + Offsets + Payouts)
-            // Assuming 'earning' is positive, 'offset' and 'payout' are negative.
-            // If the previous code relied on "virtual calculation", we keep referencing 'RewardTransaction' as the source of truth.
+        if (items && Array.isArray(items) && items.length > 0) {
+            const productIds = items.map((i: any) => i.id);
+            const products = await prisma.product.findMany({
+                where: { id: { in: productIds } }
+            });
 
-            // Note: The previous logic had a complex "Virtual Earnings" fallback. 
-            // If the system is new, we might strictly rely on DB 'RewardTransaction'.
-            // For safety, let's calculate Balance = (Total Earnings) - (Total Used).
+            for (const item of items) {
+                const product = products.find(p => p.id === item.id);
+                if (!product) continue;
+                if (product.stock < item.quantity) {
+                    return NextResponse.json({ error: `Not enough stock for: ${product.name}` }, { status: 400 });
+                }
+                const itemTotal = product.price * item.quantity;
+                cartTotal += itemTotal;
 
-            const transactions = await prisma.rewardTransaction.findMany({ where: { userId: user.id } });
+                // Stripe Line Item
+                cartLineItems.push({
+                    amount: product.price, // Unit price
+                    quantity: item.quantity,
+                    description: `[Store] ${product.name}`,
+                    productId: product.id, // Keep ref
+                    productName: product.name,
+                    image: product.image
+                });
 
-            // Assuming transaction logic: 
-            // Type 'earning_direct', 'earning_indirect' -> Positive? (Not seen in previous code, inferred)
-            // The previous code had `t.amount > 0` as earnings.
-
-            const totalEarned = transactions.reduce((sum, t) => sum + (t.amount > 0 ? t.amount : 0), 0);
-            const totalUsed = transactions.reduce((sum, t) => sum + (t.amount < 0 ? Math.abs(t.amount) : 0), 0);
-
-            // Fallback: If DB is empty but we want to allow 'Virtual' credit for legacy/migrated users?
-            // The user spec said "Reward Table... Pending". 
-            // We will stick to `available = totalEarned - totalUsed`. (Ignoring virtual for now to be strict as per spec "Reward Table")
-            // If the user *wants* the virtual calc, they would have said so. The prompt implies a concrete "Unpaid Balance".
-
-            const available = Math.max(0, totalEarned - totalUsed);
-
-            if (available > 0) {
-                offsetAmount = Math.min(finalAmount, available);
+                validItems.push({
+                    product,
+                    quantity: item.quantity
+                });
             }
         }
 
-        // Final Charge Amount
-        const chargeAmount = Math.max(0, finalAmount - offsetAmount);
+        // Shipping Calculation
+        // Rule: Max(Omakase(1000), EC(800)). If 0 use 0.
+        // Assuming 'omakaseAmount > 0' implies a request is being made that needs shipping. 
+        // Note: Sometimes Omakase is just "consultation" but usually "purchase request" involves shipping goods eventually.
+        // Assuming fixed rates for now as per instructions.
+        const omakaseShippingFee = omakaseAmount > 0 ? 1000 : 0;
+        const ecShippingFee = cartTotal > 0 ? 800 : 0;
+        const shippingFee = Math.max(omakaseShippingFee, ecShippingFee);
 
-        // 1. Create Purchase Request Record
+        // Grand Total
+        const subTotal = omakaseAmount + cartTotal + shippingFee;
+
+        if (subTotal === 0) {
+            return NextResponse.json({ error: "Total amount is 0" }, { status: 400 });
+        }
+
+        // 2. Reward Offset Calculation
+        let offsetAmount = 0;
+        if (useReward && (user.plan === 'standard' || user.plan === 'premium') && user.affiliateCode) {
+            const transactions = await prisma.rewardTransaction.findMany({ where: { userId: user.id } });
+            const totalEarned = transactions.reduce((sum, t) => sum + (t.amount > 0 ? t.amount : 0), 0);
+            const totalUsed = transactions.reduce((sum, t) => sum + (t.amount < 0 ? Math.abs(t.amount) : 0), 0);
+            const available = Math.max(0, totalEarned - totalUsed);
+
+            if (available > 0) {
+                offsetAmount = Math.min(subTotal, available);
+            }
+        }
+
+        // Final Invoice Amount
+        const chargeAmount = Math.max(0, subTotal - offsetAmount);
+
+        // 3. Create PurchaseRequest (Parent Record)
+        // We only store 'omakaseAmount' in the `amount` field to keep track of that specific budget.
+        // The Invoice will link everything else.
         const purchaseRequest = await prisma.purchaseRequest.create({
             data: {
                 userId: user.id,
-                amount: finalAmount, // Original Request Amount
+                amount: omakaseAmount, // Only the Omakase part
                 plan: plan || user.plan,
                 status: "pending",
-                note: offsetAmount > 0
-                    ? `${note || ''}\n[自動] 仕入れ代金: ¥${finalAmount}\n[自動] ポイント充当: -¥${offsetAmount}\n[自動] 請求合計: ¥${chargeAmount}`
-                    : note,
+                note: `${note || ''}
+[自動計算詳細]
+- 仕入れ希望額: ¥${omakaseAmount.toLocaleString()}
+- ストア商品計: ¥${cartTotal.toLocaleString()}
+- 同梱送料: ¥${shippingFee.toLocaleString()}
+----------------
+小計: ¥${subTotal.toLocaleString()}
+ポイント充当: -¥${offsetAmount.toLocaleString()}
+----------------
+請求合計: ¥${chargeAmount.toLocaleString()}`,
                 scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
                 carrier: carrier
             }
         });
 
-        // 2. Record Offset Transaction if used
+        // 4. Create InventoryItems (EC Goods) & Decrement Stock
+        if (validItems.length > 0) {
+            for (const v of validItems) {
+                // Decrement Stock
+                await prisma.product.update({
+                    where: { id: v.product.id },
+                    data: { stock: { decrement: v.quantity } }
+                });
+
+                // Create Inventory Items (One per quantity unit, or grouped? Usually individual items for tracking)
+                // System logic: InventoryItem represents a physical object. If user buys 2 bags, we make 2 items.
+                // For "Goods", maybe one record with quantity? Current schema InventoryItem doesn't seem to have valid quantity field?
+                // Schema check: user provided earlier 'model InventoryItem' has NO quantity.
+                // So we must create N records.
+                for (let i = 0; i < v.quantity; i++) {
+                    await prisma.inventoryItem.create({
+                        data: {
+                            adminId: 'system_store', // or system user
+                            brand: v.product.brand || 'Store Item',
+                            name: v.product.name,
+                            category: v.product.category || 'Goods',
+                            costPrice: v.product.price, // Store price is cost for user? Or we track our cost?
+                            // For Student Ledger, 'costPrice' is what THEY bought it for (which is v.product.price).
+                            // 'sellingPrice' is what they will sell it for (null).
+                            status: 'ASSIGNED', // "Purchased/Assigned"
+                            assignedToUserId: user.id,
+                            purchaseRequestId: purchaseRequest.id,
+                            images: v.product.image ? [v.product.image] : [],
+                            hasAccessories: false,
+                            accessories: [],
+                            condition: v.product.condition || 'N/A'
+                        }
+                    });
+                }
+            }
+        }
+
+        // 5. Record Offset Transaction
         if (offsetAmount > 0) {
             await prisma.rewardTransaction.create({
                 data: {
                     userId: user.id,
-                    amount: -offsetAmount, // Negative
-                    type: 'offset_purchase',
-                    description: `仕入れ購入充当 (Req: ${purchaseRequest.id})`,
+                    amount: -offsetAmount,
+                    type: 'offset_purchase_combined',
+                    description: `一括決済充当 (Req: ${purchaseRequest.id})`,
                     purchaseRequestId: purchaseRequest.id
                 }
             });
         }
 
-        // 3. Generate Stripe Invoice
+        // 6. Generate Stripe Invoice
         let invoiceId = null;
         try {
             let customerId = user.stripeCustomerId;
 
-            // Ensure Customer Exists
+            // Ensure Customer
             if (!customerId) {
                 const customers = await stripe.customers.list({ email: user.email, limit: 1 });
                 if (customers.data.length > 0) {
@@ -143,19 +215,43 @@ export async function POST(req: NextRequest) {
                     });
                     customerId = newCustomer.id;
                 }
-                // Save to DB
                 await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } });
             }
 
-            // Line Item 1: Purchase
-            await stripe.invoiceItems.create({
-                customer: customerId,
-                amount: finalAmount,
-                currency: "jpy",
-                description: `仕入れ購入代金 (${new Date().toLocaleDateString()})`,
-            });
+            // Line Item: Omakase
+            if (omakaseAmount > 0) {
+                await stripe.invoiceItems.create({
+                    customer: customerId,
+                    amount: omakaseAmount,
+                    currency: "jpy",
+                    description: `仕入れ代金 (Request #${purchaseRequest.id.slice(-4)})`,
+                });
+            }
 
-            // Line Item 2: Offset (Negative)
+            // Line Items: Cart Products
+            for (const item of cartLineItems) {
+                await stripe.invoiceItems.create({
+                    customer: customerId,
+                    amount: item.amount * item.quantity, // Stripe invoiceItems take 'amount' as total or unit?
+                    // stripe.invoiceItems.create: 'amount' is total amount in cents/yen. 'quantity' is not widely used for arbitrary amount unless using price API.
+                    // Actually for "one-off" invoice items, we specify 'amount'. If we specify 'unit_amount' and 'quantity', we need a Price ID usually.
+                    // But we can just push "Total for this Product".
+                    currency: "jpy",
+                    description: `${item.description} x${item.quantity}`,
+                });
+            }
+
+            // Line Item: Shipping
+            if (shippingFee > 0) {
+                await stripe.invoiceItems.create({
+                    customer: customerId,
+                    amount: shippingFee,
+                    currency: "jpy",
+                    description: `配送料 (同梱適用)`,
+                });
+            }
+
+            // Line Item: Reward Offset (Negative)
             if (offsetAmount > 0) {
                 await stripe.invoiceItems.create({
                     customer: customerId,
@@ -165,13 +261,13 @@ export async function POST(req: NextRequest) {
                 });
             }
 
-            // Create & Finalize Invoice
+            // Create & Finalize
             const invoice = await stripe.invoices.create({
                 customer: customerId,
-                auto_advance: true, // Auto-charge if card exists
-                collection_method: 'send_invoice', // Or 'charge_automatically' depending on flow. User said "Send invoice".
+                auto_advance: true,
+                collection_method: 'send_invoice',
                 days_until_due: 7,
-                description: `仕入れ請求 (${note || ''})`
+                description: `ご請求 (Req: ${purchaseRequest.id.slice(-6)})`
             });
             invoiceId = invoice.id;
 
@@ -186,8 +282,6 @@ export async function POST(req: NextRequest) {
 
         } catch (stripeError) {
             console.error("Stripe Invoice Error:", stripeError);
-            // Non-blocking? User might want to know. 
-            // But we already created the request.
         }
 
         return NextResponse.json({ success: true, purchaseRequest });

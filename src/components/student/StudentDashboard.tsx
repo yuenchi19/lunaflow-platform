@@ -9,6 +9,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import LockOverlay from "../LockOverlay";
 import { ProgressBar } from "../ui/ProgressBar";
+import { useCart } from "@/context/CartContext";
 
 interface StudentDashboardProps {
     initialUser?: User | null;
@@ -232,13 +233,16 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         fetchInventory();
     }, [user.isLedgerEnabled, user.id]);
 
+    const { items: cartItems, clearCart, totalAmount: cartTotalAmount } = useCart();
+
     const handlePurchaseSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
             const bodyData = {
                 ...purchaseForm,
-                useReward: useReward // Added flag
+                useReward: useReward, // Added flag
+                items: cartItems // Pass cart items
             };
 
             const response = await fetch('/api/purchase', {
@@ -252,6 +256,10 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 const requests = JSON.parse(localStorage.getItem("mock_purchase_requests") || "[]");
                 requests.push({ ...purchaseForm, id: Date.now().toString(), status: "pending", date: new Date().toLocaleString() });
                 localStorage.setItem("mock_purchase_requests", JSON.stringify(requests));
+
+                if (cartItems.length > 0) {
+                    clearCart();
+                }
 
                 alert("仕入れ希望を受け付けました。ご登録のメールアドレスに請求書を送付いたしました。");
                 setIsPurchaseModalOpen(false);
@@ -875,15 +883,83 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
             )}
 
             {/* keeping other modals unchanged but included in logic - truncated for brevity but would be included in real overwrite */}
+            {/* Purchase Modal */}
             {isPurchaseModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-lg p-8 shadow-2xl">
+                    <div className="bg-white rounded-2xl w-full max-w-lg p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
                         <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">仕入れ希望フォーム</h3>
                         <p className="text-xs text-slate-500 mb-6">
                             ご登録済みの会員情報（お名前、住所等）を使用して申請します。<br />
                             希望金額、決済予定日、備考を入力してください。
                         </p>
                         <form onSubmit={handlePurchaseSubmit} className="space-y-6">
+
+                            {/* Summary Calculation */}
+                            {(() => {
+                                const omakase = parseInt(purchaseForm.amount) || 0;
+                                const cart = cartTotalAmount;
+                                const omakaseShipping = omakase > 0 ? 1000 : 0;
+                                const ecShipping = cart > 0 ? 800 : 0;
+                                const shipping = Math.max(omakaseShipping, ecShipping);
+                                const subTotal = omakase + cart + shipping;
+                                // Reward logic display
+                                const available = Math.min(subTotal, rewardsBalance);
+                                const offset = useReward ? available : 0;
+                                const total = subTotal - offset;
+
+                                return (
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6 space-y-2 text-sm">
+                                        <h4 className="font-bold text-slate-700 mb-2 border-b border-slate-200 pb-1">請求予定額内訳</h4>
+                                        <div className="flex justify-between">
+                                            <span>仕入れ希望額</span>
+                                            <span>¥{omakase.toLocaleString()}</span>
+                                        </div>
+                                        {cart > 0 && (
+                                            <div className="flex justify-between">
+                                                <span>ストア商品代金 ({cartItems.length}点)</span>
+                                                <span>¥{cart.toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between text-slate-500">
+                                            <span>送料 (同梱適用)</span>
+                                            <span>¥{shipping.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between font-bold border-t border-slate-200 pt-1 mt-1">
+                                            <span>小計</span>
+                                            <span>¥{subTotal.toLocaleString()}</span>
+                                        </div>
+
+                                        {/* Reward Toggle */}
+                                        {(user.plan === 'standard' || user.plan === 'premium') && rewardsBalance > 0 && (
+                                            <div className="mt-4 pt-2 border-t border-dashed border-slate-300">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-xs font-bold text-amber-600">報酬残高: ¥{rewardsBalance.toLocaleString()}</span>
+                                                </div>
+                                                <label className="flex items-center gap-2 cursor-pointer bg-white p-2 rounded border border-slate-200">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={useReward}
+                                                        onChange={e => setUseReward(e.target.checked)}
+                                                        className="text-indigo-600 focus:ring-indigo-500"
+                                                    />
+                                                    <span className="text-xs font-bold text-slate-700">報酬を支払いに充当する</span>
+                                                </label>
+                                                {useReward && (
+                                                    <div className="flex justify-between text-rose-600 font-bold mt-2">
+                                                        <span>充当額</span>
+                                                        <span>-¥{offset.toLocaleString()}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-between text-lg font-bold text-slate-900 border-t-2 border-slate-800 pt-2 mt-2">
+                                            <span>請求合計</span>
+                                            <span>¥{total.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             {/* Carrier Selection */}
                             <div>
