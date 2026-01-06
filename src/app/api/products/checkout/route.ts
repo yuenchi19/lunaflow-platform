@@ -14,30 +14,46 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json();
-        const { productId } = body;
+        const { items } = body; // Array of { id, quantity }
 
-        const product = await prisma.product.findUnique({ where: { id: productId } });
-        if (!product || !product.stripePriceId || product.stock < 1) {
-            return NextResponse.json({ error: 'Product unavailable' }, { status: 400 });
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return NextResponse.json({ error: 'No items in cart' }, { status: 400 });
+        }
+
+        const lineItems = [];
+        const productIds = items.map((i: any) => i.id);
+
+        // Fetch all products at once
+        const products = await prisma.product.findMany({
+            where: { id: { in: productIds } }
+        });
+
+        for (const item of items) {
+            const product = products.find(p => p.id === item.id);
+            if (!product) continue;
+            if (!product.stripePriceId || product.stock < item.quantity) {
+                return NextResponse.json({ error: `在庫切れの商品があります: ${product.name}` }, { status: 400 });
+            }
+
+            lineItems.push({
+                price: product.stripePriceId,
+                quantity: item.quantity,
+            });
         }
 
         // Create Checkout Session
         const session = await stripe.checkout.sessions.create({
             customer_email: user.email,
             client_reference_id: user.id,
-            line_items: [
-                {
-                    price: product.stripePriceId,
-                    quantity: 1,
-                },
-            ],
+            line_items: lineItems,
             mode: 'payment',
             metadata: {
-                type: 'product_purchase',
-                productId: product.id
+                type: 'cart_purchase',
+                item_count: items.length,
+                // We can't store complex arrays easily, so maybe store summary or just rely on lineItems
             },
             success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://lunaflow.space'}/student/store/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://lunaflow.space'}/student/store`,
+            cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://lunaflow.space'}/student/store/cart`,
         });
 
         return NextResponse.json({ url: session.url });

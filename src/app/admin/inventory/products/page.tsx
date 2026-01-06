@@ -86,7 +86,12 @@ export default function AdminProductPage() {
                 body: JSON.stringify(formData)
             });
 
-            if (!res.ok) throw new Error('Save failed');
+            const data = await res.json();
+
+            if (!res.ok) {
+                // Throw with specific message from server
+                throw new Error(data.error || 'Save failed');
+            }
 
             showToast(editingProduct ? "更新しました" : "登録しました", "success");
             fetchProducts();
@@ -94,8 +99,9 @@ export default function AdminProductPage() {
             setEditingProduct(null);
             resetForm();
 
-        } catch (error) {
-            showToast("保存に失敗しました", "error");
+        } catch (error: any) {
+            console.error("Save Error:", error);
+            showToast(error.message || "保存に失敗しました", "error");
         }
     };
 
