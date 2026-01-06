@@ -5,13 +5,21 @@ import { useCart } from "@/context/CartContext";
 import { useToast } from "@/components/ui/ToastContext";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function CartPage() {
     const { items, removeFromCart, updateQuantity, totalAmount, clearCart } = useCart();
     const { showToast } = useToast();
+    const router = useRouter();
+    const [bundleWithOmakase, setBundleWithOmakase] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
 
     const handleCheckout = async () => {
+        if (bundleWithOmakase) {
+            router.push('/student/dashboard?openPurchase=true');
+            return;
+        }
+
         setIsCheckingOut(true);
         try {
             const res = await fetch('/api/products/checkout', {
@@ -99,12 +107,28 @@ export default function CartPage() {
                         <span className="text-xl font-bold text-slate-600">合計金額</span>
                         <span className="text-3xl font-bold text-slate-900">¥{totalAmount.toLocaleString()}</span>
                     </div>
+
+                    <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
+                        <label className="flex items-start gap-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={bundleWithOmakase}
+                                onChange={(e) => setBundleWithOmakase(e.target.checked)}
+                                className="mt-1 w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                            />
+                            <div>
+                                <span className="font-bold text-indigo-900 block">次回の『おまかせ仕入れ』に同梱して発送する</span>
+                                <span className="text-xs text-indigo-700 block mt-0.5">※送料がお得になります（仕入れ送料との比較で高い方1件分のみ適用）</span>
+                            </div>
+                        </label>
+                    </div>
+
                     <button
                         onClick={handleCheckout}
                         disabled={isCheckingOut}
                         className="w-full bg-[#1E3A8A] text-white py-4 rounded-xl font-bold text-lg hover:bg-[#2C3E50] transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isCheckingOut ? '処理中...' : 'レジへ進む'}
+                        {isCheckingOut ? '処理中...' : (bundleWithOmakase ? '仕入れ依頼へ進む' : 'レジへ進む')}
                     </button>
                     <p className="text-center text-xs text-slate-400 mt-4">
                         ※Stripeによる安全な決済が行われます

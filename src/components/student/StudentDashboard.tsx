@@ -998,9 +998,10 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                                                 <span>同梱送料 ({purchaseForm.prefecture || '-'})</span>
                                                 <span>¥{shipping.toLocaleString()}</span>
                                             </div>
-                                            <p className="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded inline-block self-start">
+                                            <p className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded inline-block self-start mt-1">
                                                 ※高い方の送料が1件分のみ適用されています
                                             </p>
+
                                         </div>
 
                                         <div className="flex justify-between font-bold border-t border-slate-200 pt-2 mt-2">
