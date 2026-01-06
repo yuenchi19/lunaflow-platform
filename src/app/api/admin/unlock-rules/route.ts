@@ -23,7 +23,8 @@ export async function PUT(req: Request) {
         });
 
         return NextResponse.json(rule);
-    } catch (error) {
-        return NextResponse.json({ error: 'Failed to update rule' }, { status: 500 });
+    } catch (error: any) {
+        console.error('Unlock Rule Update Error:', error);
+        return NextResponse.json({ error: error.message || 'Failed to update rule' }, { status: 500 });
     }
 }

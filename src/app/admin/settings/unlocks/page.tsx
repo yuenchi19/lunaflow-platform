@@ -72,10 +72,11 @@ export default function UnlockSettingsPage() {
             if (res.ok) {
                 alert('設定を保存しました');
             } else {
-                throw new Error('Save failed');
+                const data = await res.json();
+                throw new Error(data.error || 'Save failed');
             }
-        } catch (e) {
-            alert('保存に失敗しました');
+        } catch (e: any) {
+            alert(`保存に失敗しました: ${e.message}`);
         } finally {
             setSaving(false);
         }
