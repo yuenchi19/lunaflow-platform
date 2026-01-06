@@ -56,10 +56,11 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
     useEffect(() => {
-        if (searchParams.get('openPurchase') === 'true') {
+        const isUnlocked = user.isLedgerEnabled || unlocks.inventory;
+        if (searchParams.get('openPurchase') === 'true' && isUnlocked) {
             setIsPurchaseModalOpen(true);
         }
-    }, [searchParams]);
+    }, [searchParams, user.isLedgerEnabled, unlocks.inventory]);
 
     // Plan Change States
     const [isPlanChangeModalOpen, setIsPlanChangeModalOpen] = useState(false);
