@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from '@supabase/ssr';
+import { getShippingFee, Carrier } from '@/lib/shipping';
 import Stripe from "stripe";
 import { unstable_noStore as noStore } from 'next/cache';
 
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json();
-        const { amount: omakaseAmountInput, scheduledDate, note, plan, carrier, useReward, items } = body;
+        const { amount: omakaseAmountInput, scheduledDate, note, plan, carrier, useReward, items, prefecture } = body;
 
         const user = await prisma.user.findUnique({
             where: { email: authUser.email! },
@@ -52,13 +53,13 @@ export async function POST(req: NextRequest) {
         }
 
         // 1. Calculate Totals
-        // Omakase Amount
+        // Omakase Amount (Pure Investment)
         let omakaseAmount = typeof omakaseAmountInput === 'string' ? parseInt(omakaseAmountInput.replace(/[^0-9]/g, '')) : (omakaseAmountInput || 0);
 
         // EC Cart Items Calculation & Validation
         let cartTotal = 0;
         let cartLineItems: any[] = [];
-        let validItems: any[] = []; // To store product details for DB creation
+        let validItems: any[] = [];
 
         if (items && Array.isArray(items) && items.length > 0) {
             const productIds = items.map((i: any) => i.id);
@@ -75,12 +76,12 @@ export async function POST(req: NextRequest) {
                 const itemTotal = product.price * item.quantity;
                 cartTotal += itemTotal;
 
-                // Stripe Line Item
+                // Stripe Line Item (Goods)
                 cartLineItems.push({
-                    amount: product.price, // Unit price
+                    amount: product.price,
                     quantity: item.quantity,
                     description: `[Store] ${product.name}`,
-                    productId: product.id, // Keep ref
+                    productId: product.id,
                     productName: product.name,
                     image: product.image
                 });
@@ -93,13 +94,26 @@ export async function POST(req: NextRequest) {
         }
 
         // Shipping Calculation
-        // Rule: Max(Omakase(1000), EC(800)). If 0 use 0.
-        // Assuming 'omakaseAmount > 0' implies a request is being made that needs shipping. 
-        // Note: Sometimes Omakase is just "consultation" but usually "purchase request" involves shipping goods eventually.
-        // Assuming fixed rates for now as per instructions.
-        const omakaseShippingFee = omakaseAmount > 0 ? 1000 : 0;
-        const ecShippingFee = cartTotal > 0 ? 800 : 0;
-        const shippingFee = Math.max(omakaseShippingFee, ecShippingFee);
+        if (!prefecture && (omakaseAmount > 0 || cartTotal > 0)) {
+            return NextResponse.json({ error: "都道府県を選択してください" }, { status: 400 });
+        }
+
+        let shippingFee = 0;
+        let omakaseShipping = 0;
+        let ecShipping = 0;
+
+        if (prefecture && carrier) {
+            const rate = getShippingFee(prefecture, carrier as Carrier);
+            if (omakaseAmount > 0) omakaseShipping = rate;
+            if (cartTotal > 0) ecShipping = rate;
+
+            // Unified Shipping Rule: Apply the higher of the two (or just one rate if they are combined)
+            // As per instructions: "Combine items, apply shipping once (highest)".
+            // Since the rate is based on Region/Carrier, it's usually the same rate for both unless box size differs significantly.
+            // Assuming the 'getShippingFee' returns the standard box rate.
+            // If both exist, we take the max (which is just the rate).
+            shippingFee = Math.max(omakaseShipping, ecShipping);
+        }
 
         // Grand Total
         const subTotal = omakaseAmount + cartTotal + shippingFee;
@@ -125,19 +139,18 @@ export async function POST(req: NextRequest) {
         const chargeAmount = Math.max(0, subTotal - offsetAmount);
 
         // 3. Create PurchaseRequest (Parent Record)
-        // We only store 'omakaseAmount' in the `amount` field to keep track of that specific budget.
-        // The Invoice will link everything else.
+        // STRICT: 'amount' only contains Omakase Investment.
         const purchaseRequest = await prisma.purchaseRequest.create({
             data: {
                 userId: user.id,
-                amount: omakaseAmount, // Only the Omakase part
+                amount: omakaseAmount, // Only Omakase
                 plan: plan || user.plan,
                 status: "pending",
                 note: `${note || ''}
-[自動計算詳細]
+[決済内訳詳細]
 - 仕入れ希望額: ¥${omakaseAmount.toLocaleString()}
 - ストア商品計: ¥${cartTotal.toLocaleString()}
-- 同梱送料: ¥${shippingFee.toLocaleString()}
+- 送料 (${prefecture}): ¥${shippingFee.toLocaleString()}
 ----------------
 小計: ¥${subTotal.toLocaleString()}
 ポイント充当: -¥${offsetAmount.toLocaleString()}
@@ -157,22 +170,19 @@ export async function POST(req: NextRequest) {
                     data: { stock: { decrement: v.quantity } }
                 });
 
-                // Create Inventory Items (One per quantity unit, or grouped? Usually individual items for tracking)
-                // System logic: InventoryItem represents a physical object. If user buys 2 bags, we make 2 items.
-                // For "Goods", maybe one record with quantity? Current schema InventoryItem doesn't seem to have valid quantity field?
-                // Schema check: user provided earlier 'model InventoryItem' has NO quantity.
-                // So we must create N records.
+                // Create Inventory Items linked to Request
                 for (let i = 0; i < v.quantity; i++) {
                     await prisma.inventoryItem.create({
                         data: {
-                            adminId: 'system_store', // or system user
+                            adminId: 'system_store',
                             brand: v.product.brand || 'Store Item',
                             name: v.product.name,
                             category: v.product.category || 'Goods',
-                            costPrice: v.product.price, // Store price is cost for user? Or we track our cost?
-                            // For Student Ledger, 'costPrice' is what THEY bought it for (which is v.product.price).
-                            // 'sellingPrice' is what they will sell it for (null).
-                            status: 'ASSIGNED', // "Purchased/Assigned"
+                            costPrice: v.product.price,
+                            // Status: ASSIGNED (Pending Payment). Webhook will flip to SOLD/PAID?
+                            // User said: "InventoryItem (Bag) and StoreOrder (Goods) status -> Paid"
+                            // We use 'ASSIGNED' as "In user's possession/allocated" for now.
+                            status: 'ASSIGNED',
                             assignedToUserId: user.id,
                             purchaseRequestId: purchaseRequest.id,
                             images: v.product.image ? [v.product.image] : [],
@@ -232,10 +242,7 @@ export async function POST(req: NextRequest) {
             for (const item of cartLineItems) {
                 await stripe.invoiceItems.create({
                     customer: customerId,
-                    amount: item.amount * item.quantity, // Stripe invoiceItems take 'amount' as total or unit?
-                    // stripe.invoiceItems.create: 'amount' is total amount in cents/yen. 'quantity' is not widely used for arbitrary amount unless using price API.
-                    // Actually for "one-off" invoice items, we specify 'amount'. If we specify 'unit_amount' and 'quantity', we need a Price ID usually.
-                    // But we can just push "Total for this Product".
+                    amount: item.amount * item.quantity,
                     currency: "jpy",
                     description: `${item.description} x${item.quantity}`,
                 });
@@ -247,7 +254,7 @@ export async function POST(req: NextRequest) {
                     customer: customerId,
                     amount: shippingFee,
                     currency: "jpy",
-                    description: `配送料 (同梱適用)`,
+                    description: `配送料 (${carrier?.toUpperCase()} - ${prefecture})`,
                 });
             }
 

@@ -316,15 +316,52 @@ export async function POST(req: Request) {
 
                 if (targetUserId) {
                     console.log(`[Webhook] Invoice Paid: ${amount} by ${targetUserId}`);
-                    const { error: purchaseError } = await supabaseAdmin.from('PurchaseRequest').insert({
-                        userId: targetUserId,
-                        stripeInvoiceId: stripeInvoiceId,
-                        amount: amount,
-                        plan: 'one_time',
-                        status: 'paid',
-                        note: 'Invoice Payment'
-                    });
-                    if (purchaseError) console.error("Invoice Log Error:", purchaseError);
+
+                    // 1. Check if PurchaseRequest exists for this Invoice
+                    const { data: existingReq } = await supabaseAdmin
+                        .from('PurchaseRequest')
+                        .select('id, amount')
+                        .eq('stripeInvoiceId', stripeInvoiceId)
+                        .single();
+
+                    if (existingReq) {
+                        // Update Status to Paid
+                        const { error: updateError } = await supabaseAdmin
+                            .from('PurchaseRequest')
+                            .update({ status: 'paid' })
+                            .eq('id', existingReq.id);
+
+                        if (updateError) console.error("Failed to update PurchaseRequest:", updateError);
+                        else console.log(`[Webhook] PurchaseRequest ${existingReq.id} marked as paid.`);
+
+                        // Update Linked InventoryItems
+                        // "Status -> Paid" requested. But InventoryItem has strict Enum.
+                        // We interpret this as "Confirmed/Assigned". Ideally 'SHIPPED' comes later.
+                        // But to distinguish from "Pending Payment" (which we set as ASSIGNED), 
+                        // we might just leave it as ASSIGNED, as "Paid" is tracked on PurchaseRequest.
+                        // However, to follow "Status update" instruction, maybe we assume `ASSIGNED` is correct and just ensure it.
+                        // Or if we need to mark it, maybe `IN_STOCK` (for the user)?
+                        // "InventoryItem (Bag) ... status -> 'Paid'".
+                        // Let's assume the user meant "System recognizes it as paid".
+                        // I will trigger an update to `updatedAt` to ensure sync, or explicit status set if valid.
+                        // Ideally, `InventoryItem` for a user should be `IN_STOCK` if they have it? No, they don't have it yet.
+                        // `ASSIGNED` is correct.
+                        // I will skip changing InventoryItem status unless `PAID` enum exists.
+                        // (Schema check: IN_STOCK, ASSIGNED, SHIPPED, RECEIVED, SOLD, RETURNED)
+                        // I will just leave it ASSIGNED.
+
+                    } else {
+                        // Fallback: Create new if not found (Legacy behavior)
+                        const { error: purchaseError } = await supabaseAdmin.from('PurchaseRequest').insert({
+                            userId: targetUserId,
+                            stripeInvoiceId: stripeInvoiceId,
+                            amount: amount,
+                            plan: 'one_time',
+                            status: 'paid',
+                            note: 'Invoice Payment (Created via Webhook)'
+                        });
+                        if (purchaseError) console.error("Invoice Log Error:", purchaseError);
+                    }
                 }
             }
 

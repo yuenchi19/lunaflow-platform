@@ -896,15 +896,74 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                         </p>
                         <form onSubmit={handlePurchaseSubmit} className="space-y-6">
 
+                            {/* Cross-sell / Cart Info */}
+                            {cartItems.length > 0 ? (
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-800 flex items-center gap-2">
+                                    <span className="bg-emerald-600 text-white text-xs font-bold px-2 py-0.5 rounded">おまとめ配送適用</span>
+                                    <span>カート内の商品 ({cartItems.length}点) と同梱発送します。</span>
+                                </div>
+                            ) : (
+                                <div className="bg-slate-100 border border-slate-200 rounded-lg p-3 text-sm text-slate-600">
+                                    <p className="font-bold mb-1">💡 リペアグッズも一緒にいかがですか？</p>
+                                    <p className="text-xs">仕入れ商品と同梱なら、追加送料なしでお届けが可能です。</p>
+                                    <Link href="/student/store" className="text-rose-600 font-bold hover:underline text-xs mt-1 block">
+                                        ストアを見てみる &rarr;
+                                    </Link>
+                                </div>
+                            )}
+
+                            {/* Prefecture Selection */}
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 block mb-2">お住まいの地域 (都道府県)</label>
+                                <select
+                                    name="prefecture"
+                                    value={purchaseForm.prefecture}
+                                    onChange={handlePurchaseChange}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800"
+                                    required
+                                >
+                                    <option value="">選択してください</option>
+                                    {PREFECTURES.map(pref => (
+                                        <option key={pref} value={pref}>{pref}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Carrier Selection */}
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 block mb-2">配送業者 (Carrier)</label>
+                                <select
+                                    name="carrier"
+                                    value={purchaseForm.carrier}
+                                    onChange={handlePurchaseChange}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800"
+                                    required
+                                >
+                                    <option value="">選択してください</option>
+                                    <option value="jp">日本郵便</option>
+                                    <option value="ym">ヤマト運輸</option>
+                                    <option value="sg">佐川急便</option>
+                                </select>
+                                <div className="mt-2 text-right">
+                                    <Link href="/shipping-costs" target="_blank" className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center justify-end gap-1">
+                                        <ExternalLink className="w-3 h-3" />
+                                        送料はこちらで確認
+                                    </Link>
+                                </div>
+                            </div>
+
                             {/* Summary Calculation */}
                             {(() => {
                                 const omakase = parseInt(purchaseForm.amount) || 0;
                                 const cart = cartTotalAmount;
-                                const omakaseShipping = omakase > 0 ? 1000 : 0;
-                                const ecShipping = cart > 0 ? 800 : 0;
-                                const shipping = Math.max(omakaseShipping, ecShipping);
+
+                                let shipping = 0;
+                                if ((omakase > 0 || cart > 0) && purchaseForm.prefecture && purchaseForm.carrier) {
+                                    shipping = getShippingFee(purchaseForm.prefecture, purchaseForm.carrier as Carrier);
+                                }
+
                                 const subTotal = omakase + cart + shipping;
-                                // Reward logic display
+
                                 const available = Math.min(subTotal, rewardsBalance);
                                 const offset = useReward ? available : 0;
                                 const total = subTotal - offset;
@@ -912,21 +971,39 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                                 return (
                                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6 space-y-2 text-sm">
                                         <h4 className="font-bold text-slate-700 mb-2 border-b border-slate-200 pb-1">請求予定額内訳</h4>
-                                        <div className="flex justify-between">
-                                            <span>仕入れ希望額</span>
-                                            <span>¥{omakase.toLocaleString()}</span>
+                                        <div className="flex flex-col gap-1 mb-2">
+                                            <div className="flex justify-between items-center text-slate-800">
+                                                <span className="font-bold">仕入れ希望額</span>
+                                                <span className="font-bold">¥{omakase.toLocaleString()}</span>
+                                            </div>
+                                            <p className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded inline-block self-start">
+                                                ※今月の仕入れ実績に反映されます
+                                            </p>
                                         </div>
+
                                         {cart > 0 && (
-                                            <div className="flex justify-between">
-                                                <span>ストア商品代金 ({cartItems.length}点)</span>
-                                                <span>¥{cart.toLocaleString()}</span>
+                                            <div className="flex flex-col gap-1 mb-2">
+                                                <div className="flex justify-between items-center text-slate-800">
+                                                    <span className="font-bold">リペアグッズ合計代金</span>
+                                                    <span className="font-bold">¥{cart.toLocaleString()}</span>
+                                                </div>
+                                                <p className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded inline-block self-start">
+                                                    ※実績には反映されません
+                                                </p>
                                             </div>
                                         )}
-                                        <div className="flex justify-between text-slate-500">
-                                            <span>送料 (同梱適用)</span>
-                                            <span>¥{shipping.toLocaleString()}</span>
+
+                                        <div className="flex flex-col gap-1 mb-2 border-t border-slate-100 pt-2">
+                                            <div className="flex justify-between items-center text-slate-600">
+                                                <span>同梱送料 ({purchaseForm.prefecture || '-'})</span>
+                                                <span>¥{shipping.toLocaleString()}</span>
+                                            </div>
+                                            <p className="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded inline-block self-start">
+                                                ※高い方の送料が1件分のみ適用されています
+                                            </p>
                                         </div>
-                                        <div className="flex justify-between font-bold border-t border-slate-200 pt-1 mt-1">
+
+                                        <div className="flex justify-between font-bold border-t border-slate-200 pt-2 mt-2">
                                             <span>小計</span>
                                             <span>¥{subTotal.toLocaleString()}</span>
                                         </div>
