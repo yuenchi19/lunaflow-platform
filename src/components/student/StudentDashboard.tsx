@@ -659,6 +659,36 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         </nav>
     );
 
+    const renderStoreWidget = () => {
+        const isUnlocked = user.isLedgerEnabled || unlocks.inventory;
+
+        return (
+            <LockOverlay
+                isLocked={!isUnlocked}
+                title="ストア機能はロックされています"
+                message="規定のカリキュラムを完了することで、利用可能になります。"
+                actionLabel="コースを進める"
+                actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
+                blur="sm"
+            >
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                            <span className="bg-indigo-100 p-1.5 rounded-lg text-indigo-600">👜</span>
+                            リペアグッズストア
+                        </h3>
+                    </div>
+                    <p className="text-xs text-slate-500 mb-4">
+                        転売実践に必要な道具を購入できます。
+                    </p>
+                    <Link href="/student/store" className="block w-full text-center py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm">
+                        ストアを見る
+                    </Link>
+                </div>
+            </LockOverlay>
+        );
+    };
+
     // --- Main Render ---
 
     return (
@@ -676,25 +706,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                     {renderAnnouncements()}
                     {renderPurchaseTracker()}
                     {renderAffiliateCard()}
-
-                    {/* Store Widget */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
-                        <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                <span className="bg-indigo-100 p-1.5 rounded-lg text-indigo-600">👜</span>
-                                リペアグッズストア
-                            </h3>
-                            <Link href="/student/store" className="text-xs font-bold text-indigo-600 hover:underline">
-                                ストアへ移動 &rarr;
-                            </Link>
-                        </div>
-                        <p className="text-xs text-slate-500 mb-4">
-                            ブランド転売の実践に必要な道具・資材を購入できます。
-                        </p>
-                        <Link href="/student/store" className="block w-full text-center py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm">
-                            商品一覧を見る
-                        </Link>
-                    </div>
+                    {renderStoreWidget()}
 
                     {renderManual()}
                     {/* renderQuickMenu() is mostly redundant with Manual/Logout, but user asked for Login things at bottom */}
@@ -709,23 +721,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                         {renderLedgerWidget()}
                         {renderPurchaseTracker()}
                         {renderAffiliateCard()}
-
-                        {/* Store Widget Desktop */}
-                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
-                            <div className="flex items-center justify-between mb-2">
-                                <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <span className="bg-indigo-100 p-1.5 rounded-lg text-indigo-600">👜</span>
-                                    リペアグッズストア
-                                </h3>
-                            </div>
-                            <p className="text-xs text-slate-500 mb-4">
-                                転売実践に必要な道具を購入できます。
-                            </p>
-                            <Link href="/student/store" className="block w-full text-center py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm">
-                                ストアを見る
-                            </Link>
-                        </div>
-
+                        {renderStoreWidget()}
                         {renderQuickMenu()}
                     </div>
 
@@ -1007,7 +1003,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                                                 <span>¥{shipping.toLocaleString()}</span>
                                             </div>
                                             <p className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded inline-block self-start mt-1">
-                                                ※高い方の送料が1件分のみ適用されています
+                                                ※送料は1件分のみ適用されています
                                             </p>
 
                                         </div>
