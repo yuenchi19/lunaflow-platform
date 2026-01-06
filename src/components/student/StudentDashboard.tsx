@@ -11,6 +11,7 @@ import LockOverlay from "../LockOverlay";
 import { ProgressBar } from "../ui/ProgressBar";
 import { useCart } from "@/context/CartContext";
 import { getShippingFee, PREFECTURES, Carrier } from "@/lib/shipping";
+import { useSearchParams } from "next/navigation";
 
 interface StudentDashboardProps {
     initialUser?: User | null;
@@ -18,6 +19,7 @@ interface StudentDashboardProps {
 
 export default function StudentDashboard({ initialUser }: StudentDashboardProps) {
     const supabase = createClient();
+    const searchParams = useSearchParams();
     // STRICT: Unsafe to fallback to Mock User (which is Premium).
     // If no initialUser, we must assume loading or unauthenticated.
     // However, if called from Server Component, initialUser should be present if logged in.
@@ -52,6 +54,12 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
     // Purchase Form States
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+
+    useEffect(() => {
+        if (searchParams.get('openPurchase') === 'true') {
+            setIsPurchaseModalOpen(true);
+        }
+    }, [searchParams]);
 
     // Plan Change States
     const [isPlanChangeModalOpen, setIsPlanChangeModalOpen] = useState(false);
