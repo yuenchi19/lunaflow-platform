@@ -24,7 +24,7 @@ export async function POST(req: Request) {
         // 1. Create Product in Stripe (for appearance in Checkout)
         const stripeProduct = await stripe.products.create({
             name: name,
-            description: description,
+            description: description || undefined,
             images: image ? [image] : [],
             metadata: {
                 app: 'lunaflow'

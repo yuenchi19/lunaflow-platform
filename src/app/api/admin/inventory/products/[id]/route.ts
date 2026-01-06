@@ -15,6 +15,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         if (!oldProduct) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
         // 2. Update Product
+        // Sanitize description for Stripe (not necessarily for DB, but let's keep DB consistent if we want)
+        // Actually DB can hold empty string.
+
         const product = await prisma.product.update({
             where: { id: params.id },
             data: updateData
@@ -23,6 +26,23 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         // 3. Check Restock
         if (typeof updateData.stock === 'number') {
             await checkAndNotifyRestock(product.id, oldProduct.stock, updateData.stock, product.name);
+        }
+
+        // 4. Update Stripe Product Details (Name, Description, Image)
+        // We need 'stripeProductId'. We only have 'stripePriceId'. Retrieve Price to find Product.
+        if (oldProduct.stripePriceId) {
+            try {
+                const priceObj = await stripe.prices.retrieve(oldProduct.stripePriceId);
+                if (typeof priceObj.product === 'string') {
+                    await stripe.products.update(priceObj.product, {
+                        name: product.name,
+                        description: product.description || undefined,
+                        images: product.image ? [product.image] : [],
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to update Stripe Product:", e);
+            }
         }
 
         // 4. Update Stripe if Price Changed
