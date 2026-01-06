@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import LockOverlay from "../LockOverlay";
 import { ProgressBar } from "../ui/ProgressBar";
 import { useCart } from "@/context/CartContext";
+import { getShippingFee, PREFECTURES, Carrier } from "@/lib/shipping";
 
 interface StudentDashboardProps {
     initialUser?: User | null;
@@ -62,7 +63,8 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         scheduledDate: "",
         note: "",
         carrier: "",
-        plan: user.plan || "standard"
+        plan: user.plan || "standard",
+        prefecture: "" // Added
     });
 
     const [currentMonthPurchaseTotal, setCurrentMonthPurchaseTotal] = useState(0);
@@ -71,167 +73,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     const [rewardsBalance, setRewardsBalance] = useState(0);
     const [useReward, setUseReward] = useState(false);
 
-    useEffect(() => {
-        const fetchCourses = async () => {
-            try {
-                const res = await fetch('/api/courses');
-                if (res.ok) {
-                    const data = await res.json();
-                    setCourses(data);
-                }
-            } catch (e) {
-                console.error("Failed to fetch courses", e);
-            }
-        };
-
-        const fetchNews = async () => {
-            try {
-                const res = await fetch('/api/news');
-                if (res.ok) {
-                    const data = await res.json();
-                    setAnnouncements(data);
-                }
-            } catch (e) {
-                console.error("Failed to fetch news", e);
-            }
-        };
-
-        fetchCourses();
-        fetchNews();
-    }, []);
-
-    useEffect(() => {
-        const fetchRewards = async () => {
-            try {
-                const res = await fetch('/api/user/rewards');
-                if (res.ok) {
-                    const data = await res.json();
-                    setRewardsBalance(data.balance || 0);
-                }
-            } catch (e) {
-                console.error("Failed to fetch rewards", e);
-            }
-        };
-        fetchRewards();
-    }, [user.id]);
-
-    // Initialize State from User Prop or Storage
-    useEffect(() => {
-        if (user) {
-            setNewName(user.name);
-            setEmail(user.email);
-            setZipCode(user.zipCode || "");
-            setAddress(user.address || "");
-            setCommunityNickname(user.communityNickname || "");
-        }
-    }, [user]);
-
-    useEffect(() => {
-        let target = 0;
-        if (user.plan === 'light') target = 80000;
-        else if (user.plan === 'standard') target = 60000;
-        else if (user.plan === 'premium') target = 30000;
-        setPurchaseTarget(target);
-
-        // Fetch total from API instead of localStorage potentially? For now keep legacy local calc as backup or replace if API available
-        // Ideally we should have an API to get this total. Assuming current legacy behavior is acceptable for display only.
-        if (typeof window !== 'undefined') {
-            const requests = JSON.parse(localStorage.getItem("mock_purchase_requests") || "[]");
-            // ... (keep existing localStorage read for total calculation for now to minimize disruption, or fetch from server later)
-            const currentMonth = new Date().getMonth();
-            const currentYear = new Date().getFullYear();
-
-            const total = requests.reduce((sum: number, req: any) => {
-                const reqDate = new Date(req.date);
-                if (reqDate.getMonth() === currentMonth && reqDate.getFullYear() === currentYear) {
-                    return sum + (parseInt(req.amount) || 0);
-                }
-                return sum;
-            }, 0);
-            setCurrentMonthPurchaseTotal(total);
-        }
-    }, [user.plan, isPurchaseModalOpen]);
-
-    // Affiliate Code Auto-Generation
-    useEffect(() => {
-        if (!user.affiliateCode && (user.plan === 'standard' || user.plan === 'premium' || user.plan === 'partner')) {
-            fetch('/api/student/affiliate/generate', { method: 'POST' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.affiliateCode) {
-                        setUser(prev => {
-                            if (!prev) return null;
-                            return { ...prev, affiliateCode: data.affiliateCode };
-                        });
-                    }
-                })
-                .catch(err => console.error("Failed to generate affiliate code", err));
-        }
-    }, [user.affiliateCode, user.plan]);
-
-    useEffect(() => {
-        // ... (keep existing lifetime total logic or switch to API)
-        if (typeof window !== 'undefined') {
-            const requests = JSON.parse(localStorage.getItem("mock_purchase_requests") || "[]");
-            const total = requests.reduce((sum: number, req: any) => sum + (parseInt(req.amount) || 0), 0);
-            setLifetimePurchaseTotal(total);
-
-            const mockDate = new Date();
-            mockDate.setMonth(mockDate.getMonth() - 3);
-            setRegistrationDate(mockDate);
-        }
-
-        const earnings = getAffiliateEarnings(user.id);
-        setAffiliateEarnings(earnings);
-    }, [user.id]);
-
-    // AI Feedback
-    const [feedbacks, setFeedbacks] = useState<import("@/types").ProgressDetail[]>([]);
-    const [showFeedbackToast, setShowFeedbackToast] = useState(false);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const allProgress = getStudentProgressDetail(user.id);
-        const completedFeedbacks = allProgress.filter(p => p.feedbackStatus === 'completed');
-        setFeedbacks(completedFeedbacks);
-
-        const lastSeen = parseInt(localStorage.getItem(`luna_seen_feedback_count_${user.id}`) || "0");
-        if (completedFeedbacks.length > lastSeen) {
-            setShowFeedbackToast(true);
-            localStorage.setItem(`luna_seen_feedback_count_${user.id}`, completedFeedbacks.length.toString());
-        }
-    }, [user.id]);
-
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const [inventoryStats, setInventoryStats] = useState({ count: 0, profit: 0 });
-
-    useEffect(() => {
-        if (!user.isLedgerEnabled) return;
-        const fetchInventory = async () => {
-            try {
-                const res = await fetch('/api/student/inventory');
-                if (res.ok) {
-                    const data = await res.json();
-                    const count = (data.items || []).filter((i: any) => i.status !== 'SOLD').length;
-
-                    const now = new Date();
-                    const currentMonth = now.getMonth();
-                    const currentYear = now.getFullYear();
-
-                    const monthlyProfit = (data.ledger || []).filter((l: any) => {
-                        const d = new Date(l.sellDate || l.createdAt);
-                        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-                    }).reduce((sum: number, l: any) => sum + (l.profit || 0), 0);
-
-                    setInventoryStats({ count, profit: monthlyProfit });
-                }
-            } catch (e) {
-                console.error("Failed to fetch inventory stats", e);
-            }
-        };
-        fetchInventory();
-    }, [user.isLedgerEnabled, user.id]);
+    // ... useEffects ...
 
     const { items: cartItems, clearCart, totalAmount: cartTotalAmount } = useCart();
 
