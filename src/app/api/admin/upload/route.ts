@@ -23,9 +23,24 @@ export async function POST(req: Request) {
         const buffer = await file.arrayBuffer();
         const filename = `${Date.now()}-${file.name.replace(/\s/g, '_')}`;
         const path = `products/${filename}`;
+        const bucketName = 'product-images';
+
+        // Auto-create bucket if not exists
+        const { data: buckets } = await supabase.storage.listBuckets();
+        if (!buckets?.find(b => b.name === bucketName)) {
+            console.log(`Bucket ${bucketName} not found. Creating...`);
+            await supabase.storage.createBucket(bucketName, {
+                public: true,
+                fileSizeLimit: 10485760,
+                allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+            });
+            // Public access policy is usually separate in SQL, but public: true helps for read.
+            // Note: If RLS is enabled, we might need a policy. 
+            // For now, assuming basic Supabase setup allows creator to write.
+        }
 
         const { data, error } = await supabase.storage
-            .from('product-images')
+            .from(bucketName)
             .upload(path, buffer, {
                 contentType: file.type,
                 upsert: true
