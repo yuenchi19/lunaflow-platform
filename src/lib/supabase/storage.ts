@@ -7,29 +7,41 @@ export async function uploadInventoryImage(file: File): Promise<string | null> {
     const supabase = createClient();
 
     try {
-        // 1. Compress Image
-        const options = {
-            maxSizeMB: 1,
-            maxWidthOrHeight: 1920,
-            useWebWorker: true
-        };
-        const compressedFile = await imageCompression(file, options);
+        let fileToUpload = file;
+
+        // 1. Try Compress Image
+        try {
+            const options = {
+                maxSizeMB: 1,
+                maxWidthOrHeight: 1920,
+                // useWebWorker: true // Disable WebWorker if it causes issues on some devices
+                // Fallback: If compression fails (e.g. HEIC on unsupported browser), we catch and use original.
+            };
+            fileToUpload = await imageCompression(file, options);
+        } catch (compressionError) {
+            console.warn("Image Compression Failed, using original file:", compressionError);
+            // Fallback to original file
+            fileToUpload = file;
+        }
 
         // 2. Generate Unique Path
-        const fileExt = file.name.split('.').pop();
+        // Ensure extension matches the actual file we are uploading (compressed might be blob/file)
+        // If compressed, it usually becomes a Blob with correct type. 
+        // We will default to original name extension or jpg if compressed.
+        const originalExt = file.name.split('.').pop();
+        const fileExt = originalExt || 'jpg';
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
         const filePath = `${fileName}`;
 
         // 3. Upload
         const { error: uploadError } = await supabase.storage
             .from(BUCKET_NAME)
-            .upload(filePath, compressedFile);
+            .upload(filePath, fileToUpload);
 
         if (uploadError) {
             console.error("Supabase Upload Error:", uploadError);
-            // If bucket doesn't exist, we might need to handle creation or assume it exists.
-            // For now, logging error.
-            return null;
+            // Throw specific error for RLS/Permission issues
+            throw new Error(`Upload failed: ${uploadError.message}`);
         }
 
         // 4. Get Public URL
@@ -40,8 +52,7 @@ export async function uploadInventoryImage(file: File): Promise<string | null> {
         return data.publicUrl;
 
     } catch (error: any) {
-        console.error("Image Processing Error:", error);
-        // Throwing allows caller to see the message
-        throw new Error(error.message || "Image processing failed");
+        console.error("Image Upload Process Error:", error);
+        throw new Error(error.message || "Image upload failed");
     }
 }
