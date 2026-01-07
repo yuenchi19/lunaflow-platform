@@ -168,15 +168,16 @@ export default function AdminInventoryPage() {
                 method: 'POST',
                 body: uploadFormData
             });
+            const data = await res.json();
+
             if (res.ok) {
-                const data = await res.json();
-                setCreateImages([...createImages, data.url]);
+                setCreateImages(prev => [...prev, data.url]);
             } else {
-                alert("画像のアップロードに失敗しました");
+                alert(`画像のアップロードに失敗しました: ${data.error}`);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            alert("通信エラー");
+            alert(`通信エラー: ${err.message}`);
         } finally {
             setUploading(false);
         }
@@ -193,15 +194,16 @@ export default function AdminInventoryPage() {
                 method: 'POST',
                 body: uploadFormData
             });
+            const data = await res.json();
+
             if (res.ok) {
-                const data = await res.json();
-                setEditImages([...editImages, data.url]);
+                setEditImages(prev => [...prev, data.url]);
             } else {
-                alert("画像のアップロードに失敗しました");
+                alert(`画像のアップロードに失敗しました: ${data.error}`);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            alert("通信エラー");
+            alert(`通信エラー: ${err.message}`);
         } finally {
             setUploading(false);
         }
@@ -240,15 +242,16 @@ export default function AdminInventoryPage() {
                     images: editImages
                 })
             });
+            const data = await res.json();
             if (res.ok) {
                 alert("更新しました");
                 setEditItem(null);
                 fetchData();
             } else {
-                alert("エラーが発生しました");
+                alert(`エラーが発生しました: ${data.error || 'Unknown Error'}`);
             }
-        } catch (e) {
-            alert("通信エラー");
+        } catch (e: any) {
+            alert(`通信エラー: ${e.message}`);
         } finally {
             setEditing(false);
         }
