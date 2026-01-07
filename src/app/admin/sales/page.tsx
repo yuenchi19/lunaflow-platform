@@ -121,7 +121,7 @@ export default function AdminSalesPage() {
                                 <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
                                 <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
                                 <Tooltip
-                                    formatter={(value: number) => `¥${value.toLocaleString()}`}
+                                    formatter={(value: any) => `¥${Number(value).toLocaleString()}`}
                                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                 />
                                 <Bar dataKey="profit" fill="#10b981" radius={[4, 4, 0, 0]} name="利益" />
@@ -141,16 +141,16 @@ export default function AdminSalesPage() {
                                     cx="50%"
                                     cy="50%"
                                     labelLine={false}
-                                    label={({ name, percent }) => percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : ''}
+                                    label={({ name, percent }: any) => percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : ''}
                                     outerRadius={80}
                                     fill="#8884d8"
                                     dataKey="value"
                                 >
-                                    {platformData.map((entry, index) => (
+                                    {platformData.map((entry: any, index: number) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip formatter={(value: number) => `¥${value.toLocaleString()}`} />
+                                <Tooltip formatter={(value: any) => `¥${Number(value).toLocaleString()}`} />
                                 <Legend />
                             </PieChart>
                         </ResponsiveContainer>
