@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
         const { id } = params;
         const body = await req.json();
-        const { sellPrice, sellDate, shippingCost, platformFee, note } = body;
+        const { sellPrice, sellDate, shippingCost, platformFee, note, salePlatform, saleNote } = body;
 
         if (!sellPrice || !sellDate) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                 data: {
                     status: 'SOLD',
                     updatedAt: new Date(),
+                    sellingPrice: sale, // Update selling price on item too
                     note: note ? `${item.note || ''}\n[Sold Note]: ${note}` : item.note
                 }
             }),
@@ -64,6 +66,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                     shippingCost: shipping,
                     platformFee: fee,
                     profit: profit,
+                    salePlatform: salePlatform,
+                    saleNote: saleNote,
+                    note: note, // Store note in ledger too
                     status: 'SOLD'
                 }
             })
@@ -73,6 +78,94 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     } catch (error: any) {
         console.error("Sell Item Error:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+    try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const itemId = params.id;
+        const body = await req.json();
+        const { sellPrice, sellDate, shippingCost, platformFee, note, salePlatform, saleNote } = body;
+
+        // Verify ownership
+        const item = await prisma.inventoryItem.findUnique({
+            where: { id: itemId },
+            include: { ledgerEntry: true }
+        });
+
+        if (!item) {
+            return NextResponse.json({ error: "Item not found" }, { status: 404 });
+        }
+
+        if (item.adminId !== user.id && item.assignedToUserId !== user.id) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+
+        const cost = item.costPrice;
+        const sale = Number(sellPrice);
+        const shipping = Number(shippingCost) || 0;
+        const fee = Number(platformFee) || 0;
+        const profit = sale - cost - shipping - fee;
+
+        // Update Ledger logic
+        let ledgerEntry;
+        if (item.ledgerEntry) {
+            ledgerEntry = await prisma.ledgerEntry.update({
+                where: { id: item.ledgerEntry.id },
+                data: {
+                    sellPrice: sale,
+                    sellDate: new Date(sellDate),
+                    shippingCost: shipping,
+                    platformFee: fee,
+                    profit: profit,
+                    salePlatform: salePlatform,
+                    saleNote: saleNote,
+                    note: note
+                }
+            });
+        } else {
+            // Fallback create
+            ledgerEntry = await prisma.ledgerEntry.create({
+                data: {
+                    userId: user.id,
+                    inventoryItemId: itemId,
+                    originItemId: itemId, // Add originItemId for relation consistency
+                    brand: item.brand,
+                    purchasePrice: cost,
+                    images: item.images,
+                    sellDate: new Date(sellDate),
+                    sellPrice: sale,
+                    shippingCost: shipping,
+                    platformFee: fee,
+                    profit: profit,
+                    salePlatform,
+                    saleNote,
+                    note,
+                    status: 'SOLD'
+                }
+            });
+        }
+
+        const updatedItem = await prisma.inventoryItem.update({
+            where: { id: itemId },
+            data: {
+                sellingPrice: sale,
+                status: 'SOLD'
+            }
+        });
+
+        return NextResponse.json({ item: updatedItem, ledger: ledgerEntry });
+
+    } catch (error: any) {
+        console.error("Update Sale Error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

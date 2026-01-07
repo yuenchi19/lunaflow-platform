@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Loader2, Plus, Search, Tag, DollarSign, Calendar, Package } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -17,6 +18,19 @@ interface InventoryItem {
     status: string;
     createdAt: string;
     condition: string | null;
+}
+
+interface LedgerEntry {
+    id: string;
+    originItemId: string | null;
+    sellPrice: number | null;
+    sellDate: string | null;
+    shippingCost: number | null;
+    platformFee: number | null;
+    note: string | null;
+    salePlatform: string | null;
+    saleNote: string | null;
+    profit: number | null;
 }
 
 export default function StudentInventoryPage() {
@@ -114,18 +128,52 @@ export default function StudentInventoryPage() {
         }
     });
 
+    const [visibleCount, setVisibleCount] = useState(20);
+    const displayedItems = filteredItems.slice(0, visibleCount);
+
+    const handleLoadMore = () => {
+        setVisibleCount(prev => prev + 20);
+    };
+
     const handleSellClick = (item: InventoryItem) => {
         setSelectedItem(item);
-        // Pre-fill some defaults if possible
-        setSellForm({
-            sellPrice: item.sellingPrice ? item.sellingPrice.toString() : '',
-            sellDate: new Date().toISOString().split('T')[0],
-            shippingCost: '1000', // Default guess
-            platformFee: item.sellingPrice ? Math.floor(item.sellingPrice * 0.1).toString() : '', // 10% guess
-            note: '',
-            salePlatform: '',
-            saleNote: ''
-        });
+
+        if (item.status === 'SOLD') {
+            // Find ledger entry
+            const entry = ledger.find((l: LedgerEntry) => l.originItemId === item.id);
+            if (entry) {
+                setSellForm({
+                    sellPrice: entry.sellPrice ? entry.sellPrice.toString() : '',
+                    sellDate: entry.sellDate ? new Date(entry.sellDate).toISOString().split('T')[0] : '',
+                    shippingCost: entry.shippingCost ? entry.shippingCost.toString() : '',
+                    platformFee: entry.platformFee ? entry.platformFee.toString() : '',
+                    note: entry.note || '',
+                    salePlatform: entry.salePlatform || '',
+                    saleNote: entry.saleNote || ''
+                });
+            } else {
+                setSellForm({
+                    sellPrice: item.sellingPrice ? item.sellingPrice.toString() : '',
+                    sellDate: new Date().toISOString().split('T')[0],
+                    shippingCost: '0',
+                    platformFee: '0',
+                    note: '',
+                    salePlatform: '',
+                    saleNote: ''
+                });
+            }
+        } else {
+            // New Sale
+            setSellForm({
+                sellPrice: item.sellingPrice ? item.sellingPrice.toString() : '',
+                sellDate: new Date().toISOString().split('T')[0],
+                shippingCost: '1000',
+                platformFee: item.sellingPrice ? Math.floor(item.sellingPrice * 0.1).toString() : '',
+                note: '',
+                salePlatform: '',
+                saleNote: ''
+            });
+        }
         setIsSellModalOpen(true);
     };
 
@@ -135,14 +183,16 @@ export default function StudentInventoryPage() {
         setSubmittingSell(true);
 
         try {
+            const method = selectedItem.status === 'SOLD' ? 'PATCH' : 'POST';
             const res = await fetch(`/api/student/inventory/${selectedItem.id}/sell`, {
-                method: 'POST',
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(sellForm)
             });
 
             if (res.ok) {
-                alert("販売情報を登録しました！");
+                const msg = selectedItem.status === 'SOLD' ? '販売情報を更新しました' : '販売実績を登録しました！';
+                alert(msg);
                 setIsSellModalOpen(false);
                 fetchItems(); // Refresh
             } else {
@@ -342,6 +392,17 @@ export default function StudentInventoryPage() {
                     </table>
                 </div>
             </div>
+
+            {visibleCount < filteredItems.length && (
+                <div className="flex justify-center mb-8">
+                    <button
+                        onClick={handleLoadMore}
+                        className="px-6 py-2 bg-white border border-slate-300 rounded-full text-slate-600 font-bold hover:bg-slate-50 transition-colors shadow-sm"
+                    >
+                        もっと見る ({filteredItems.length - visibleCount}件)
+                    </button>
+                </div>
+            )}
 
             {/* Sell Modal */}
             {isSellModalOpen && selectedItem && (
