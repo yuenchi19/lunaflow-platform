@@ -48,8 +48,28 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
         }
 
-        const buffer = await file.arrayBuffer();
-        const filename = `${Date.now()}-${file.name.replace(/\s/g, '_')}`;
+        let buffer = await file.arrayBuffer();
+        let filename = `${Date.now()}-${file.name.replace(/\s/g, '_')}`;
+        let contentType = file.type;
+
+        // HEIC Conversion
+        if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic')) {
+            try {
+                const convert = require('heic-convert');
+                const convertedBuffer = await convert({
+                    buffer: Buffer.from(buffer),
+                    format: 'JPEG',
+                    quality: 0.8
+                });
+                buffer = convertedBuffer;
+                contentType = 'image/jpeg';
+                filename = filename.replace(/\.(heic|heif)$/i, '.jpg');
+            } catch (conversionError) {
+                console.error("Server-side HEIC conversion failed:", conversionError);
+                return NextResponse.json({ error: 'Server-side HEIC conversion failed' }, { status: 500 });
+            }
+        }
+
         const path = `products/${filename}`;
         const bucketName = 'product-images';
 
@@ -68,7 +88,7 @@ export async function POST(req: NextRequest) {
         const { error } = await supabase.storage
             .from(bucketName)
             .upload(path, buffer, {
-                contentType: file.type,
+                contentType: contentType,
                 upsert: true
             });
 

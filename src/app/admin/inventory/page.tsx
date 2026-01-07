@@ -161,32 +161,13 @@ export default function AdminInventoryPage() {
         }
     };
 
-    const processFile = async (file: File): Promise<File> => {
-        if (file.type === "image/heic" || file.type === "image/heif" || file.name.toLowerCase().endsWith(".heic")) {
-            try {
-                const heic2any = (await import("heic2any")).default;
-                const convertedBlob = await heic2any({
-                    blob: file,
-                    toType: "image/jpeg",
-                    quality: 0.8
-                });
-                // Handle single blob or array
-                const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
-                return new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), { type: "image/jpeg" });
-            } catch (e) {
-                console.error("HEIC conversion failed", e);
-                throw new Error("HEIC conversion failed");
-            }
-        }
-        return file;
-    };
+
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length) return;
         setUploading(true);
         try {
-            const rawFile = e.target.files[0];
-            const file = await processFile(rawFile);
+            const file = e.target.files[0];
 
             const uploadFormData = new FormData();
             uploadFormData.append("file", file);
