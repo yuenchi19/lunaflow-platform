@@ -22,7 +22,10 @@ export async function POST(req: NextRequest) {
             condition,
             hasAccessories,
             accessories,
-            note
+            accessories,
+            note,
+            supplier,
+            purchaseDate
         } = body;
 
         // Validation
@@ -65,7 +68,9 @@ export async function POST(req: NextRequest) {
                 status: 'ASSIGNED',
                 assignedToUserId: user.id,
                 // @ts-ignore
-                isSelfSourced: true
+                isSelfSourced: true,
+                supplier,
+                purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date(),
             }
         });
 

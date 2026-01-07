@@ -63,9 +63,16 @@ export async function GET(req: NextRequest) {
     const items = await prisma.inventoryItem.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
-            assignedToUser: { select: { name: true } }
+            assignedToUser: { select: { name: true, email: true } }
         }
     });
 
-    return NextResponse.json({ items });
+    const ledger = await prisma.ledgerEntry.findMany({
+        orderBy: { sellDate: 'desc' },
+        include: {
+            user: { select: { name: true, email: true } }
+        }
+    });
+
+    return NextResponse.json({ items, ledger });
 }

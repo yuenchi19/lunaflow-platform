@@ -157,6 +157,8 @@ model InventoryItem {
   hasAccessories  Boolean  @default(false)
   accessories     String[] // Box, Dust Bag, Card, etc.
   note            String?  // Other comments
+  supplier        String?  // Purchase Source (Kobutsusho Requirement)
+  purchaseDate    DateTime? @default(now())
 
   // Assignment
   assignedToUser   User?   @relation(fields: [assignedToUserId], references: [id])
