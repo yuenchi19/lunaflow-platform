@@ -9,103 +9,62 @@ export async function POST(req: NextRequest) {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl) {
-        return NextResponse.json({ error: 'Server Config Error: Missing URL' }, { status: 500 });
-    }
+    if (!supabaseUrl) return NextResponse.json({ error: 'Server Config Error' }, { status: 500 });
 
     let supabase;
-
-    // Priority 1: Service Role Key (Bypass RLS)
-    if (supabaseServiceKey) {
-        supabase = createClient(supabaseUrl, supabaseServiceKey);
-    }
-    // Priority 2: SSR Client (User Auth / RLS)
-    else if (supabaseAnonKey) {
-        // Need to create a response object to handle cookie methods, though we won't use the response here for setting cookies
-        // We just need to read cookies to pass to Supabase
-        supabase = createServerClient(
-            supabaseUrl,
-            supabaseAnonKey,
-            {
-                cookies: {
-                    getAll() { return req.cookies.getAll(); },
-                    setAll(cookiesToSet) {
-                        // We are not setting cookies in this upload handler, so empty implementation is fine for this purpose
-                        // or we could assume we don't need to refresh tokens here as it's a simple upload
-                    },
-                },
-            }
-        );
-    } else {
-        return NextResponse.json({ error: 'Server Config Error: Missing Keys' }, { status: 500 });
-    }
+    if (supabaseServiceKey) supabase = createClient(supabaseUrl, supabaseServiceKey);
+    else if (supabaseAnonKey) supabase = createServerClient(supabaseUrl, supabaseAnonKey, { cookies: { getAll() { return req.cookies.getAll(); }, setAll() { } } });
+    else return NextResponse.json({ error: 'Missing Keys' }, { status: 500 });
 
     try {
         const formData = await req.formData();
         const file = formData.get('file') as File;
+        const bucket = formData.get('bucket') as string || 'product-images';
 
-        if (!file) {
-            return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
-        }
+        if (!file) return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
 
-        let buffer = await file.arrayBuffer();
-        let filename = `${Date.now()}-${file.name.replace(/\s/g, '_')}`;
+        let buffer = Buffer.from(await file.arrayBuffer());
         let contentType = file.type;
+        let filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-        // HEIC Conversion
-        if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic')) {
+        // Sharp Conversion (HEIC/HEIF -> JPEG)
+        if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
             try {
-                const convert = require('heic-convert');
-                const convertedBuffer = await convert({
-                    buffer: Buffer.from(buffer),
-                    format: 'JPEG',
-                    quality: 0.8
-                });
-                buffer = convertedBuffer;
+                const sharp = require('sharp');
+                buffer = await sharp(buffer)
+                    .toFormat('jpeg', { quality: 80 })
+                    .toBuffer();
                 contentType = 'image/jpeg';
                 filename = filename.replace(/\.(heic|heif)$/i, '.jpg');
-            } catch (conversionError) {
-                console.error("Server-side HEIC conversion failed:", conversionError);
-                return NextResponse.json({ error: 'Server-side HEIC conversion failed' }, { status: 500 });
+            } catch (e: any) {
+                console.error("Sharp conversion failed:", e);
+                return NextResponse.json({ error: '画像の変換に失敗しました' }, { status: 500 });
             }
         }
 
-        const path = `products/${filename}`;
-        const bucketName = 'product-images';
+        const path = `${filename}`;
 
-        // Check Bucket Existence (Only if using Service Key, otherwise listBuckets might fail RLS)
+        // Ensure Bucket (Service Key only)
         if (supabaseServiceKey) {
             const { data: buckets } = await supabase.storage.listBuckets();
-            if (!buckets?.find(b => b.name === bucketName)) {
-                await supabase.storage.createBucket(bucketName, {
-                    public: true,
-                    fileSizeLimit: 10485760,
-                    allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
-                });
+            if (!buckets?.find(b => b.name === bucket)) {
+                await supabase.storage.createBucket(bucket, { public: true, fileSizeLimit: 10485760 });
             }
         }
 
-        const { error } = await supabase.storage
-            .from(bucketName)
-            .upload(path, buffer, {
-                contentType: contentType,
-                upsert: true
-            });
+        const { error } = await supabase.storage.from(bucket).upload(path, buffer, { contentType, upsert: true });
 
         if (error) {
-            console.error("Upload error:", error);
-            // Return detailed error for debugging
-            return NextResponse.json({ error: `Storage Error: ${error.message}` }, { status: 500 });
+            console.error("Supabase Upload Error:", error);
+            return NextResponse.json({ error: `アップロード失敗: ${error.message}` }, { status: 500 });
         }
 
-        const { data: { publicUrl } } = supabase.storage
-            .from('product-images')
-            .getPublicUrl(path);
+        const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path);
 
         return NextResponse.json({ url: publicUrl });
 
     } catch (e: any) {
-        console.error("Upload handler error:", e);
-        return NextResponse.json({ error: `Server Error: ${e.message}` }, { status: 500 });
+        console.error("Upload Handler Error:", e);
+        return NextResponse.json({ error: `システムエラー: ${e.message}` }, { status: 500 });
     }
 }
