@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Loader2, UserPlus, Package, CheckCircle, AlertCircle, Plus, X } from "lucide-react";
+import { Search, Loader2, UserPlus, Package, CheckCircle, AlertCircle, Plus, X, Edit2, Download } from "lucide-react";
 import Image from "next/image";
 
 interface InventoryItem {
@@ -20,6 +20,13 @@ interface InventoryItem {
     receivedAt?: string;
     adminId?: string;
     condition?: string;
+    // Kobutsusho
+    supplierName?: string;
+    supplierAddress?: string;
+    supplierOccupation?: string;
+    supplierAge?: number;
+    idVerificationMethod?: string;
+    purchaseDate?: string;
 }
 
 interface LedgerEntry {
@@ -64,6 +71,15 @@ export default function AdminInventoryPage() {
     const [selectedUserId, setSelectedUserId] = useState('');
     const [assignUserSearch, setAssignUserSearch] = useState('');
     const [assigning, setAssigning] = useState(false);
+
+    // Edit Modal
+    const [editItem, setEditItem] = useState<InventoryItem | null>(null);
+    const [editForm, setEditForm] = useState({
+        brand: '', name: '', category: '', costPrice: '', condition: 'B',
+        supplier: '', supplierName: '', supplierAddress: '', supplierOccupation: '', supplierAge: '', idVerificationMethod: '', purchaseDate: ''
+    });
+    const [editImages, setEditImages] = useState<string[]>([]);
+    const [editing, setEditing] = useState(false);
 
     // Create Modal
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -166,6 +182,78 @@ export default function AdminInventoryPage() {
         }
     };
 
+    const handleImageUploadEdit = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files?.length) return;
+        setUploading(true);
+        const file = e.target.files[0];
+        try {
+            const uploadFormData = new FormData();
+            uploadFormData.append("file", file);
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: uploadFormData
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setEditImages([...editImages, data.url]);
+            } else {
+                alert("画像のアップロードに失敗しました");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("通信エラー");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const openEditModal = (item: InventoryItem) => {
+        setEditItem(item);
+        setEditForm({
+            brand: item.brand,
+            name: item.name || '',
+            category: item.category || '',
+            costPrice: item.costPrice.toString(),
+            condition: item.condition || 'B',
+            supplier: item.supplier || '',
+            supplierName: item.supplierName || '',
+            supplierAddress: item.supplierAddress || '',
+            supplierOccupation: item.supplierOccupation || '',
+            supplierAge: item.supplierAge ? item.supplierAge.toString() : '',
+            idVerificationMethod: item.idVerificationMethod || ID_VERIFICATION_METHODS[0],
+            purchaseDate: item.purchaseDate ? new Date(item.purchaseDate).toISOString().split('T')[0] : ''
+        });
+        setEditImages(item.images || []);
+    };
+
+    const handleEditUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editItem) return;
+        setEditing(true);
+        try {
+            const res = await fetch(`/api/admin/inventory/${editItem.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...editForm,
+                    costPrice: Number(editForm.costPrice),
+                    images: editImages
+                })
+            });
+            if (res.ok) {
+                alert("更新しました");
+                setEditItem(null);
+                fetchData();
+            } else {
+                alert("エラーが発生しました");
+            }
+        } catch (e) {
+            alert("通信エラー");
+        } finally {
+            setEditing(false);
+        }
+    };
+
     const handleCreateItem = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -204,6 +292,65 @@ export default function AdminInventoryPage() {
         } finally {
             setCreating(false);
         }
+    };
+
+    const downloadCSV = () => {
+        // Collect all items to export based on current view OR all items?
+        // User probably wants to export the visible list or ALL list.
+        // For Admin Inventory Ledger, let's export ALL items filtered by current tab logic if possible, or just download displayedItems.
+        // Let's download `displayedItems`.
+
+        if (displayedItems.length === 0) {
+            alert("出力するデータがありません");
+            return;
+        }
+
+        const headers = ["No.", "商品ID", "画像URL", "ブランド", "商品名", "カテゴリ", "ランク", "仕入れ価格", "仕入れ先", "仕入れ日", "担当者", "ステータス", "登録日"];
+
+        const csvContent = headers.join(",") + "\n" + displayedItems.map((item: any, index: number) => {
+            // item can be InventoryItem or LedgerEntry
+            // Common fields: brand, name (InventoryItem), user (LedgerEntry -> assignedToUser?)
+
+            // Normalized Data
+            const id = item.id;
+            const img = item.images?.[0] || '';
+            const brand = item.brand;
+            const name = item.name || '';
+            const category = item.category || '';
+            const rank = item.condition || '';
+            const cost = item.costPrice || item.purchasePrice || 0;
+            const supplier = item.supplier || '';
+            const purchaseDate = item.purchaseDate ? new Date(item.purchaseDate).toLocaleDateString() : '';
+            const assignee = item.assignedToUser?.name || item.user?.name || '-';
+            const status = item.status;
+            const createdAt = new Date(item.createdAt || item.updatedAt).toLocaleDateString();
+
+            return [
+                index + 1,
+                id,
+                img,
+                brand,
+                name,
+                category,
+                rank,
+                cost,
+                supplier,
+                purchaseDate,
+                assignee,
+                status,
+                createdAt
+            ].map(f => `"${f}"`).join(",");
+        }).join("\n");
+
+        const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+        const blob = new Blob([bom, csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `管理者在庫台帳_${activeTab}_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     // Filtering Logic
@@ -280,13 +427,22 @@ export default function AdminInventoryPage() {
                         className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm w-64"
                     />
                 </div>
-                <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-800"
-                >
-                    <Package className="w-4 h-4" />
-                    商品登録
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={downloadCSV}
+                        className="flex items-center gap-2 bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-50"
+                    >
+                        <Download className="w-4 h-4" />
+                        CSV出力
+                    </button>
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-800"
+                    >
+                        <Package className="w-4 h-4" />
+                        商品登録
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
@@ -362,13 +518,22 @@ export default function AdminInventoryPage() {
                                     )}
                                     {activeTab === 'pool' && (
                                         <td className="px-6 py-4 text-center">
-                                            <button
-                                                onClick={() => setAssignModalItem(item)}
-                                                className="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-indigo-700 flex items-center gap-1 mx-auto shadow-sm"
-                                            >
-                                                <UserPlus className="w-3 h-3" />
-                                                割り当て
-                                            </button>
+                                            <div className="flex justify-center items-center gap-2">
+                                                <button
+                                                    onClick={() => setAssignModalItem(item)}
+                                                    className="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-indigo-700 flex items-center gap-1 shadow-sm"
+                                                >
+                                                    <UserPlus className="w-3 h-3" />
+                                                    割り当て
+                                                </button>
+                                                <button
+                                                    onClick={() => openEditModal(item)}
+                                                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"
+                                                    title="編集"
+                                                >
+                                                    <Edit2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     )}
                                     <td className="px-6 py-4 text-right font-mono">¥{item.costPrice.toLocaleString()}</td>
@@ -567,6 +732,134 @@ export default function AdminInventoryPage() {
                                 <button type="button" onClick={() => setIsCreateModalOpen(false)} className="flex-1 py-3 bg-slate-100 font-bold text-slate-600 rounded-lg">キャンセル</button>
                                 <button type="submit" disabled={creating} className="flex-1 py-3 bg-slate-900 font-bold text-white rounded-lg disabled:opacity-50">
                                     {creating ? '登録中...' : '登録'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Edit Modal (Admin) */}
+            {editItem && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-lg">商品情報の編集 (管理者)</h3>
+                            <button onClick={() => setEditItem(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+                        </div>
+                        <form onSubmit={handleEditUpdate} className="space-y-6">
+                            {/* Images */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-2">商品画像 (メイン1枚 + サブ5枚)</label>
+                                <div className="flex gap-2 overflow-x-auto pb-2">
+                                    {editImages.map((img, idx) => (
+                                        <div key={idx} className="relative w-20 h-20 flex-shrink-0 bg-slate-100 rounded border border-slate-200 overflow-hidden group">
+                                            <Image src={img} alt="preview" fill className="object-cover" />
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditImages(editImages.filter((_, i) => i !== idx))}
+                                                className="absolute top-0 right-0 bg-black/50 text-white p-0.5 rounded-bl opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {editImages.length < 6 && (
+                                        <label className={`w-20 h-20 flex-shrink-0 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded cursor-pointer hover:bg-slate-50 ${uploading ? 'opacity-50' : ''}`}>
+                                            <input type="file" accept="image/*" onChange={handleImageUploadEdit} disabled={uploading} className="hidden" />
+                                            {uploading ? <Loader2 className="w-4 h-4 animate-spin text-slate-400" /> : <Plus className="w-5 h-5 text-slate-400" />}
+                                            <span className="text-[9px] text-slate-400 font-bold mt-1">追加</span>
+                                        </label>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">ブランド <span className="text-red-500">*</span></label>
+                                    <input type="text" required value={editForm.brand} onChange={e => setEditForm({ ...editForm, brand: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">カテゴリ <span className="text-red-500">*</span></label>
+                                    <select required value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2 bg-white">
+                                        <option value="">選択してください</option>
+                                        <option value="Bags">バッグ</option>
+                                        <option value="Wallets">財布</option>
+                                        <option value="Accessories">アクセサリー</option>
+                                        <option value="Apparel">アパレル</option>
+                                        <option value="Other">その他</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">商品名</label>
+                                <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">仕入れ価格 (¥) <span className="text-red-500">*</span></label>
+                                    <input type="number" required value={editForm.costPrice} onChange={e => setEditForm({ ...editForm, costPrice: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">状態 (ランク) <span className="text-red-500">*</span></label>
+                                    <select required value={editForm.condition} onChange={e => setEditForm({ ...editForm, condition: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2 bg-white">
+                                        <option value="S">S (新品同様)</option>
+                                        <option value="A">A (非常に良い)</option>
+                                        <option value="B">B (良い)</option>
+                                        <option value="C">C (可)</option>
+                                        <option value="D">D (難あり)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Admin Supplier Info (For Kobutsusho) */}
+                            <div className="border-t pt-4">
+                                <h4 className="font-bold text-sm text-slate-700 mb-3">仕入れ先情報 (古物台帳用)</h4>
+                                <div className="space-y-3 p-4 bg-slate-50 rounded-lg">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">仕入れ先 (表示用名)</label>
+                                        <input type="text" value={editForm.supplier} onChange={e => setEditForm({ ...editForm, supplier: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" placeholder="例: セカンドストリート" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">氏名/名称</label>
+                                            <input type="text" value={editForm.supplierName} onChange={e => setEditForm({ ...editForm, supplierName: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">年齢</label>
+                                            <input type="number" value={editForm.supplierAge} onChange={e => setEditForm({ ...editForm, supplierAge: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">住所</label>
+                                        <input type="text" value={editForm.supplierAddress} onChange={e => setEditForm({ ...editForm, supplierAddress: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">職業</label>
+                                        <input type="text" value={editForm.supplierOccupation} onChange={e => setEditForm({ ...editForm, supplierOccupation: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">本人確認方法</label>
+                                        <select
+                                            value={editForm.idVerificationMethod}
+                                            onChange={e => setEditForm({ ...editForm, idVerificationMethod: e.target.value })}
+                                            className="w-full border border-slate-300 rounded-lg p-2 bg-white"
+                                        >
+                                            {ID_VERIFICATION_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">仕入れ日</label>
+                                        <input type="date" value={editForm.purchaseDate} onChange={e => setEditForm({ ...editForm, purchaseDate: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-4 flex gap-2">
+                                <button type="button" onClick={() => setEditItem(null)} className="flex-1 py-3 bg-slate-100 font-bold text-slate-600 rounded-lg">キャンセル</button>
+                                <button type="submit" disabled={editing} className="flex-1 py-3 bg-slate-900 font-bold text-white rounded-lg disabled:opacity-50">
+                                    {editing ? '保存中...' : '保存'}
                                 </button>
                             </div>
                         </form>
