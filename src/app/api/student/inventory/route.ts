@@ -62,9 +62,9 @@ export async function POST(req: NextRequest) {
                 hasAccessories: hasAccessories || false,
                 accessories: accessories || [],
                 note,
-                status: 'ASSIGNED', // Auto-assign to creator (Self-Sourced)
-                assignedToUserId: user.id, // Lock to creator
-                isSelfSourced: true // Flag as self-sourced
+                status: 'ASSIGNED',
+                assignedToUserId: user.id,
+                isSelfSourced: true
             }
         });
 

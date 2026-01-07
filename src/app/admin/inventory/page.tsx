@@ -381,10 +381,14 @@ export default function AdminInventoryPage() {
                                         {item.assignedToUser ? (
                                             <div className="flex items-center gap-1.5">
                                                 <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-bold">
-                                                    {item.assignedToUser.name.substring(0, 1)}
+                                                    {(item.assignedToUser.name || 'U').substring(0, 1)}
                                                 </div>
-                                                <span className="text-slate-600">{item.assignedToUser.name}</span>
+                                                <span className="text-slate-600 font-bold">{item.assignedToUser.name || '名称未設定'}</span>
                                             </div>
+                                        ) : item.isSelfSourced && item.assignedToUserId ? (
+                                            <span className="text-slate-500 italic text-xs">
+                                                (ユーザーID: {item.assignedToUserId.substring(0, 6)}...)
+                                            </span>
                                         ) : (
                                             <span className="text-slate-400 text-xs">-</span>
                                         )}
