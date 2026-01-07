@@ -536,9 +536,9 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                         </div>
                     </div>
 
-                    <button className="block w-full text-center py-2 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors">
+                    <Link href="/student/inventory" className="block w-full text-center py-2 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors">
                         台帳を開く
-                    </button>
+                    </Link>
                 </div>
             </LockOverlay>
         );
