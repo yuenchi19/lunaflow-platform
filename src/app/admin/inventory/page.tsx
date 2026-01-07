@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Search, Loader2, UserPlus, Package, CheckCircle, AlertCircle, Plus, X, Edit2, Download } from "lucide-react";
 import Image from "next/image";
-import heic2any from "heic2any";
+
 
 interface InventoryItem {
     id: string;
@@ -164,6 +164,7 @@ export default function AdminInventoryPage() {
     const processFile = async (file: File): Promise<File> => {
         if (file.type === "image/heic" || file.type === "image/heif" || file.name.toLowerCase().endsWith(".heic")) {
             try {
+                const heic2any = (await import("heic2any")).default;
                 const convertedBlob = await heic2any({
                     blob: file,
                     toType: "image/jpeg",
