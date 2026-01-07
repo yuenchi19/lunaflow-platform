@@ -55,14 +55,16 @@ export async function POST(req: NextRequest) {
                 name,
                 category,
                 costPrice: Number(costPrice),
-                sellingPrice,
+                sellingPrice: null, // No initial markup for self-sourced
                 images,
                 damageImages: damageImages || [],
                 condition,
                 hasAccessories: hasAccessories || false,
                 accessories: accessories || [],
                 note,
-                status: 'IN_STOCK', // Default
+                status: 'ASSIGNED', // Auto-assign to creator (Self-Sourced)
+                assignedToUserId: user.id, // Lock to creator
+                isSelfSourced: true // Flag as self-sourced
             }
         });
 

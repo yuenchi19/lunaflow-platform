@@ -187,6 +187,9 @@ model LedgerEntry {
   shippingCost    Int?
   platformFee     Int?
   profit          Int?
+
+  salePlatform    String?  // Mercari, Rakuma, etc.
+  saleNote        String?  // Remarks
   
   status          ItemStatus @default(ASSIGNED)
   

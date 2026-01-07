@@ -34,7 +34,9 @@ export default function StudentInventoryPage() {
         sellDate: new Date().toISOString().split('T')[0],
         shippingCost: '',
         platformFee: '',
-        note: ''
+        note: '', // Keep for backward compatibility or existing note
+        salePlatform: '',
+        saleNote: ''
     });
     const [submittingSell, setSubmittingSell] = useState(false);
 
@@ -120,7 +122,9 @@ export default function StudentInventoryPage() {
             sellDate: new Date().toISOString().split('T')[0],
             shippingCost: '1000', // Default guess
             platformFee: item.sellingPrice ? Math.floor(item.sellingPrice * 0.1).toString() : '', // 10% guess
-            note: ''
+            note: '',
+            salePlatform: '',
+            saleNote: ''
         });
         setIsSellModalOpen(true);
     };
@@ -226,139 +230,182 @@ export default function StudentInventoryPage() {
                 </div>
             </div>
 
-            {/* Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {activeTab === 'stock' ? (
-                    filteredItems.length === 0 ? (
-                        <EmptyState
-                            title="在庫がありません"
-                            description="在庫アイテムが登録されていません。「商品登録」ボタンから追加してください。"
-                            icon={Package}
-                            className="col-span-full py-16"
-                        />
-                    ) : (
-                        filteredItems.map(item => (
-                            <div key={item.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden group hover:shadow-md transition-all">
-                                <div className="relative aspect-square bg-slate-100">
-                                    {item.images[0] ? (
-                                        <img src={item.images[0]} alt={item.brand} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-slate-300">No Image</div>
-                                    )}
-                                    <div className="absolute top-2 right-2">
-                                        <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase shadow-sm ${item.status === 'IN_STOCK' ? 'bg-emerald-100 text-emerald-700' :
-                                            item.status === 'SHIPPED' ? 'bg-amber-100 text-amber-700' :
-                                                'bg-slate-100 text-slate-500'
-                                            }`}>
-                                            {item.status === 'IN_STOCK' ? '在庫あり' :
-                                                item.status === 'SHIPPED' ? '発送済み' :
-                                                    item.status === 'ASSIGNED' ? '担当者割り当て済み' :
-                                                        item.status === 'RECEIVED' ? '受領済み' :
-                                                            item.status}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="p-4">
-                                    <div className="text-xs text-slate-400 font-bold mb-1">{item.category || "未分類"}</div>
-                                    <h3 className="font-bold text-slate-800 mb-1 truncate">{item.brand} {item.name}</h3>
-                                    <div className="flex justify-between items-end mt-4">
-                                        <div>
-                                            <p className="text-[10px] text-slate-400 uppercase">仕入れ値</p>
-                                            <p className="text-sm font-bold text-slate-700">¥{item.costPrice.toLocaleString()}</p>
-                                        </div>
-                                        <button
-                                            onClick={() => handleSellClick(item)}
-                                            className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors"
-                                        >
-                                            販売登録
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))
-                    )
-                ) : (
-                    // SOLD VIEW (Using Ledger)
-                    ledger.filter(l => (l.brand || '').toLowerCase().includes(searchTerm.toLowerCase()) || (l.name || '').toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
-                        <EmptyState
-                            title="販売履歴がありません"
-                            description="まだ販売された商品がありません。在庫を販売登録するとここに表示されます。"
-                            icon={DollarSign}
-                            className="col-span-full py-16"
-                        />
-                    ) : (
-                        ledger.filter(l => (l.brand || '').toLowerCase().includes(searchTerm.toLowerCase()) || (l.name || '').toLowerCase().includes(searchTerm.toLowerCase())).map(entry => (
-                            <div key={entry.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden group hover:shadow-md transition-all">
-                                <div className="relative aspect-square bg-slate-100">
-                                    {entry.images && entry.images[0] ? (
-                                        <img src={entry.images[0]} alt={entry.brand} className="w-full h-full object-cover grayscale" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-slate-300">No Image</div>
-                                    )}
-                                    <div className="absolute top-2 right-2">
-                                        <span className="px-2 py-1 rounded-md text-[10px] font-bold uppercase shadow-sm bg-slate-800 text-white">
-                                            SOLD OUT
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="p-4">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h3 className="font-bold text-slate-800 truncate flex-1">{entry.brand} {entry.name}</h3>
-                                        <span className="text-[10px] text-slate-400">{new Date(entry.sellDate || entry.updatedAt).toLocaleDateString()}</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-                                        <div className="bg-slate-50 p-2 rounded">
-                                            <p className="text-[10px] text-slate-400">売上</p>
-                                            <p className="font-bold">¥{entry.sellPrice?.toLocaleString()}</p>
-                                        </div>
-                                        <div className="bg-emerald-50 p-2 rounded">
-                                            <p className="text-[10px] text-emerald-600">利益</p>
-                                            <p className="font-bold text-emerald-700">¥{entry.profit?.toLocaleString()}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))
-                    )
-                )}
+            {/* List View (Table) */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-bold">
+                            <tr>
+                                <th className="px-6 py-4">商品画像</th>
+                                <th className="px-6 py-4">登録日</th>
+                                <th className="px-6 py-4">カテゴリー</th>
+                                <th className="px-6 py-4">ブランド / 商品名</th>
+                                <th className="px-6 py-4 text-right">仕入れ価格</th>
+                                <th className="px-6 py-4 text-center">ステータス</th>
+                                {activeTab === 'sold' && <>
+                                    <th className="px-6 py-4 text-right">販売価格</th>
+                                    <th className="px-6 py-4 text-right">粗利益</th>
+                                    <th className="px-6 py-4 text-center">PF</th>
+                                </>}
+                                <th className="px-6 py-4 text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+                            {activeTab === 'stock' ? (
+                                filteredItems.length === 0 ? (
+                                    <tr><td colSpan={8} className="text-center py-10 text-slate-400">データがありません</td></tr>
+                                ) : (
+                                    filteredItems.map(item => (
+                                        <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-6 py-4 w-20">
+                                                <div className="w-12 h-12 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+                                                    {item.images[0] ? (
+                                                        <img src={item.images[0]} alt={item.brand} className="w-full h-full object-cover" />
+                                                    ) : <div className="w-full h-full flex items-center justify-center text-xs text-slate-300">No</div>}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-xs tabular-nums text-slate-500">
+                                                {new Date(item.createdAt).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-6 py-4">{item.category || "-"}</td>
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold text-slate-800">{item.brand}</div>
+                                                <div className="text-xs text-slate-500">{item.name}</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-mono">¥{item.costPrice.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${item.status === 'IN_STOCK' ? 'bg-emerald-100 text-emerald-700' :
+                                                    item.status === 'SHIPPED' ? 'bg-amber-100 text-amber-700' :
+                                                        item.status === 'ASSIGNED' ? 'bg-blue-100 text-blue-700' :
+                                                            'bg-slate-100 text-slate-600'
+                                                    }`}>
+                                                    {item.status === 'IN_STOCK' ? '在庫あり' :
+                                                        item.status === 'SHIPPED' ? '発送済み' :
+                                                            item.status === 'ASSIGNED' ? '保管中' :
+                                                                item.status === 'RECEIVED' ? '受取済' : item.status}
+                                                </span>
+                                            </td>
+                                            {/* Stock Tab Actions */}
+                                            <td className="px-6 py-4 text-center">
+                                                <button
+                                                    onClick={() => handleSellClick(item)}
+                                                    className="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-indigo-700 transition-colors shadow-sm"
+                                                >
+                                                    販売登録
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )
+                            ) : (
+                                /* SOLD TAB (Ledger) */
+                                ledger.filter(l => (l.brand || '').toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+                                    <tr><td colSpan={10} className="text-center py-10 text-slate-400">履歴がありません</td></tr>
+                                ) : (
+                                    ledger.map(entry => (
+                                        <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-6 py-4 w-20">
+                                                <div className="w-12 h-12 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 grayscale">
+                                                    {entry.images && entry.images[0] ? (
+                                                        <img src={entry.images[0]} alt={entry.brand} className="w-full h-full object-cover" />
+                                                    ) : <div className="w-full h-full flex items-center justify-center text-xs text-slate-300">No</div>}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-xs tabular-nums text-slate-500">
+                                                {new Date(entry.sellDate || entry.updatedAt).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-6 py-4">-</td>
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold text-slate-800">{entry.brand}</div>
+                                                <div className="text-xs text-slate-500">{entry.name}</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-mono text-slate-400">¥{(entry.purchasePrice || 0).toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="bg-slate-800 text-white px-2 py-1 rounded-full text-[10px] font-bold">SOLD</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-mono font-bold text-indigo-700">¥{entry.sellPrice?.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-right font-mono font-bold text-emerald-600">¥{entry.profit?.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-center text-xs text-slate-500">{entry.salePlatform || '-'}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button
+                                                    onClick={() => {/* Edit Logic to be implemented or alert */ alert("編集機能は準備中です") }}
+                                                    className="text-slate-400 hover:text-indigo-600 text-xs font-bold underline"
+                                                >
+                                                    編集
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* Sell Modal */}
             {isSellModalOpen && selectedItem && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
                         <h3 className="text-xl font-bold text-slate-800 mb-4">販売実績の登録</h3>
-                        <div className="flex gap-4 mb-6 bg-slate-50 p-4 rounded-lg">
+
+                        <div className="flex gap-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-100">
                             <div className="w-16 h-16 bg-white rounded-md overflow-hidden border border-slate-200 flex-shrink-0">
                                 {selectedItem.images[0] && <img src={selectedItem.images[0]} className="w-full h-full object-cover" />}
                             </div>
                             <div>
-                                <p className="font-bold text-slate-700">{selectedItem.brand}</p>
-                                <p className="text-xs text-slate-500">仕入れ: ¥{selectedItem.costPrice.toLocaleString()}</p>
+                                <p className="font-bold text-slate-700">{selectedItem.brand} {selectedItem.name}</p>
+                                <p className="text-xs text-slate-500 mt-1">仕入れ: <span className="font-mono text-slate-800 font-bold">¥{selectedItem.costPrice.toLocaleString()}</span></p>
                             </div>
                         </div>
 
                         <form onSubmit={handleSellSubmit} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">販売日 <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={sellForm.sellDate}
+                                        onChange={e => setSellForm({ ...sellForm, sellDate: e.target.value })}
+                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">販売先プラットフォーム <span className="text-red-500">*</span></label>
+                                    <select
+                                        required
+                                        value={sellForm.salePlatform}
+                                        onChange={e => setSellForm({ ...sellForm, salePlatform: e.target.value })}
+                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+                                    >
+                                        <option value="">選択してください</option>
+                                        <option value="Mercari">メルカリ</option>
+                                        <option value="Rakuma">ラクマ</option>
+                                        <option value="YahooFleaMarket">Yahoo!フリマ</option>
+                                        <option value="eBay">eBay</option>
+                                        <option value="Amazon">Amazon</option>
+                                        <option value="OwnSite">自社EC</option>
+                                        <option value="Other">その他</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 mb-1">販売価格 (¥) <span className="text-red-500">*</span></label>
-                                <input
-                                    type="number"
-                                    required
-                                    value={sellForm.sellPrice}
-                                    onChange={e => setSellForm({ ...sellForm, sellPrice: e.target.value })}
-                                    className="w-full border border-slate-300 rounded-lg px-3 py-2"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        required
+                                        value={sellForm.sellPrice}
+                                        onChange={e => setSellForm({ ...sellForm, sellPrice: e.target.value })}
+                                        className="w-full border border-slate-300 rounded-lg pl-8 pr-4 py-2 font-mono text-lg font-bold text-indigo-600"
+                                        placeholder="0"
+                                    />
+                                    <span className="absolute left-3 top-2.5 text-slate-400 font-bold">¥</span>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 mb-1">販売日 <span className="text-red-500">*</span></label>
-                                <input
-                                    type="date"
-                                    required
-                                    value={sellForm.sellDate}
-                                    onChange={e => setSellForm({ ...sellForm, sellDate: e.target.value })}
-                                    className="w-full border border-slate-300 rounded-lg px-3 py-2"
-                                />
-                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 mb-1">送料 (¥)</label>
@@ -376,24 +423,30 @@ export default function StudentInventoryPage() {
                                         value={sellForm.platformFee}
                                         onChange={e => setSellForm({ ...sellForm, platformFee: e.target.value })}
                                         className="w-full border border-slate-300 rounded-lg px-3 py-2"
-                                        placeholder="例: メルカリ10%"
                                     />
                                 </div>
                             </div>
+
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 mb-1">メモ</label>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">備考 / メモ</label>
                                 <textarea
                                     value={sellForm.note}
                                     onChange={e => setSellForm({ ...sellForm, note: e.target.value })}
-                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 h-20"
+                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 h-20 text-sm"
+                                    placeholder="返品条件や取引メモなど"
                                 />
                             </div>
 
                             {sellForm.sellPrice && (
-                                <div className="bg-indigo-50 p-3 rounded-lg text-center mt-2">
-                                    <p className="text-xs text-indigo-600 font-bold uppercase mb-1">予想利益</p>
-                                    <p className="text-xl font-bold text-indigo-700">
-                                        ¥{(Number(sellForm.sellPrice) - selectedItem.costPrice - Number(sellForm.shippingCost || 0) - Number(sellForm.platformFee || 0)).toLocaleString()}
+                                <div className="bg-indigo-50 p-4 rounded-xl text-center border border-indigo-100">
+                                    <p className="text-xs text-indigo-600 font-bold uppercase mb-1">予想粗利益 (Profit)</p>
+                                    <p className="text-2xl font-bold text-indigo-700 tracking-tight">
+                                        ¥{(
+                                            Number(sellForm.sellPrice) -
+                                            selectedItem.costPrice -
+                                            Number(sellForm.shippingCost || 0) -
+                                            Number(sellForm.platformFee || 0)
+                                        ).toLocaleString()}
                                     </p>
                                 </div>
                             )}
@@ -402,16 +455,16 @@ export default function StudentInventoryPage() {
                                 <button
                                     type="button"
                                     onClick={() => setIsSellModalOpen(false)}
-                                    className="flex-1 py-2.5 bg-slate-100 text-slate-500 font-bold rounded-lg hover:bg-slate-200"
+                                    className="flex-1 py-3 bg-slate-100 text-slate-500 font-bold rounded-xl hover:bg-slate-200 transition-colors"
                                 >
                                     キャンセル
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={submittingSell}
-                                    className="flex-1 py-2.5 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                                    className="flex-1 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 disabled:opacity-50 transition-colors shadow-lg"
                                 >
-                                    {submittingSell ? '処理中...' : '確定する'}
+                                    {submittingSell ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : '実績を確定する'}
                                 </button>
                             </div>
                         </form>

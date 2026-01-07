@@ -404,12 +404,21 @@ export default function AdminInventoryPage() {
                                                 </button>
                                             )}
                                             {item.status === 'ASSIGNED' && (
-                                                <button
-                                                    onClick={() => handleOpenAssignModal(item)}
-                                                    className="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1.5 rounded hover:bg-slate-200 whitespace-nowrap"
-                                                >
-                                                    状態変更
-                                                </button>
+                                                item.isSelfSourced ? (
+                                                    <span className="text-[10px] text-slate-400 font-bold border border-slate-200 px-2 py-1.5 rounded bg-slate-50 flex items-center gap-1 opacity-70 cursor-not-allowed">
+                                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                        </svg>
+                                                        固定
+                                                    </span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleOpenAssignModal(item)}
+                                                        className="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1.5 rounded hover:bg-slate-200 whitespace-nowrap"
+                                                    >
+                                                        状態変更
+                                                    </button>
+                                                )
                                             )}
                                             {item.status === 'SHIPPED' && (
                                                 <button
