@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
             condition,
             hasAccessories,
             accessories,
-            accessories,
             note,
             supplier,
             purchaseDate
