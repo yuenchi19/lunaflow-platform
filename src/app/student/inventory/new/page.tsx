@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { uploadInventoryImage } from "@/lib/supabase/storage";
 import { Loader2, Upload, X } from "lucide-react";
 
-// Categories from prompt
+// Categories from prompt (Japanese)
 const CATEGORIES = [
-    "Bag", "Wallet (Small)", "Wallet (Large)", "Key Case",
-    "Cigarette Case", "Other Small Items", "Accessories",
-    "Apparel (Tops)", "Apparel (Bottoms)", "Apparel (Outer)",
-    "Shoes", "Watch", "Scarf", "Belt", "Perfume", "Tie", "Other Goods"
+    "バッグ", "財布 (小物)", "財布 (長物)", "キーケース",
+    "シガレットケース", "その他小物", "アクセサリー",
+    "アパレル (トップス)", "アパレル (ボトムス)", "アパレル (アウター)",
+    "靴", "時計", "スカーフ/マフラー", "ベルト", "香水", "ネクタイ", "その他"
 ];
 
 const CONDITIONS = [
@@ -90,8 +90,13 @@ export default function StudentInventoryNewPage() {
 
         try {
             // 1. Upload Main Image
-            const mainImageUrl = await uploadInventoryImage(mainImage);
-            if (!mainImageUrl) throw new Error("Main image upload failed");
+            let mainImageUrl: string | null = null;
+            try {
+                mainImageUrl = await uploadInventoryImage(mainImage);
+            } catch (e: any) {
+                throw new Error("メイン画像のアップロードに失敗しました: " + e.message);
+            }
+            if (!mainImageUrl) throw new Error("メイン画像のアップロードに失敗しました (Unknown Error)");
 
             // 2. Upload Damage Images
             const damageUrls = await Promise.all(damageImages.map(f => uploadInventoryImage(f)));
@@ -130,7 +135,7 @@ export default function StudentInventoryNewPage() {
 
     return (
         <div className="max-w-3xl mx-auto p-6 bg-white min-h-screen">
-            <h1 className="text-2xl font-bold text-slate-800 mb-6">商品登録 (Inventory Input)</h1>
+            <h1 className="text-2xl font-bold text-slate-800 mb-6">商品登録</h1>
 
             <form onSubmit={handleSubmit} className="space-y-8">
 
@@ -240,11 +245,7 @@ export default function StudentInventoryNewPage() {
                         <input type="number" value={formData.costPrice} onChange={e => setFormData({ ...formData, costPrice: e.target.value })} className="w-full border border-slate-300 rounded-lg pl-8 pr-4 py-3 font-mono text-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0" />
                         <span className="absolute left-3 top-3.5 text-slate-400 font-bold">¥</span>
                     </div>
-                    {formData.costPrice && (
-                        <p className="text-xs text-indigo-600 font-bold text-right">
-                            お客様表示価格 (15%UP): ¥{Math.floor(parseInt(formData.costPrice) * 1.15).toLocaleString()}
-                        </p>
-                    )}
+                    {/* Markup display removed as per request */}
                 </div>
 
                 {/* Submit */}

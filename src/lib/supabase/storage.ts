@@ -39,8 +39,9 @@ export async function uploadInventoryImage(file: File): Promise<string | null> {
 
         return data.publicUrl;
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Image Processing Error:", error);
-        return null;
+        // Throwing allows caller to see the message
+        throw new Error(error.message || "Image processing failed");
     }
 }

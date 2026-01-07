@@ -148,6 +148,7 @@ model InventoryItem {
   sellingPrice    Int?     // Calculated as costPrice * 1.15 usually
   images          String[] // Main photos
   damageImages    String[] // Damage/Defect photos
+  isSelfSourced   Boolean  @default(false)
   
   status          ItemStatus @default(IN_STOCK)
 

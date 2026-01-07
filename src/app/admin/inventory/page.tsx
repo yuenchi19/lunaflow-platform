@@ -14,6 +14,7 @@ interface InventoryItem {
     status: 'IN_STOCK' | 'ASSIGNED' | 'SOLD' | 'SHIPPED' | 'RECEIVED' | 'RETURNED';
     assignedToUser?: { id: string; name: string; email?: string };
     createdAt: string;
+    isSelfSourced?: boolean;
 }
 
 export default function AdminInventoryPage() {
@@ -349,7 +350,14 @@ export default function AdminInventoryPage() {
                                                 )}
                                             </div>
                                             <div>
-                                                <div className="font-bold text-slate-800">{item.brand}</div>
+                                                <div className="font-bold text-slate-800 flex items-center gap-2">
+                                                    {item.brand}
+                                                    {item.isSelfSourced && (
+                                                        <span className="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full font-bold border border-sky-200 whitespace-nowrap">
+                                                            自己仕入れ
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="text-xs text-slate-500">{item.name || '-'}</div>
                                             </div>
                                         </div>
