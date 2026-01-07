@@ -61,6 +61,10 @@ export default function StudentInventoryNewPage() {
             alert("画像は必須です（少なくとも1枚）");
             return;
         }
+        if (!formData.category || !formData.condition) {
+            alert("カテゴリーと状態は必須です");
+            return;
+        }
 
         setIsLoading(true);
 
@@ -147,7 +151,7 @@ export default function StudentInventoryNewPage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-bold text-slate-600 mb-2">商品名 / モデル <span className="text-red-500">*</span></label>
+                        <label className="block text-sm font-bold text-slate-600 mb-2">商品名 / モデル <span className="text-xs text-slate-400 font-normal ml-1">任意</span></label>
                         <input
                             type="text"
                             value={formData.name}
@@ -159,8 +163,9 @@ export default function StudentInventoryNewPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-bold text-slate-600 mb-2">カテゴリー</label>
+                            <label className="block text-sm font-bold text-slate-600 mb-2">カテゴリー <span className="text-red-500">*</span></label>
                             <select
+                                required
                                 value={formData.category}
                                 onChange={e => setFormData({ ...formData, category: e.target.value })}
                                 className="w-full border border-slate-300 rounded-lg px-4 py-2 bg-white"

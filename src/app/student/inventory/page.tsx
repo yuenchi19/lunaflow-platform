@@ -429,7 +429,9 @@ export default function StudentInventoryPage() {
                                     )}
                                     <th className="px-6 py-4">商品画像</th>
                                     <th className="px-6 py-4">情報</th>
-                                    {activeTab === 'stock' && <th className="px-6 py-4">仕入れ情報</th>}
+                                    {activeTab === 'stock' && <th className="px-6 py-4 min-w-[150px]">仕入れ情報 (古物)</th>}
+                                    {activeTab === 'stock' && <th className="px-6 py-4 min-w-[120px]">本人確認</th>}
+                                    {activeTab === 'stock' && <th className="px-6 py-4 min-w-[100px]">詳細</th>}
                                     {activeTab === 'sold' && (
                                         <>
                                             <th className="px-6 py-4 text-right">販売価格</th>
@@ -481,7 +483,19 @@ export default function StudentInventoryPage() {
                                             </td>
                                             <td className="px-6 py-4 text-xs">
                                                 <div className="text-slate-500">¥{item.costPrice.toLocaleString()}</div>
-                                                <div className="text-slate-400 truncate max-w-[120px]" title={item.supplier}>{item.supplier || '-'}</div>
+                                                <div className="text-slate-400 text-[10px] mt-0.5">{item.purchaseDate ? new Date(item.purchaseDate).toLocaleDateString() : '-'}</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-xs">
+                                                <div className="font-bold text-slate-600 truncate max-w-[120px]" title={item.supplierName}>{item.supplierName || item.supplier || '-'}</div>
+                                                <div className="text-slate-400 truncate max-w-[120px]" title={item.supplierAddress}>{item.supplierAddress || '-'}</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-xs">
+                                                <div className="truncate max-w-[100px]" title={item.idVerificationMethod}>{item.idVerificationMethod || '-'}</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-xs text-slate-400">
+                                                <div title={`職業: ${item.supplierOccupation || '-'} / 年齢: ${item.supplierAge || '-'}`}>
+                                                    {item.supplierOccupation || '-'}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex justify-center items-center gap-2">
