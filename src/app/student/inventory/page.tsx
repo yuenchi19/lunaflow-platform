@@ -40,8 +40,21 @@ export default function StudentInventoryPage() {
 
     const [ledger, setLedger] = useState<any[]>([]);
 
+    const [locked, setLocked] = useState(false);
+
     const fetchItems = async () => {
         try {
+            // Check Unlock Status First
+            const unlockRes = await fetch('/api/student/unlock-status');
+            if (unlockRes.ok) {
+                const unlocks = await unlockRes.json();
+                if (!unlocks.inventory) {
+                    setLocked(true);
+                    setLoading(false);
+                    return;
+                }
+            }
+
             const res = await fetch('/api/student/inventory');
             if (res.ok) {
                 const data = await res.json();
@@ -59,6 +72,31 @@ export default function StudentInventoryPage() {
         fetchItems();
     }, []);
 
+    if (loading) return <div className="p-8 text-center text-slate-500">読み込み中...</div>;
+
+    if (locked) {
+        return (
+            <div className="p-8 max-w-4xl mx-auto min-h-[60vh] flex items-center justify-center">
+                <div className="text-center">
+                    <div className="mb-4 flex justify-center">
+                        <div className="p-4 bg-slate-100 rounded-full">
+                            <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-800 mb-2">この機能は利用できません</h2>
+                    <p className="text-slate-500 mb-6">
+                        現在のお客様のプラン（または進捗）では、この機能はロックされています。<br />
+                        上位プランへのアップグレードまたはカリキュラムの完了が必要です。
+                    </p>
+                    <Link href="/student/dashboard" className="inline-flex items-center justify-center px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors">
+                        ダッシュボードに戻る
+                    </Link>
+                </div>
+            </div>
+        );
+    }
     const filteredItems = items.filter(item => {
         const matchesSearch = (item.brand + item.name + item.category).toLowerCase().includes(searchTerm.toLowerCase());
         if (activeTab === 'stock') {
