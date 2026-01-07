@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Loader2, Plus, Search } from "lucide-react";
+import { Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 // --- Interfaces ---
@@ -66,6 +66,9 @@ export default function StudentInventoryPage() {
     const [submittingSell, setSubmittingSell] = useState(false);
     const [locked, setLocked] = useState(false);
 
+    // Delete State
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
     // --- Data Fetching ---
     const fetchItems = useCallback(async () => {
         try {
@@ -101,15 +104,11 @@ export default function StudentInventoryPage() {
     const filteredItems = useMemo(() => {
         return items.filter(item => {
             const matchesSearch = (item.brand + item.name + (item.category || '')).toLowerCase().includes(searchTerm.toLowerCase());
-            if (activeTab === 'stock') {
-                // Determine stock status: IN_STOCK, ASSIGNED, RECEIVED. 
-                // SHIPPED is usually an incoming state for student, so handled in Stock?
-                // Or maybe SHIPPED is outgoing? Based on context, SHIPPED is typically "Sent by Admin".
-                return matchesSearch && (['IN_STOCK', 'ASSIGNED', 'RECEIVED', 'SHIPPED'].includes(item.status));
-            }
-            return false; // For 'stock' tab only
+            // Updated filtered logic: Show everything that is NOT sold in 'stock' tab
+            // Including 'ASSIGNED', 'RECEIVED', 'IN_STOCK', 'SHIPPED'
+            return matchesSearch && item.status !== 'SOLD';
         });
-    }, [items, searchTerm, activeTab]);
+    }, [items, searchTerm]);
 
     const filteredLedger = useMemo(() => {
         return ledger.filter(entry => {
@@ -130,6 +129,29 @@ export default function StudentInventoryPage() {
     };
 
     // --- Actions ---
+    const handleDelete = async (id: string) => {
+        if (!confirm("本当に削除しますか？この操作は取り消せません。")) return;
+        setDeletingId(id);
+        try {
+            const res = await fetch(`/api/student/inventory/${id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                // Optimistic Update or Refetch
+                setItems(prev => prev.filter(i => i.id !== id));
+                alert("削除しました");
+            } else {
+                const err = await res.json();
+                alert(`削除失敗: ${err.error}`);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("通信エラーが発生しました");
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
     const handleSellClick = (item: InventoryItem) => {
         setSelectedItem(item);
 
@@ -147,7 +169,6 @@ export default function StudentInventoryPage() {
                     saleNote: entry.saleNote || ''
                 });
             } else {
-                // Fallback if ledger missing but status SOLD? Reset form or alert?
                 setSellForm({
                     sellPrice: item.sellingPrice ? item.sellingPrice.toString() : '',
                     sellDate: new Date().toISOString().split('T')[0],
@@ -225,11 +246,17 @@ export default function StudentInventoryPage() {
         );
     }
 
+    // Stats Calculation
+    const stockCount = items.filter(i => i.status !== 'SOLD').length;
+    const soldCount = ledger.length;
+    const stockAmount = items.filter(i => i.status !== 'SOLD').reduce((sum, i) => sum + i.costPrice, 0);
+    const profitAmount = ledger.reduce((sum, l) => sum + (l.profit || 0), 0);
+
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-8">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">商品管理台帳 (Ledger)</h1>
+                    <h1 className="text-2xl font-bold text-slate-800">商品管理台帳</h1>
                     <p className="text-sm text-slate-500 mt-1">
                         仕入れ・在庫管理・ストア公開機能、販売実績の登録ができます。
                     </p>
@@ -245,25 +272,25 @@ export default function StudentInventoryPage() {
                 <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
                     <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase">在庫総数</p>
                     <p className="text-2xl font-bold text-slate-800">
-                        {items.filter(i => i.status !== 'SOLD').length}<span className="text-sm font-normal text-slate-400 ml-1">点</span>
+                        {stockCount}<span className="text-sm font-normal text-slate-400 ml-1">点</span>
                     </p>
                 </div>
                 <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase">販売済み</p>
+                    <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase">完売総数</p>
                     <p className="text-2xl font-bold text-indigo-600">
-                        {ledger.length}<span className="text-sm font-normal text-slate-400 ml-1">点</span>
+                        {soldCount}<span className="text-sm font-normal text-slate-400 ml-1">点</span>
                     </p>
                 </div>
                 <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
                     <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase">在庫金額(原価)</p>
                     <p className="text-xl font-bold text-slate-800 truncate">
-                        ¥{items.filter(i => i.status !== 'SOLD').reduce((sum, i) => sum + i.costPrice, 0).toLocaleString()}
+                        ¥{stockAmount.toLocaleString()}
                     </p>
                 </div>
                 <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
                     <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase">粗利益総額</p>
                     <p className="text-xl font-bold text-emerald-600 truncate">
-                        ¥{ledger.reduce((sum, l) => sum + (l.profit || 0), 0).toLocaleString()}
+                        ¥{profitAmount.toLocaleString()}
                     </p>
                 </div>
             </div>
@@ -281,7 +308,7 @@ export default function StudentInventoryPage() {
                         onClick={() => setActiveTab('sold')}
                         className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'sold' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
-                        販売済み履歴
+                        完売履歴
                     </button>
                 </div>
                 <div className="relative w-full md:w-64">
@@ -298,16 +325,15 @@ export default function StudentInventoryPage() {
 
             {/* List View */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-8">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto min-h-[300px]">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-bold">
                             <tr>
                                 <th className="px-6 py-4">商品画像</th>
                                 <th className="px-6 py-4">登録日/販売日</th>
-                                <th className="px-6 py-4">状態</th>
+                                <th className="px-6 py-4">カテゴリー</th>
                                 <th className="px-6 py-4">ブランド / 商品名</th>
                                 <th className="px-6 py-4 text-right">仕入れ価格</th>
-                                <th className="px-6 py-4 text-center">ステータス</th>
                                 {activeTab === 'sold' && <>
                                     <th className="px-6 py-4 text-right">販売価格</th>
                                     <th className="px-6 py-4 text-right">粗利益</th>
@@ -342,29 +368,36 @@ export default function StudentInventoryPage() {
                                             </td>
                                             <td className="px-6 py-4">{item.category || "-"}</td>
                                             <td className="px-6 py-4">
-                                                <div className="font-bold text-slate-800">{item.brand}</div>
+                                                <div className="font-bold text-slate-800 flex items-center gap-2">
+                                                    {item.brand}
+                                                    {/* @ts-ignore */}
+                                                    {item.isSelfSourced && <span className="text-[10px] bg-slate-100 text-slate-500 px-1 rounded border border-slate-200">自己仕入れ</span>}
+                                                </div>
                                                 <div className="text-xs text-slate-500">{item.name}</div>
                                             </td>
                                             <td className="px-6 py-4 text-right font-mono">¥{item.costPrice.toLocaleString()}</td>
                                             <td className="px-6 py-4 text-center">
-                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${item.status === 'IN_STOCK' ? 'bg-emerald-100 text-emerald-700' :
-                                                    item.status === 'SHIPPED' ? 'bg-amber-100 text-amber-700' :
-                                                        item.status === 'ASSIGNED' ? 'bg-blue-100 text-blue-700' :
-                                                            'bg-slate-100 text-slate-600'
-                                                    }`}>
-                                                    {item.status === 'IN_STOCK' ? '在庫あり' :
-                                                        item.status === 'SHIPPED' ? '発送済み' :
-                                                            item.status === 'ASSIGNED' ? '保管中' :
-                                                                item.status === 'RECEIVED' ? '受取済' : item.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <button
-                                                    onClick={() => handleSellClick(item)}
-                                                    className="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-indigo-700 transition-colors shadow-sm"
-                                                >
-                                                    販売登録
-                                                </button>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        onClick={() => handleSellClick(item)}
+                                                        className="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-indigo-700 transition-colors shadow-sm"
+                                                    >
+                                                        販売登録
+                                                    </button>
+
+                                                    {/* Delete Button - Only for Self-Sourced & Stock */}
+                                                    {/* @ts-ignore */}
+                                                    {item.isSelfSourced && (
+                                                        <button
+                                                            onClick={() => handleDelete(item.id)}
+                                                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                            title="削除"
+                                                            disabled={deletingId === item.id}
+                                                        >
+                                                            {deletingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -388,26 +421,20 @@ export default function StudentInventoryPage() {
                                             <td className="px-6 py-4 text-xs tabular-nums text-slate-500">
                                                 {new Date(entry.sellDate || entry.updatedAt).toLocaleDateString()}
                                             </td>
-                                            <td className="px-6 py-4">-</td>
+                                            <td className="px-6 py-4 text-xs text-slate-400">-</td>
                                             <td className="px-6 py-4">
                                                 <div className="font-bold text-slate-800">{entry.brand}</div>
                                                 <div className="text-xs text-slate-500">{entry.name}</div>
                                             </td>
                                             <td className="px-6 py-4 text-right font-mono text-slate-400">¥{(entry.purchasePrice || 0).toLocaleString()}</td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="bg-slate-800 text-white px-2 py-1 rounded-full text-[10px] font-bold">SOLD</span>
-                                            </td>
                                             <td className="px-6 py-4 text-right font-mono font-bold text-indigo-700">¥{entry.sellPrice?.toLocaleString()}</td>
                                             <td className="px-6 py-4 text-right font-mono font-bold text-emerald-600">¥{entry.profit?.toLocaleString()}</td>
                                             <td className="px-6 py-4 text-center text-xs text-slate-500">{entry.salePlatform || '-'}</td>
                                             <td className="px-6 py-4 text-center">
-                                                {/* Edit Button - Finds original Item by originItemId if possible or we assume local info */}
                                                 <button
                                                     onClick={() => {
-                                                        // Fallback: construct a pseudo-item to pass to handleSellClick
-                                                        // Because handleSellClick expects InventoryItem
                                                         const pseudoItem: InventoryItem = {
-                                                            id: entry.originItemId || entry.id, // Use origin item id
+                                                            id: entry.originItemId || entry.id,
                                                             brand: entry.brand,
                                                             name: entry.name,
                                                             category: null,
