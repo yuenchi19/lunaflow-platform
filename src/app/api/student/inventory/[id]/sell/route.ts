@@ -68,7 +68,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                     profit: profit,
                     salePlatform: salePlatform,
                     saleNote: saleNote,
-                    note: note, // Store note in ledger too
                     status: 'SOLD'
                 }
             })
@@ -97,8 +96,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
         // Verify ownership
         const item = await prisma.inventoryItem.findUnique({
-            where: { id: itemId },
-            include: { ledgerEntry: true }
+            where: { id: itemId }
         });
 
         if (!item) {
@@ -116,10 +114,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         const profit = sale - cost - shipping - fee;
 
         // Update Ledger logic
+        // Find existing ledger entry by originItemId
+        const existingLedger = await prisma.ledgerEntry.findFirst({
+            where: { originItemId: itemId }
+        });
+
         let ledgerEntry;
-        if (item.ledgerEntry) {
+        if (existingLedger) {
             ledgerEntry = await prisma.ledgerEntry.update({
-                where: { id: item.ledgerEntry.id },
+                where: { id: existingLedger.id },
                 data: {
                     sellPrice: sale,
                     sellDate: new Date(sellDate),
@@ -127,8 +130,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
                     platformFee: fee,
                     profit: profit,
                     salePlatform: salePlatform,
-                    saleNote: saleNote,
-                    note: note
+                    saleNote: saleNote
                 }
             });
         } else {
@@ -136,9 +138,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
             ledgerEntry = await prisma.ledgerEntry.create({
                 data: {
                     userId: user.id,
-                    inventoryItemId: itemId,
-                    originItemId: itemId, // Add originItemId for relation consistency
+                    originItemId: itemId,
                     brand: item.brand,
+                    purchaseDate: item.createdAt,
                     purchasePrice: cost,
                     images: item.images,
                     sellDate: new Date(sellDate),
@@ -148,7 +150,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
                     profit: profit,
                     salePlatform,
                     saleNote,
-                    note,
                     status: 'SOLD'
                 }
             });
