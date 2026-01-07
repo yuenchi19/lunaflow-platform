@@ -159,6 +159,7 @@ model InventoryItem {
   note            String?  // Other comments
   supplier        String?  // Purchase Source (Kobutsusho Requirement)
   purchaseDate    DateTime? @default(now())
+  receivedAt      DateTime? // When student verified/received item
 
   // Assignment
   assignedToUser   User?   @relation(fields: [assignedToUserId], references: [id])
