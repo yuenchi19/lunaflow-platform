@@ -55,6 +55,13 @@ export default function StudentInventoryNewPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Strict Validation
+        if (images.length === 0) {
+            alert("画像は必須です（少なくとも1枚）");
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -96,20 +103,31 @@ export default function StudentInventoryNewPage() {
 
             <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Images */}
+                {/* Images */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="font-bold text-slate-700 mb-4">商品画像</h3>
+                    <h3 className="font-bold text-slate-700 mb-2">商品画像 (メイン1枚 + サブ5枚) <span className="text-red-500">*</span></h3>
                     <div className="flex gap-4 overflow-x-auto pb-2">
                         {images.map((img, idx) => (
-                            <div key={idx} className="relative w-24 h-24 flex-shrink-0 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+                            <div key={idx} className="relative w-24 h-24 flex-shrink-0 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 group">
                                 <Image src={img} alt="Product" fill className="object-cover" />
+                                <button
+                                    type="button"
+                                    onClick={() => setImages(images.filter((_, i) => i !== idx))}
+                                    className="absolute top-0 right-0 bg-black/50 text-white p-1 rounded-bl opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    ✕
+                                </button>
                             </div>
                         ))}
-                        <label className={`w-24 h-24 flex-shrink-0 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                            <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
-                            {uploading ? <Loader2 className="w-6 h-6 animate-spin text-slate-400" /> : <Plus className="w-6 h-6 text-slate-400" />}
-                            <span className="text-[10px] text-slate-400 font-bold mt-1">追加</span>
-                        </label>
+                        {images.length < 6 && (
+                            <label className={`w-24 h-24 flex-shrink-0 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
+                                {uploading ? <Loader2 className="w-6 h-6 animate-spin text-slate-400" /> : <Plus className="w-6 h-6 text-slate-400" />}
+                                <span className="text-[10px] text-slate-400 font-bold mt-1">追加</span>
+                            </label>
+                        )}
                     </div>
+                    {images.length === 0 && <p className="text-xs text-red-500 mt-2 font-bold">※メイン画像は必須です。</p>}
                 </div>
 
                 {/* Basic Info */}

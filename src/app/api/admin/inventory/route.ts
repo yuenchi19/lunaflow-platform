@@ -37,9 +37,12 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { brand, name, category, costPrice, images } = body;
+    const {
+        brand, name, category, costPrice, images, condition,
+        supplier, supplierName, supplierAddress, supplierOccupation, supplierAge, idVerificationMethod, purchaseDate
+    } = body;
 
-    if (!brand || !costPrice) {
+    if (!brand || !costPrice) { // Frontend validates more
         return NextResponse.json({ error: "Brand and Cost Price are required" }, { status: 400 });
     }
 
@@ -49,9 +52,18 @@ export async function POST(req: NextRequest) {
             brand,
             name,
             category,
+            condition,
             costPrice: parseInt(costPrice),
             images: images || [],
-            status: 'IN_STOCK'
+            status: 'IN_STOCK',
+            // Kobutsusho Fields (For Admin Stock -> Student Assignment)
+            supplier,
+            supplierName,
+            supplierAddress,
+            supplierOccupation,
+            supplierAge: supplierAge ? parseInt(supplierAge) : null,
+            idVerificationMethod,
+            purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date()
         }
     });
 

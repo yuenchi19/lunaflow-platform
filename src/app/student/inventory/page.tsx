@@ -455,7 +455,7 @@ export default function StudentInventoryPage() {
                                                 />
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="w-12 h-12 relative bg-slate-100 rounded overflow-hidden border border-slate-200">
+                                                <div className="relative w-16 h-16 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0">
                                                     {item.images?.[0] ? (
                                                         <Image src={item.images[0]} alt={item.brand} fill className="object-cover" />
                                                     ) : (

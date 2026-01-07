@@ -35,15 +35,15 @@ export async function POST(req: NextRequest) {
 
     const updatedItem = await prisma.inventoryItem.update({
         where: { id: itemId },
-        data: {
-            assignedToUserId: userId,
-            status: 'ASSIGNED',
-            supplier: 'LunaFlow Operation (LunaFlow運営)',
-            receivedAt: null, // Reset receipt verification
-            // We should probably NOT overwrite purchaseDate if it was set by Admin purchase?
-            // Assuming Admin Stock item has purchaseDate already.
-        }
+        assignedToUserId: userId,
+        status: 'ASSIGNED',
+        // Do NOT overwrite supplier info - keep Admin's entry or "Market A" etc.
+        // supplier: 'LunaFlow Operation (LunaFlow運営)', 
+        receivedAt: null, // Reset receipt verification
+        // We should probably NOT overwrite purchaseDate if it was set by Admin purchase?
+        // Assuming Admin Stock item has purchaseDate already.
+    }
     });
 
-    return NextResponse.json({ success: true, item: updatedItem });
+return NextResponse.json({ success: true, item: updatedItem });
 }
