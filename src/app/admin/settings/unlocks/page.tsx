@@ -60,7 +60,7 @@ export default function UnlockSettingsPage() {
         try {
             const rule = rules[key];
             const res = await fetch('/api/admin/unlock-rules', {
-                method: 'PUT',
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     key,
