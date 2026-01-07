@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Search, Loader2, UserPlus, Package, CheckCircle, AlertCircle, Plus, X, Edit2, Download } from "lucide-react";
 import Image from "next/image";
+import heic2any from "heic2any";
 
 interface InventoryItem {
     id: string;
@@ -27,6 +28,7 @@ interface InventoryItem {
     supplierAge?: number;
     idVerificationMethod?: string;
     purchaseDate?: string;
+    isOmakase?: boolean;
 }
 
 interface LedgerEntry {
@@ -76,7 +78,8 @@ export default function AdminInventoryPage() {
     const [editItem, setEditItem] = useState<InventoryItem | null>(null);
     const [editForm, setEditForm] = useState({
         brand: '', name: '', category: '', costPrice: '', condition: 'B',
-        supplier: '', supplierName: '', supplierAddress: '', supplierOccupation: '', supplierAge: '', idVerificationMethod: '', purchaseDate: ''
+        supplier: '', supplierName: '', supplierAddress: '', supplierOccupation: '', supplierAge: '', idVerificationMethod: '', purchaseDate: '',
+        isOmakase: true
     });
     const [editImages, setEditImages] = useState<string[]>([]);
     const [editing, setEditing] = useState(false);
@@ -96,7 +99,8 @@ export default function AdminInventoryPage() {
         supplierOccupation: '',
         supplierAge: '',
         idVerificationMethod: ID_VERIFICATION_METHODS[0],
-        purchaseDate: new Date().toISOString().split('T')[0]
+        purchaseDate: new Date().toISOString().split('T')[0],
+        isOmakase: true
     });
     const [createImages, setCreateImages] = useState<string[]>([]);
     const [uploading, setUploading] = useState(false);
@@ -157,17 +161,35 @@ export default function AdminInventoryPage() {
         }
     };
 
+    const processFile = async (file: File): Promise<File> => {
+        if (file.type === "image/heic" || file.type === "image/heif" || file.name.toLowerCase().endsWith(".heic")) {
+            try {
+                const convertedBlob = await heic2any({
+                    blob: file,
+                    toType: "image/jpeg",
+                    quality: 0.8
+                });
+                // Handle single blob or array
+                const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                return new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), { type: "image/jpeg" });
+            } catch (e) {
+                console.error("HEIC conversion failed", e);
+                throw new Error("HEIC conversion failed");
+            }
+        }
+        return file;
+    };
+
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length) return;
         setUploading(true);
-        const file = e.target.files[0];
         try {
+            const rawFile = e.target.files[0];
+            const file = await processFile(rawFile);
+
             const uploadFormData = new FormData();
             uploadFormData.append("file", file);
-            const res = await fetch('/api/upload', {
-                method: 'POST',
-                body: uploadFormData
-            });
+            const res = await fetch('/api/upload', { method: 'POST', body: uploadFormData });
             const data = await res.json();
 
             if (res.ok) {
@@ -223,7 +245,8 @@ export default function AdminInventoryPage() {
             supplierOccupation: item.supplierOccupation || '',
             supplierAge: item.supplierAge ? item.supplierAge.toString() : '',
             idVerificationMethod: item.idVerificationMethod || ID_VERIFICATION_METHODS[0],
-            purchaseDate: item.purchaseDate ? new Date(item.purchaseDate).toISOString().split('T')[0] : ''
+            purchaseDate: item.purchaseDate ? new Date(item.purchaseDate).toISOString().split('T')[0] : '',
+            isOmakase: item.isOmakase ?? true
         });
         setEditImages(item.images || []);
     };
@@ -283,7 +306,8 @@ export default function AdminInventoryPage() {
                 setIsCreateModalOpen(false);
                 setCreateForm({
                     brand: '', name: '', category: '', costPrice: '', condition: 'B',
-                    supplier: '', supplierName: '', supplierAddress: '', supplierOccupation: '', supplierAge: '', idVerificationMethod: ID_VERIFICATION_METHODS[0], purchaseDate: new Date().toISOString().split('T')[0]
+                    supplier: '', supplierName: '', supplierAddress: '', supplierOccupation: '', supplierAge: '', idVerificationMethod: ID_VERIFICATION_METHODS[0], purchaseDate: new Date().toISOString().split('T')[0],
+                    isOmakase: true
                 });
                 setCreateImages([]);
                 fetchData();
@@ -369,7 +393,8 @@ export default function AdminInventoryPage() {
                 return filtered.filter(i =>
                     !i.isSelfSourced &&
                     (!i.assignedToUserId || i.assignedToUser?.name === 'Admin') &&
-                    i.status === 'IN_STOCK'
+                    i.status === 'IN_STOCK' &&
+                    i.isOmakase !== false // Default to true if undefined
                 ).filter(i => !i.assignedToUserId);
             case 'assigned':
                 return filtered.filter(i =>
@@ -377,7 +402,10 @@ export default function AdminInventoryPage() {
                     i.status !== 'SOLD'
                 );
             case 'admin_stock':
-                return [];
+                return filtered.filter(i =>
+                    i.status === 'IN_STOCK' &&
+                    i.isOmakase === false
+                );
             default:
                 return [];
         }
@@ -622,6 +650,30 @@ export default function AdminInventoryPage() {
                             <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
                         </div>
                         <form onSubmit={handleCreateItem} className="space-y-6">
+                            {/* Stock Type Selection */}
+                            <div className="bg-slate-50 p-4 rounded-lg flex gap-6">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="stockType"
+                                        checked={createForm.isOmakase}
+                                        onChange={() => setCreateForm({ ...createForm, isOmakase: true })}
+                                        className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                                    />
+                                    <span className="text-sm font-bold text-slate-700">おまかせ仕入れ (募集中)</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="stockType"
+                                        checked={!createForm.isOmakase}
+                                        onChange={() => setCreateForm({ ...createForm, isOmakase: false })}
+                                        className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                                    />
+                                    <span className="text-sm font-bold text-slate-700">管理者在庫 (控えておく)</span>
+                                </label>
+                            </div>
+
                             {/* Images */}
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 mb-2">商品画像 (メイン1枚 + サブ5枚) <span className="text-red-500">*</span></label>
@@ -750,6 +802,30 @@ export default function AdminInventoryPage() {
                             <button onClick={() => setEditItem(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
                         </div>
                         <form onSubmit={handleEditUpdate} className="space-y-6">
+                            {/* Stock Type Selection */}
+                            <div className="bg-slate-50 p-4 rounded-lg flex gap-6">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="editStockType"
+                                        checked={editForm.isOmakase}
+                                        onChange={() => setEditForm({ ...editForm, isOmakase: true })}
+                                        className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                                    />
+                                    <span className="text-sm font-bold text-slate-700">おまかせ仕入れ (募集中)</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="editStockType"
+                                        checked={!editForm.isOmakase}
+                                        onChange={() => setEditForm({ ...editForm, isOmakase: false })}
+                                        className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                                    />
+                                    <span className="text-sm font-bold text-slate-700">管理者在庫 (控えておく)</span>
+                                </label>
+                            </div>
+
                             {/* Images */}
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 mb-2">商品画像 (メイン1枚 + サブ5枚)</label>

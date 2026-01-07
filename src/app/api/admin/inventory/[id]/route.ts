@@ -46,6 +46,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
                 condition,
                 costPrice: costPrice ? parseInt(costPrice) : undefined,
                 images,
+                isOmakase,
                 // Kobutsusho
                 supplier,
                 supplierName,

@@ -150,6 +150,7 @@ model InventoryItem {
   images          String[] // Main photos
   damageImages    String[] // Damage/Defect photos
   isSelfSourced   Boolean  @default(false)
+  isOmakase       Boolean  @default(true) // True = Available in Pool, False = Admin Stock (Private)
   
   status          ItemStatus @default(IN_STOCK)
 
