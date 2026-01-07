@@ -79,7 +79,7 @@ export default function AdminSidebar() {
         {
             label: "商品管理",
             items: [
-                { label: "在庫管理", href: "/admin/inventory", icon: "👜" },
+                { label: "仕入れ・在庫管理・ストア公開機能", href: "/admin/inventory", icon: "👜" },
                 { label: "仕入れ希望", href: "/admin/purchase-requests", icon: "📦", badge: pendingCount },
                 { label: "商品管理", href: "/admin/inventory/products", icon: "🏷️" },
             ]

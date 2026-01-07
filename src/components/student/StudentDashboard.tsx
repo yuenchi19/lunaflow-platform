@@ -397,7 +397,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         return (
             <LockOverlay
                 isLocked={!isUnlocked}
-                title="仕入れ機能はロックされています"
+                title="仕入れ・在庫管理・ストア公開機能はロックされています"
                 message="規定のカリキュラムを完了することで、利用可能になります。"
                 actionLabel="コースを進める"
                 actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}

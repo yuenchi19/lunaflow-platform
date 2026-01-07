@@ -1,56 +1,80 @@
-
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 
 export async function GET() {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
 
-    if (!user) {
+    if (!authUser || !authUser.email) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
-        const rules = await prisma.featureUnlock.findMany();
+        // Fetch full user profile to get plan
+        const user = await prisma.user.findUnique({
+            where: { email: authUser.email },
+            select: { id: true, plan: true }
+        });
+
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        const plan = user.plan || 'standard'; // Default to standard if null
+
+        // Fetch rules for this plan
+        const rules = await prisma.featureUnlock.findMany({
+            where: { plan: plan }
+        });
+
         const unlocks: Record<string, boolean> = {};
+        const KNOWN_FEATURES = ['affiliate', 'inventory'];
 
-        for (const rule of rules) {
-            let isUnlocked = true; // Default true if no conditions? Or false? 
-            // If rule exists but no conditions, standard feature toggle says unlocked? 
-            // The prompt says "Unlock by advancing curriculum". Implies default LOCKED.
-            // But if rule has NO requiredCourseId, maybe it's unlocked? Admin UI says "Conditions: None (Immediate)".
+        for (const feature of KNOWN_FEATURES) {
+            const rule = rules.find(r => r.featureKey === feature);
 
-            if (!rule.requiredCourseId) {
-                isUnlocked = true;
-            } else {
-                // Check Course Completion
-                // Get all published blocks in course
-                const blocks = await prisma.block.findMany({
-                    where: {
-                        category: {
-                            courseId: rule.requiredCourseId,
-                            published: true
-                        }
-                    },
-                    select: { id: true }
-                });
-
-                if (blocks.length === 0) {
-                    isUnlocked = true; // Empty course = completed?
-                } else {
-                    // Count completed blocks
-                    const completedCount = await prisma.userProgress.count({
-                        where: {
-                            userId: user.id,
-                            blockId: { in: blocks.map(b => b.id) },
-                            status: 'completed'
-                        }
-                    });
-                    isUnlocked = completedCount >= blocks.length;
-                }
+            if (!rule) {
+                // Default Locked if no rule exists for this plan
+                unlocks[feature] = false;
+                continue;
             }
-            unlocks[rule.featureKey] = isUnlocked;
+
+            // Check Status
+            if (rule.status === 'locked') {
+                unlocks[feature] = false;
+                continue;
+            }
+
+            // If active and no course requirement => Unlocked
+            if (!rule.requiredCourseId) {
+                unlocks[feature] = true;
+                continue;
+            }
+
+            // Check Course Completion condition
+            const blocks = await prisma.block.findMany({
+                where: {
+                    category: {
+                        courseId: rule.requiredCourseId,
+                        published: true
+                    }
+                },
+                select: { id: true }
+            });
+
+            if (blocks.length === 0) {
+                unlocks[feature] = true; // Empty course = completed
+            } else {
+                const completedCount = await prisma.userProgress.count({
+                    where: {
+                        userId: user.id,
+                        blockId: { in: blocks.map(b => b.id) },
+                        status: 'completed'
+                    }
+                });
+                unlocks[feature] = completedCount >= blocks.length;
+            }
         }
 
         return NextResponse.json(unlocks);

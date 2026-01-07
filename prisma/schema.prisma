@@ -234,10 +234,14 @@ model SentEmail {
 
 model FeatureUnlock {
   id               String   @id @default(cuid())
-  featureKey       String   @unique // "affiliate", "inventory"
+  featureKey       String   // "affiliate", "inventory"
+  plan             String   @default("standard") // "light", "standard", "premium"
+  status           String   @default("active")   // "active", "locked"
   requiredCourseId String?
   requiredBlockId  String?
   updatedAt        DateTime @updatedAt
+
+  @@unique([featureKey, plan])
 }
 
 model Announcement {

@@ -123,7 +123,7 @@ export default function StudentInventoryPage() {
                 <div>
                     <h1 className="text-2xl font-bold text-slate-800">商品管理台帳 (Ledger)</h1>
                     <p className="text-sm text-slate-500 mt-1">
-                        在庫の管理、販売実績の登録ができます。
+                        仕入れ・在庫管理・ストア公開機能、販売実績の登録ができます。
                     </p>
                 </div>
                 <Link href="/student/inventory/new" className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg font-bold hover:bg-slate-800 transition-colors shadow-lg">
