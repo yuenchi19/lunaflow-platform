@@ -34,7 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         const {
             brand, name, category, costPrice, condition,
             supplier, supplierName, supplierAddress, supplierOccupation, supplierAge,
-            idVerificationMethod, purchaseDate, images
+            idVerificationMethod, purchaseDate, images, isOmakase
         } = body;
 
         const updatedItem = await prisma.inventoryItem.update({
