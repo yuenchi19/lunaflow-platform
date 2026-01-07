@@ -13,6 +13,7 @@ interface InventoryItem {
     images: string[];
     status: 'IN_STOCK' | 'ASSIGNED' | 'SOLD' | 'SHIPPED' | 'RECEIVED' | 'RETURNED';
     assignedToUser?: { id: string; name: string; email?: string };
+    assignedToUserId?: string; // Added for fallback display
     createdAt: string;
     isSelfSourced?: boolean;
 }

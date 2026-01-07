@@ -18,6 +18,8 @@ interface InventoryItem {
     status: string;
     createdAt: string;
     condition: string | null;
+    assignedToUserId?: string | null;
+    isSelfSourced?: boolean;
 }
 
 interface LedgerEntry {
@@ -346,9 +348,9 @@ export default function StudentInventoryPage() {
                                             <td className="px-6 py-4 text-right font-mono">¥{item.costPrice.toLocaleString()}</td>
                                             <td className="px-6 py-4 text-center">
                                                 <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${item.status === 'IN_STOCK' ? 'bg-emerald-100 text-emerald-700' :
-                                                        item.status === 'SHIPPED' ? 'bg-amber-100 text-amber-700' :
-                                                            item.status === 'ASSIGNED' ? 'bg-blue-100 text-blue-700' :
-                                                                'bg-slate-100 text-slate-600'
+                                                    item.status === 'SHIPPED' ? 'bg-amber-100 text-amber-700' :
+                                                        item.status === 'ASSIGNED' ? 'bg-blue-100 text-blue-700' :
+                                                            'bg-slate-100 text-slate-600'
                                                     }`}>
                                                     {item.status === 'IN_STOCK' ? '在庫あり' :
                                                         item.status === 'SHIPPED' ? '発送済み' :

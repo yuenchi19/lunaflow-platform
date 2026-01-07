@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
                 note,
                 status: 'ASSIGNED',
                 assignedToUserId: user.id,
+                // @ts-ignore
                 isSelfSourced: true
             }
         });
