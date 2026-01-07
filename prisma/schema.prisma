@@ -50,6 +50,7 @@ model User {
   bankAccountType    String?             @default("ordinary") // ordinary, current
   bankAccountNumber  String?
   bankAccountHolder  String?
+  kobutsushoNumber   String? // Antique Dealer License Number
   invoiceRegistrationNumber String?      // Added for Partner Invoice
 }
 
@@ -157,7 +158,12 @@ model InventoryItem {
   hasAccessories  Boolean  @default(false)
   accessories     String[] // Box, Dust Bag, Card, etc.
   note            String?  // Other comments
-  supplier        String?  // Purchase Source (Kobutsusho Requirement)
+  supplier        String?  // Purchase Source (Legacy/Simple)
+  supplierName    String?  // Kobutsusho: Name
+  supplierAddress String?  // Kobutsusho: Address
+  supplierOccupation String? // Kobutsusho: Occupation
+  supplierAge     Int?     // Kobutsusho: Age
+  idVerificationMethod String? // Kobutsusho: ID Method
   purchaseDate    DateTime? @default(now())
   receivedAt      DateTime? // When student verified/received item
 

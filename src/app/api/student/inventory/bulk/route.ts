@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { itemIds, supplier, purchaseDate } = body;
+        const { itemIds, supplier, supplierName, supplierAddress, supplierOccupation, supplierAge, idVerificationMethod, purchaseDate, costPrice } = body;
 
         if (!itemIds || !Array.isArray(itemIds)) {
             return NextResponse.json({ error: "Invalid Item IDs" }, { status: 400 });
@@ -30,15 +30,21 @@ export async function PATCH(req: NextRequest) {
                 // Assuming "Self-Sourced" items are assigned to user.
             },
             data: {
+                // Legacy/Display Supplier
                 supplier: supplier || undefined,
-                // If we had purchaseDate in schema, update it. 
-                // For now, I'll update createdAt if requested? Or add field?
-                // I will add purchaseDate to schema first.
-                // For now, I will omit purchaseDate until schema is ready.
+
+                // Kobutsusho Fields
+                supplierName: supplierName || undefined,
+                supplierAddress: supplierAddress || undefined,
+                supplierOccupation: supplierOccupation || undefined,
+                supplierAge: supplierAge ? parseInt(supplierAge) : undefined,
+                idVerificationMethod: idVerificationMethod || undefined,
+
+                // Other fields
+                purchaseDate: purchaseDate ? new Date(purchaseDate) : undefined,
+                costPrice: costPrice ? parseInt(costPrice) : undefined,
             }
         });
-
-        // Since I need to add purchaseDate, I will hold off on full logic here and return success for supplier.
 
         return NextResponse.json({ success: true });
 

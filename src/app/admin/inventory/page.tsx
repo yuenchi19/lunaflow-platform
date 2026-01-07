@@ -53,6 +53,11 @@ export default function AdminInventoryPage() {
     const [selectedUserId, setSelectedUserId] = useState('');
     const [assigning, setAssigning] = useState(false);
 
+    // Create Modal
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [createForm, setCreateForm] = useState({ brand: '', name: '', category: '', costPrice: '' });
+    const [creating, setCreating] = useState(false);
+
     useEffect(() => {
         fetchData();
         fetchUsers();
@@ -73,7 +78,7 @@ export default function AdminInventoryPage() {
 
     const fetchUsers = async () => {
         try {
-            const res = await fetch('/api/admin/users'); // Assuming this exists or works
+            const res = await fetch('/api/admin/users');
             if (res.ok) {
                 const data = await res.json();
                 setUsers(data.users || []);
@@ -106,9 +111,33 @@ export default function AdminInventoryPage() {
         }
     };
 
+    const handleCreateItem = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setCreating(true);
+        try {
+            const res = await fetch('/api/admin/inventory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(createForm)
+            });
+            if (res.ok) {
+                alert("登録しました");
+                setIsCreateModalOpen(false);
+                setCreateForm({ brand: '', name: '', category: '', costPrice: '' });
+                fetchData();
+            } else {
+                alert("エラーが発生しました");
+            }
+        } catch (e) {
+            alert("通信エラー");
+        } finally {
+            setCreating(false);
+        }
+    };
+
     // Filtering Logic
     const displayedItems = (() => {
-        if (activeTab === 'sold') return ledger; // Return ledger entries
+        if (activeTab === 'sold') return ledger;
 
         // Common filtering
         let filtered = items.filter(item =>
@@ -117,40 +146,22 @@ export default function AdminInventoryPage() {
 
         switch (activeTab) {
             case 'pool':
-                // Omakase Pool: Admin created, Not Assigned (or assigned to null/admin?), Status IN_STOCK/UNASSIGNED
-                // And NOT Self-Sourced (implied by Admin created, usually)
-                // And NOT Admin Stock (if we define Admin Stock as assigned to Admin)
                 return filtered.filter(i =>
                     !i.isSelfSourced &&
-                    (!i.assignedToUserId || i.assignedToUser?.name === 'Admin') && // Assuming unassigned or assigned to generic admin
+                    (!i.assignedToUserId || i.assignedToUser?.name === 'Admin') &&
                     i.status === 'IN_STOCK'
-                    // TODO: Need strict definition of "Admin Stock". Using "Assigned to explicit Admin User" vs "Unassigned"?
-                    // Let's assume Pool = Unassigned.
                 ).filter(i => !i.assignedToUserId);
             case 'assigned':
-                // Assigned to Student (Not self sourced? Or all assigned?)
-                // User requirement: "Omakase" assigned to student.
                 return filtered.filter(i =>
                     i.assignedToUserId &&
-                    // i.isSelfSourced === false && // Optional: include self-sourced in "Assigned"? 
-                    // Usually "Assigned" tab tracks Omakase. Self-sourced is managed by student.
-                    // Let's include everything assigned to a student (not Admin).
-                    // Filter out Admin (if Admin ID known) or check role? 
-                    // For now checking if assignedToUser exists.
                     i.status !== 'SOLD'
                 );
             case 'admin_stock':
-                // Admin's own listings. Protected.
-                // Could be items assigned to Admin explicitly?
-                // Or items with special flag?
-                // Let's filter items where assignedToUserId is the Admin User (need current user ID, but frontend doesn't have it easily without context).
-                // Or simply items that are "IN_STOCK" but marked as "Admin Stock" (maybe via Supplier?)
-                // For this implementation, let's look for items assigned to specific Admin user if possible, or just use a placeholder logic:
-                // "Items created by Admin and explicitly NOT in Pool"?
-                // Let's use: Assigned to Admin.
-                return filtered.filter(i => false); // Placeholder as we don't have Admin ID easily here.
-            // Actually, let's just make 'pool' = unassigned, 'assigned' = assigned to anyone.
-            // If user wants 'Admin Stock', they should assign to themselves.
+                // Placeholder for Admin's own stock if needed.
+                // Assuming currently 'pool' covers unassigned, 'assigned' covers students.
+                // If Admin assigns to themselves, it might appear in 'assigned' if we don't filter.
+                // For now, returning empty or specific logic if defined.
+                return [];
             default:
                 return [];
         }
@@ -191,6 +202,13 @@ export default function AdminInventoryPage() {
                         className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm w-64"
                     />
                 </div>
+                <button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-800"
+                >
+                    <Package className="w-4 h-4" />
+                    商品登録
+                </button>
             </div>
 
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
@@ -236,7 +254,6 @@ export default function AdminInventoryPage() {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <div className="font-bold text-slate-700">{item.assignedToUser?.name}</div>
-                                                {/* Unreceived Badge */}
                                                 {!item.receivedAt ? (
                                                     <span className="px-2 py-0.5 bg-rose-100 text-rose-700 text-[10px] font-bold rounded-full flex items-center gap-1">
                                                         <AlertCircle className="w-3 h-3" />
@@ -305,6 +322,45 @@ export default function AdminInventoryPage() {
                                 {assigning ? '処理中...' : '確定'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Item Modal */}
+            {isCreateModalOpen && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-lg">新規商品登録 (管理者)</h3>
+                            <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+                        </div>
+                        <form onSubmit={handleCreateItem} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">ブランド *</label>
+                                    <input type="text" required value={createForm.brand} onChange={e => setCreateForm({ ...createForm, brand: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">カテゴリ</label>
+                                    <input type="text" value={createForm.category} onChange={e => setCreateForm({ ...createForm, category: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">商品名</label>
+                                <input type="text" value={createForm.name} onChange={e => setCreateForm({ ...createForm, name: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">仕入れ価格 (¥) *</label>
+                                <input type="number" required value={createForm.costPrice} onChange={e => setCreateForm({ ...createForm, costPrice: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                            </div>
+
+                            <div className="pt-4 flex gap-2">
+                                <button type="button" onClick={() => setIsCreateModalOpen(false)} className="flex-1 py-2 bg-slate-100 font-bold text-slate-600 rounded-lg">キャンセル</button>
+                                <button type="submit" disabled={creating} className="flex-1 py-2 bg-slate-900 font-bold text-white rounded-lg disabled:opacity-50">
+                                    {creating ? '登録中...' : '登録'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

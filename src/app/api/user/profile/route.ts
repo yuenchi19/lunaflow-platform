@@ -35,7 +35,7 @@ export async function PUT(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { name, zipCode, address, communityNickname, bankName, bankBranch, bankAccountType, bankAccountNumber, bankAccountHolder, invoiceRegistrationNumber } = body;
+        const { name, zipCode, address, communityNickname, bankName, bankBranch, bankAccountType, bankAccountNumber, bankAccountHolder, invoiceRegistrationNumber, kobutsushoNumber } = body;
 
         // Note: Email update is more complex due to Auth provider sync, so we might skip it here or just update the DB record if it's display only.
         // For now, we update the DB fields.
@@ -52,7 +52,8 @@ export async function PUT(req: NextRequest) {
                 bankAccountType,
                 bankAccountNumber,
                 bankAccountHolder,
-                invoiceRegistrationNumber
+                invoiceRegistrationNumber,
+                kobutsushoNumber
                 // Not updating email here to avoid desync with Auth
             }
         });

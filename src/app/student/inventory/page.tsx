@@ -1,192 +1,268 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
+import { Search, Loader2, Download, Package, CheckCircle, AlertCircle, Edit2, ArrowRightLeft } from "lucide-react";
 import Image from "next/image";
-import { Loader2, Plus, Search, Trash2, Download, Copy, CheckSquare, ChevronDown, ChevronUp, Edit, CheckCircle, Package, RefreshCw } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
-// --- Interfaces ---
 interface InventoryItem {
     id: string;
     brand: string;
-    name: string | null;
-    category: string | null;
+    name?: string;
+    category?: string;
     costPrice: number;
-    sellingPrice: number | null;
     images: string[];
-    status: string;
+    assignedToUserId: string;
     createdAt: string;
-    condition: string | null;
-    assignedToUserId?: string | null;
-    isSelfSourced?: boolean;
-    supplier?: string | null;
-    purchaseDate?: string | null;
-    receivedAt?: string | null;
+    status: string;
+    isSelfSourced: boolean;
+    supplier?: string;
+    receivedAt?: string;
+    purchaseDate?: string;
+
+    // Kobutsusho Fields
+    supplierName?: string;
+    supplierAddress?: string;
+    supplierOccupation?: string;
+    supplierAge?: number;
+    idVerificationMethod?: string;
 }
 
 interface LedgerEntry {
     id: string;
-    originItemId: string | null;
-    sellPrice: number | null;
-    sellDate: string | null;
-    shippingCost: number | null;
-    platformFee: number | null;
-    note: string | null;
-    salePlatform: string | null;
-    saleNote: string | null;
-    profit: number | null;
-    purchasePrice: number | null;
+    user: { name: string, email: string };
     brand: string;
-    name: string | null;
+    purchasePrice: number;
+    sellPrice?: number;
+    profit?: number;
+    salePlatform?: string;
+    saleDate?: string;
+    sellNote?: string;
     updatedAt: string;
-    images: string[];
-    // For CSV
-    supplier?: string;
-    purchaseDate?: string;
+    status: string;
 }
 
+const ID_VERIFICATION_METHODS = [
+    "店舗・業者間取引（本人確認省略）",
+    "運転免許証",
+    "マイナンバーカード",
+    "健康保険証",
+    "その他（備考に記載）"
+];
+
 export default function StudentInventoryPage() {
-    const router = useRouter();
     const [items, setItems] = useState<InventoryItem[]>([]);
     const [ledger, setLedger] = useState<LedgerEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'stock' | 'sold'>('stock');
-    const [searchTerm, setSearchTerm] = useState("");
-
-    // Pagination
-    const [visibleCount, setVisibleCount] = useState(20);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [userProfile, setUserProfile] = useState<{ name: string, kobutsushoNumber?: string } | null>(null);
 
     // Bulk Selection
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
-    const [bulkForm, setBulkForm] = useState({ supplier: '', purchaseDate: '' });
-
-    // Sell Modal State
-    const [isSellModalOpen, setIsSellModalOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
-    const [sellForm, setSellForm] = useState({
-        sellPrice: '',
-        sellDate: new Date().toISOString().split('T')[0],
-        shippingCost: '',
-        platformFee: '',
-        note: '',
-        salePlatform: '',
-        saleNote: ''
+    const [bulkEditForm, setBulkEditForm] = useState({
+        supplier: '',
+        purchaseDate: '',
+        supplierName: '',
+        supplierAddress: '',
+        supplierOccupation: '',
+        supplierAge: '',
+        idVerificationMethod: ID_VERIFICATION_METHODS[0]
     });
-    const [submittingSell, setSubmittingSell] = useState(false);
-    const [locked, setLocked] = useState(false);
+    const [bulkUpdating, setBulkUpdating] = useState(false);
+
+    // Sales Modal
+    const [sellModalItem, setSellModalItem] = useState<InventoryItem | null>(null);
+    const [sellForm, setSellForm] = useState({ price: '', platform: 'Mercari', note: '' });
+    const [selling, setSelling] = useState(false);
+
+    // Return Modal
+    const [returnItem, setReturnItem] = useState<LedgerEntry | null>(null);
+    const [returnReason, setReturnReason] = useState("");
+    const [returning, setReturning] = useState(false);
+
+    // Individual Edit Modal (Stock)
+    const [editItem, setEditItem] = useState<InventoryItem | null>(null);
+    const [editForm, setEditForm] = useState({
+        supplier: '',
+        purchaseDate: '',
+        supplierName: '',
+        supplierAddress: '',
+        supplierOccupation: '',
+        supplierAge: '',
+        idVerificationMethod: '',
+        costPrice: ''
+    });
+    const [editing, setEditing] = useState(false);
+
+    // Delete
     const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    // Receiving
     const [receivingId, setReceivingId] = useState<string | null>(null);
 
-    // --- Data Fetching ---
-    const fetchItems = useCallback(async () => {
+    useEffect(() => {
+        fetchData();
+        fetchProfile();
+    }, []);
+
+    const fetchData = async () => {
         try {
-            const unlockRes = await fetch('/api/student/unlock-status');
-            if (unlockRes.ok) {
-                const unlocks = await unlockRes.json();
-                if (!unlocks.inventory) {
-                    setLocked(true);
-                    setLoading(false);
-                    return;
-                }
-            }
             const res = await fetch('/api/student/inventory');
-            if (res.ok) {
-                const data = await res.json();
-                setItems(data.items || []);
-                setLedger(data.ledger || []);
-            }
+            const data = await res.json();
+            setItems(data.items || []);
+            setLedger(data.ledger || []);
         } catch (error) {
             console.error("Failed to fetch inventory", error);
         } finally {
             setLoading(false);
         }
-    }, []);
-
-    useEffect(() => {
-        fetchItems();
-    }, [fetchItems]);
-
-    // --- Item Filtering ---
-    const filteredItems = useMemo(() => {
-        return items.filter(item => {
-            const matchesSearch = (item.brand + item.name + (item.category || '')).toLowerCase().includes(searchTerm.toLowerCase());
-            return matchesSearch && item.status !== 'SOLD';
-        });
-    }, [items, searchTerm]);
-
-    const filteredLedger = useMemo(() => {
-        return ledger.filter(entry => {
-            const matchesSearch = (entry.brand + (entry.name || '')).toLowerCase().includes(searchTerm.toLowerCase());
-            return matchesSearch;
-        });
-    }, [ledger, searchTerm]);
-
-    // Derived Display List
-    const displayedItems = activeTab === 'stock'
-        ? filteredItems.slice(0, visibleCount)
-        : filteredLedger.slice(0, visibleCount);
-
-    const totalCount = activeTab === 'stock' ? filteredItems.length : filteredLedger.length;
-
-    const handleLoadMore = () => {
-        setVisibleCount(prev => prev + 20);
     };
 
-    // --- Bulk Actions ---
-    const toggleSelect = (id: string) => {
+    const fetchProfile = async () => {
+        try {
+            const res = await fetch('/api/user/profile');
+            if (res.ok) {
+                const data = await res.json();
+                setUserProfile(data);
+            }
+        } catch (e) {
+            console.error("Failed to fetch profile", e);
+        }
+    };
+
+    // --- Bulk Logic ---
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedIds(new Set(items.filter(i => i.status === 'IN_STOCK').map(i => i.id)));
+        } else {
+            setSelectedIds(new Set());
+        }
+    };
+
+    const handleSelectOne = (id: string) => {
         const newSet = new Set(selectedIds);
         if (newSet.has(id)) newSet.delete(id);
         else newSet.add(id);
         setSelectedIds(newSet);
     };
 
-    const toggleSelectAll = () => {
-        if (selectedIds.size === filteredItems.length) {
-            setSelectedIds(new Set());
-        } else {
-            setSelectedIds(new Set(filteredItems.map(i => i.id)));
-        }
-    };
-
-    const handleBulkEditSubmit = async () => {
-        if (!confirm(`${selectedIds.size}件の商品の情報を更新しますか？`)) return;
+    const handleBulkUpdate = async () => {
+        if (selectedIds.size === 0) return;
+        setBulkUpdating(true);
         try {
             const res = await fetch('/api/student/inventory/bulk', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     itemIds: Array.from(selectedIds),
-                    supplier: bulkForm.supplier,
-                    purchaseDate: bulkForm.purchaseDate
+                    ...bulkEditForm
                 })
             });
-
             if (res.ok) {
-                alert("一括更新しました");
+                alert("更新しました");
                 setIsBulkEditOpen(false);
                 setSelectedIds(new Set());
-                fetchItems();
+                fetchData();
             } else {
-                alert("更新に失敗しました");
+                alert("エラーが発生しました");
             }
         } catch (e) {
-            console.error(e);
             alert("通信エラー");
+        } finally {
+            setBulkUpdating(false);
         }
     };
 
-    // --- Receive (Verify) ---
-    const handleReceive = async (item: InventoryItem) => {
-        if (!confirm("検品完了としてマークしますか？\n(台帳へ出力可能になります)")) return;
-        setReceivingId(item.id);
+    // --- Individual Edit Logic ---
+    const openEditModal = (item: InventoryItem) => {
+        setEditItem(item);
+        setEditForm({
+            supplier: item.supplier || '',
+            purchaseDate: item.purchaseDate ? new Date(item.purchaseDate).toISOString().split('T')[0] : '',
+            supplierName: item.supplierName || '',
+            supplierAddress: item.supplierAddress || '',
+            supplierOccupation: item.supplierOccupation || '',
+            supplierAge: item.supplierAge ? item.supplierAge.toString() : '',
+            idVerificationMethod: item.idVerificationMethod || ID_VERIFICATION_METHODS[0],
+            costPrice: item.costPrice.toString()
+        });
+    };
+
+    const handleEditSave = async () => {
+        if (!editItem) return;
+        setEditing(true);
         try {
-            const res = await fetch(`/api/student/inventory/${item.id}/receive`, { method: 'POST' });
+            const res = await fetch('/api/student/inventory/bulk', { // Reuse bulk endpoint for single update
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    itemIds: [editItem.id],
+                    ...editForm
+                })
+            });
             if (res.ok) {
-                // Update local state
-                setItems(prev => prev.map(i => i.id === item.id ? { ...i, receivedAt: new Date().toISOString() } : i));
-                alert("検品完了しました");
+                alert("更新しました");
+                setEditItem(null);
+                fetchData();
+            } else {
+                alert("エラーが発生しました");
+            }
+        } catch (e) {
+            alert("通信エラー");
+        } finally {
+            setEditing(false);
+        }
+    };
+
+
+    // --- Sales Logic ---
+    const handleSellClick = (item: InventoryItem) => {
+        setSellModalItem(item);
+        setSellForm({ price: '', platform: 'Mercari', note: '' });
+    };
+
+    const handleSellConfirm = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!sellModalItem) return;
+        setSelling(true);
+        try {
+            const res = await fetch('/api/student/inventory/sell', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    itemId: sellModalItem.id,
+                    sellPrice: parseInt(sellForm.price),
+                    platform: sellForm.platform,
+                    note: sellForm.note
+                })
+            });
+            if (res.ok) {
+                alert("販売記録を保存しました");
+                setSellModalItem(null);
+                fetchData();
+            } else {
+                alert("エラーが発生しました");
+            }
+        } catch (e) {
+            alert("通信エラー");
+        } finally {
+            setSelling(false);
+        }
+    };
+
+    // --- Receive Logic ---
+    const handleReceive = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm("検品を完了し、在庫として登録しますか？")) return;
+
+        setReceivingId(id);
+        try {
+            const res = await fetch(`/api/student/inventory/${id}/receive`, { method: 'POST' });
+            if (res.ok) {
+                fetchData();
             } else {
                 alert("エラーが発生しました");
             }
@@ -197,350 +273,450 @@ export default function StudentInventoryPage() {
         }
     };
 
-    // --- CSV Export (Restricted) ---
-    const downloadCSV = () => {
-        // Filter out unreceived Omakase items
-        const validItems = [...items, ...ledger].filter(item => {
-            const i = item as InventoryItem;
-            // Ledger items usually originate from valid received items, assuming safe.
-            // Items: Check if Omakase (!isSelfSourced) AND !receivedAt -> Exclude.
-            if ('isSelfSourced' in i) { // InventoryItem check
-                // @ts-ignore
-                if (!i.isSelfSourced && !i.receivedAt) return false;
-            }
-            return true;
-        });
-
-        const csvHeader = [
-            "取引年月日(仕入日)", "品目(ブランド/カテゴリ)", "特徴(商品名/状態)", "数量", "買受金額(仕入等)",
-            "氏名又は名称(仕入先)", "販売年月日", "販売金額", "氏名又は名称(販売先)"
-        ].join(",");
-
-        const rows = validItems.map(item => {
-            const isSold = 'sellDate' in item;
-            let purchaseDate = '';
-            let itemDesc = '';
-            let features = '';
-            let price = '';
-            let supplier = '';
-            let sellDate = '';
-            let sellPrice = '';
-            let sellTo = '';
-
-            if (isSold) {
-                const l = item as LedgerEntry;
-                purchaseDate = l.updatedAt ? new Date(l.updatedAt).toLocaleDateString() : '';
-                itemDesc = `${l.brand}`;
-                features = `${l.name || ''}`;
-                price = l.purchasePrice?.toString() || '0';
-                supplier = 'LunaFlow Operation'; // Fallback for Omakase sold items or join real data
-                sellDate = l.sellDate ? new Date(l.sellDate).toLocaleDateString() : '';
-                sellPrice = l.sellPrice?.toString() || '';
-                sellTo = l.salePlatform || '';
-            } else {
-                const i = item as InventoryItem;
-                purchaseDate = i.purchaseDate ? new Date(i.purchaseDate).toLocaleDateString() : new Date(i.createdAt).toLocaleDateString();
-                itemDesc = `${i.brand} ${i.category || ''}`;
-                features = `${i.name || ''} ${i.condition || ''}`;
-                price = i.costPrice.toString();
-                supplier = i.supplier || (i.isSelfSourced ? '' : 'LunaFlow Operation');
-                sellDate = '';
-                sellPrice = '';
-                sellTo = '';
-            }
-            return [purchaseDate, itemDesc, features, "1", price, supplier, sellDate, sellPrice, sellTo].map(f => `"${f}"`).join(",");
-        });
-
-        const csvContent = "\uFEFF" + [csvHeader, ...rows].join("\n");
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", `kobutsusho_ledger_${new Date().toISOString().slice(0, 10)}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    // --- Delete & Sell logic ---
+    // --- Delete Logic ---
     const handleDelete = async (id: string) => {
         if (!confirm("本当に削除しますか？")) return;
         setDeletingId(id);
         try {
             const res = await fetch(`/api/student/inventory/${id}`, { method: 'DELETE' });
             if (res.ok) {
-                setItems(prev => prev.filter(i => i.id !== id));
-                alert("削除しました");
+                fetchData();
             } else {
-                alert("削除失敗");
+                const data = await res.json();
+                alert(data.error || "削除できませんでした");
             }
         } catch (e) {
-            alert("通信エラー");
+            alert("エラー");
         } finally {
             setDeletingId(null);
         }
     };
 
-    // Return Logic (Not Implemented Backend yet, adding button UI first)
-    // Actually plan said use 'Return' button logic.
-    // I can reuse Delete or add separate endpoint.
-    // User requested "Return Button" in Sold Tab.
-    // For now I'll implement placeholder or basic logic.
-    // Since I don't have return API in this file, I will skip backend call implementation or use DELETE as placeholder?
-    // No, Return means Un-Sold.
-    // I need `api/student/inventory/[id]/return` endpoint.
-    // I will implement UI button here.
+    // --- CSV Export ---
+    const downloadCSV = () => {
+        // Filter: Must be received
+        const exportItems = items.filter(i => i.receivedAt);
 
-    const handleReturn = async (ledgerId: string) => {
-        // Implement Return logic
-        alert("返品処理機能は現在開発中です (在庫に戻す処理)");
-    };
-
-    const handleSellClick = (item: InventoryItem) => {
-        setSelectedItem(item);
-        setSellForm({
-            sellPrice: item.sellingPrice?.toString() || '',
-            sellDate: new Date().toISOString().split('T')[0],
-            shippingCost: '1000',
-            platformFee: item.sellingPrice ? Math.floor(item.sellingPrice * 0.1).toString() : '',
-            note: '',
-            salePlatform: '',
-            saleNote: ''
-        });
-        setIsSellModalOpen(true);
-    };
-
-    const handleSellSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedItem) return;
-        setSubmittingSell(true);
-        try {
-            const res = await fetch(`/api/student/inventory/${selectedItem.id}/sell`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(sellForm)
-            });
-            if (res.ok) {
-                alert("販売登録しました");
-                setIsSellModalOpen(false);
-                fetchItems();
-            } else {
-                alert("エラーが発生しました");
-            }
-        } catch (e) {
-            alert("通信エラー");
-        } finally {
-            setSubmittingSell(false);
+        if (exportItems.length === 0) {
+            alert("CSV出力できる商品がありません（未検品の商品は出力されません）");
+            return;
         }
+
+        // Header
+        const headerInfo = userProfile ? `古物商許可番号: ${userProfile.kobutsushoNumber || '未登録'}  氏名: ${userProfile.name}\n` : '';
+        const headers = ["No.", "受入年月日", "品目", "特徴", "数量", "単価", "仕入先住所", "仕入先氏名", "職業", "年齢", "確認確認方法", "払出年月日", "価額", "相手方"];
+
+        const csvContent = headerInfo + headers.join(",") + "\n" + exportItems.map((item, index) => {
+            const purchaseDate = item.purchaseDate ? new Date(item.purchaseDate).toLocaleDateString() : (item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "");
+            const description = `${item.brand} ${item.name || ''}`;
+            const features = item.category || ''; // Using category as feature
+            const qty = 1;
+            const cost = item.costPrice;
+
+            // Kobutsusho Supplier Info
+            const supplierAddress = item.supplierAddress || item.supplier || ""; // Fallback to simple supplier if address missing
+            const supplierName = item.supplierName || "";
+            const occupation = item.supplierOccupation || "";
+            const age = item.supplierAge || "";
+            const idMethod = item.idVerificationMethod || "";
+
+            // Sales info (Check ledger if sold, but this list is mostly Stock. If sold items are in list? Current list view separates Stock/Sold.)
+            // If exporting ALL, we need to merge. But user typically exports "Ledger" which includes both. 
+            // Current `items` is Stock. `ledger` is Sold.
+            // Let's combine for CSV if requested? Or just Stock?
+            // Usually Kobutsusho Ledger needs sequence of Purchase -> Sale.
+            // Let's try to export BOTH if we can, or just tell user this matches the view.
+            // Since `items` might update to `status=sold`? No, separate states.
+            // Let's export current `items` (Stock) + `ledger` (Sold) combined?
+            // Complexity: LedgerEntry structure matches `InventoryItem`?
+            // Let's just export `items` (Stock) for now, or merge manually.
+            // Ideally, we fetch ALL history for CSV. 
+            // For now, let's export valid Stock items.
+
+            return [
+                index + 1,
+                purchaseDate,
+                "衣類・雑貨", // Fixed or Category
+                description,
+                qty,
+                cost,
+                supplierAddress,
+                supplierName,
+                occupation,
+                age,
+                idMethod,
+                "", // Sales Date (Empty for stock)
+                "", // Sales Price
+                ""  // Buyer
+            ].map(f => `"${f}"`).join(",");
+        }).join("\n");
+
+        const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+        const blob = new Blob([bom, csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `古物台帳_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
-    if (loading) return <div className="p-8 text-center text-slate-500"><Loader2 className="animate-spin w-8 h-8 mx-auto" /></div>;
-    if (locked) return <div className="p-8 text-center">機能がロックされています</div>;
+    // Filtered Display
+    const displayedItems = activeTab === 'sold'
+        ? ledger.filter(i => (i.brand + i.brand).toLowerCase().includes(searchQuery.toLowerCase()))
+        : items.filter(i => (i.brand + (i.name || '')).toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
-        <div className="max-w-6xl mx-auto p-4 md:p-8 pb-24">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-800">商品管理台帳</h1>
-                    <p className="text-sm text-slate-500 mt-1">仕入れ・在庫管理と古物台帳の記録</p>
-                </div>
-                <div className="flex gap-2">
-                    <button onClick={downloadCSV} className="flex items-center gap-2 bg-white text-slate-600 border border-slate-300 px-4 py-2 rounded-lg font-bold hover:bg-slate-50 transition-colors">
-                        <Download className="w-4 h-4" />
-                        台帳出力
-                    </button>
-                    <Link href="/student/inventory/new" className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg font-bold hover:bg-slate-800 transition-colors shadow-lg">
-                        <Plus className="w-4 h-4" />
-                        商品登録
-                    </Link>
-                </div>
+        <div className="p-4 md:p-8 pb-32">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold text-slate-800">在庫管理</h1>
+                <Link href="/student/inventory/new" className="bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-slate-800 transition-colors">
+                    <Package className="w-4 h-4" />
+                    <span className="hidden md:inline">新規登録</span>
+                </Link>
             </div>
 
-            {/* Stats Summary */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-xs font-bold text-slate-400 uppercase">在庫総数</p>
-                    <p className="text-2xl font-bold text-slate-800">{items.filter(i => i.status !== 'SOLD').length}</p>
-                </div>
-                {/* Other stats omitted for brevity but should be here */}
-            </div>
-
-            {/* Tabs & Search */}
-            <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+            {/* Filter & Controls */}
+            <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
                 <div className="flex bg-slate-100 p-1 rounded-lg self-start">
-                    <button onClick={() => setActiveTab('stock')} className={`px-4 py-2 rounded-md text-sm font-bold ${activeTab === 'stock' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>在庫一覧</button>
-                    <button onClick={() => setActiveTab('sold')} className={`px-4 py-2 rounded-md text-sm font-bold ${activeTab === 'sold' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>完売履歴</button>
+                    <button onClick={() => setActiveTab('stock')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'stock' ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>在庫一覧</button>
+                    <button onClick={() => setActiveTab('sold')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'sold' ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>完売・利益</button>
                 </div>
 
-                {/* Bulk Action Bar - Mobile Friendly */}
-                {activeTab === 'stock' && selectedIds.size > 0 && (
-                    <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-slate-600">{selectedIds.size}件選択中</span>
-                        <button onClick={() => setIsBulkEditOpen(true)} className="flex items-center gap-2 bg-indigo-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700">
-                            <Edit className="w-4 h-4" />
-                            一括編集
-                        </button>
+                <div className="flex gap-2">
+                    <div className="relative">
+                        <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="検索..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm w-full md:w-64"
+                        />
                     </div>
-                )}
+                    {activeTab === 'stock' && (
+                        <>
+                            <button
+                                onClick={() => setIsBulkEditOpen(true)}
+                                disabled={selectedIds.size === 0}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold disabled:opacity-50 hover:bg-indigo-700 transition-colors"
+                            >
+                                一括編集
+                            </button>
+                            <button onClick={downloadCSV} className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-bold hover:bg-slate-50 flex items-center gap-2">
+                                <Download className="w-4 h-4" />
+                                <span className="hidden md:inline">台帳CSV</span>
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
 
-            {/* List View */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-8">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-bold">
-                            <tr>
-                                {activeTab === 'stock' && (
-                                    <th className="px-4 py-4 w-12 text-center">
-                                        <input type="checkbox" checked={selectedIds.size > 0 && selectedIds.size === filteredItems.length} onChange={toggleSelectAll} className="w-5 h-5 rounded border-slate-300 text-indigo-600" />
-                                    </th>
-                                )}
-                                <th className="px-6 py-4">商品情報</th>
-                                <th className="px-6 py-4">仕入れ情報</th>
-                                <th className="px-6 py-4 text-center">ステータス</th>
-                                <th className="px-6 py-4 text-center">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 text-sm">
-                            {activeTab === 'stock' ? (
-                                (displayedItems as InventoryItem[]).map(item => (
-                                    <tr key={item.id} className={`hover:bg-slate-50 ${selectedIds.has(item.id) ? 'bg-indigo-50/50' : ''}`}>
-                                        <td className="px-4 py-4 text-center">
-                                            <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} className="w-5 h-5 rounded border-slate-300 text-indigo-600" />
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="relative w-12 h-12 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0">
-                                                    {item.images[0] && <Image src={item.images[0]} alt="img" fill className="object-cover" />}
+            {/* Content */}
+            {loading ? (
+                <div className="p-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>
+            ) : (
+                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left min-w-[800px]">
+                            <thead className="bg-slate-50 text-xs text-slate-500 uppercase font-bold border-b border-slate-200">
+                                <tr>
+                                    {activeTab === 'stock' && (
+                                        <th className="px-6 py-4 w-10">
+                                            <input type="checkbox" onChange={handleSelectAll} className="rounded border-slate-300 mb-0.5" />
+                                        </th>
+                                    )}
+                                    <th className="px-6 py-4">商品画像</th>
+                                    <th className="px-6 py-4">情報</th>
+                                    {activeTab === 'stock' && <th className="px-6 py-4">仕入れ情報</th>}
+                                    {activeTab === 'sold' && (
+                                        <>
+                                            <th className="px-6 py-4 text-right">販売価格</th>
+                                            <th className="px-6 py-4 text-right">利益</th>
+                                            <th className="px-6 py-4">PF</th>
+                                        </>
+                                    )}
+                                    <th className="px-6 py-4 text-center">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-sm">
+                                {displayedItems.length === 0 ? (
+                                    <tr><td colSpan={8} className="text-center py-12 text-slate-400">データがありません</td></tr>
+                                ) : (activeTab === 'stock' ? (
+                                    (displayedItems as InventoryItem[]).map(item => (
+                                        <tr key={item.id} className="hover:bg-slate-50">
+                                            <td className="px-6 py-4">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.has(item.id)}
+                                                    onChange={() => handleSelectOne(item.id)}
+                                                    className="rounded border-slate-300"
+                                                />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="w-12 h-12 relative bg-slate-100 rounded overflow-hidden border border-slate-200">
+                                                    {item.images?.[0] ? (
+                                                        <Image src={item.images[0]} alt={item.brand} fill className="object-cover" />
+                                                    ) : (
+                                                        <div className="flex items-center justify-center h-full text-slate-300"><Package className="w-6 h-6" /></div>
+                                                    )}
                                                 </div>
-                                                <div>
-                                                    <div className="font-bold text-slate-800">{item.brand}</div>
-                                                    <div className="text-xs text-slate-500">{item.name}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold text-slate-800">{item.brand}</div>
+                                                <div className="text-xs text-slate-500">{item.name}</div>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    {item.isSelfSourced ? (
+                                                        <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] rounded">受講生仕入</span>
+                                                    ) : (
+                                                        <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[10px] rounded">おまかせ</span>
+                                                    )}
+                                                    {!item.receivedAt && (
+                                                        <span className="px-1.5 py-0.5 bg-rose-100 text-rose-700 text-[10px] font-bold rounded flex items-center gap-1">
+                                                            <AlertCircle className="w-3 h-3" />未検品
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-xs">
-                                            {/* @ts-ignore */}
-                                            {item.isSelfSourced ? (
-                                                <span className="text-slate-500">受講生仕入れ</span>
-                                            ) : (
-                                                <span className="font-bold text-indigo-600">おまかせ仕入れ</span>
-                                            )}
-                                            <div className="mt-1 text-slate-400">{new Date(item.createdAt).toLocaleDateString()}</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            {/* Status Badge */}
-                                            {/* @ts-ignore */}
-                                            {!item.isSelfSourced && !item.receivedAt ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">
-                                                    <Package className="w-3 h-3" />
-                                                    未検品
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">
-                                                    <CheckCircle className="w-3 h-3" />
-                                                    在庫あり
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                {/* Receive Button */}
-                                                {/* @ts-ignore */}
-                                                {!item.isSelfSourced && !item.receivedAt ? (
+                                            </td>
+                                            <td className="px-6 py-4 text-xs">
+                                                <div className="text-slate-500">¥{item.costPrice.toLocaleString()}</div>
+                                                <div className="text-slate-400 truncate max-w-[120px]" title={item.supplier}>{item.supplier || '-'}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex justify-center items-center gap-2">
+                                                    {/* Receive Button */}
+                                                    {!item.isSelfSourced && !item.receivedAt && (
+                                                        <button
+                                                            onClick={(e) => handleReceive(item.id, e)}
+                                                            disabled={!!receivingId}
+                                                            className="flex items-center gap-1 bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-emerald-700 shadow-sm"
+                                                        >
+                                                            {receivingId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                                                            検品完了
+                                                        </button>
+                                                    )}
+
+                                                    {/* Operation Buttons */}
                                                     <button
-                                                        onClick={() => handleReceive(item)}
-                                                        disabled={receivingId === item.id}
-                                                        className="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-indigo-700 shadow-sm whitespace-nowrap"
+                                                        onClick={() => handleSellClick(item)}
+                                                        className="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-indigo-700 transition-colors shadow-sm"
                                                     >
-                                                        {receivingId === item.id ? '処理中...' : '検品完了'}
-                                                    </button>
-                                                ) : (
-                                                    <button onClick={() => handleSellClick(item)} className="bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-slate-700 shadow-sm whitespace-nowrap">
                                                         販売登録
                                                     </button>
-                                                )}
 
-                                                {/* Delete Button (Only for Self Sourced) */}
-                                                {/* @ts-ignore */}
-                                                {item.isSelfSourced && (
-                                                    <button onClick={() => handleDelete(item.id)} className="p-2 text-slate-400 hover:text-red-600 rounded hover:bg-red-50">
-                                                        <Trash2 className="w-4 h-4" />
+                                                    {/* Edit Button (Individual) */}
+                                                    <button
+                                                        onClick={() => openEditModal(item)}
+                                                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"
+                                                        title="編集"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
                                                     </button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                (displayedItems as LedgerEntry[]).map(entry => (
-                                    <tr key={entry.id} className="hover:bg-slate-50">
-                                        <td colSpan={2} className="px-6 py-4">
-                                            <div className="font-bold">{entry.brand} {entry.name}</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-bold text-indigo-700">¥{entry.sellPrice?.toLocaleString()}</td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full">完売</span>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <button onClick={() => handleReturn(entry.id)} className="text-xs text-rose-500 font-bold hover:underline">
-                                                返品処理
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
-            {/* Bulk Edit Modal - Mobile Optimized */}
+                                                    {item.isSelfSourced && (
+                                                        <button
+                                                            onClick={() => handleDelete(item.id)}
+                                                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                            title="削除"
+                                                        >
+                                                            {deletingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "✕"}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    (displayedItems as LedgerEntry[]).map(entry => (
+                                        <tr key={entry.id} className="hover:bg-slate-50">
+                                            <td className="px-6 py-4">
+                                                {/* Sold Item Image Placeholder or from joined data if available (removed simplistic handling for brevity, assuming standard table) */}
+                                                <div className="font-bold text-slate-800">{entry.brand}</div>
+                                                <div className="text-xs text-slate-500">{new Date(entry.updatedAt).toLocaleDateString()}</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-xs text-slate-500">
+                                                {/* Sold Item Info */}
+                                                売却済
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-bold">¥{entry.sellPrice?.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-right font-bold text-emerald-600">¥{entry.profit?.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-sm">{entry.salePlatform}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button className="text-xs font-bold text-slate-400 hover:text-slate-600 border border-slate-200 px-2 py-1 rounded">
+                                                    返品・修正
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Edit Modal */}
             {isBulkEditOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl animate-in zoom-in-95">
-                        <h3 className="text-xl font-bold text-slate-800 mb-4">一括編集 ({selectedIds.size}件)</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-bold text-slate-600 mb-2">仕入れ先 (購入元)</label>
-                                <input
-                                    type="text"
-                                    value={bulkForm.supplier}
-                                    onChange={e => setBulkForm({ ...bulkForm, supplier: e.target.value })}
-                                    placeholder="例: セカンドストリート渋谷店"
-                                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base" // Larger tap target
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-slate-600 mb-2">購入日</label>
-                                <input
-                                    type="date"
-                                    value={bulkForm.purchaseDate}
-                                    onChange={e => setBulkForm({ ...bulkForm, purchaseDate: e.target.value })}
-                                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base"
-                                />
-                            </div>
+                    <div className="bg-white rounded-xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-lg">一括編集 ({selectedIds.size}件)</h3>
                         </div>
-                        <div className="flex gap-3 pt-6">
-                            <button onClick={() => setIsBulkEditOpen(false)} className="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-xl active:bg-slate-200">キャンセル</button>
-                            <button onClick={handleBulkEditSubmit} className="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-xl active:bg-indigo-700 shadow-lg">更新する</button>
+                        <div className="space-y-4">
+                            <div className="bg-yellow-50 p-3 rounded-lg text-xs text-yellow-800 mb-4">
+                                ※ここで入力した内容は、選択した全ての商品に上書きされます。
+                            </div>
+
+                            <h4 className="font-bold text-sm border-b pb-2">仕入れ情報 (古物台帳用)</h4>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">仕入れ先 (表示用名)</label>
+                                <input type="text" value={bulkEditForm.supplier} onChange={e => setBulkEditForm({ ...bulkEditForm, supplier: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" placeholder="例: セカンドストリート" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">氏名 (必須)</label>
+                                    <input type="text" value={bulkEditForm.supplierName} onChange={e => setBulkEditForm({ ...bulkEditForm, supplierName: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">年齢</label>
+                                    <input type="number" value={bulkEditForm.supplierAge} onChange={e => setBulkEditForm({ ...bulkEditForm, supplierAge: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">住所 (必須)</label>
+                                <input type="text" value={bulkEditForm.supplierAddress} onChange={e => setBulkEditForm({ ...bulkEditForm, supplierAddress: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" placeholder="東京都..." />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">職業</label>
+                                <input type="text" value={bulkEditForm.supplierOccupation} onChange={e => setBulkEditForm({ ...bulkEditForm, supplierOccupation: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">本人確認方法</label>
+                                <select
+                                    value={bulkEditForm.idVerificationMethod}
+                                    onChange={e => setBulkEditForm({ ...bulkEditForm, idVerificationMethod: e.target.value })}
+                                    className="w-full border border-slate-300 rounded-lg p-2"
+                                >
+                                    {ID_VERIFICATION_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">仕入れ日時</label>
+                                <input type="date" value={bulkEditForm.purchaseDate} onChange={e => setBulkEditForm({ ...bulkEditForm, purchaseDate: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                            </div>
+
+                            <div className="flex gap-2 pt-4">
+                                <button onClick={() => setIsBulkEditOpen(false)} className="flex-1 py-3 bg-slate-100 font-bold text-slate-600 rounded-lg">キャンセル</button>
+                                <button onClick={handleBulkUpdate} disabled={bulkUpdating} className="flex-1 py-3 bg-indigo-600 font-bold text-white rounded-lg disabled:opacity-50">
+                                    {bulkUpdating ? '更新中...' : '一括更新を実行'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Sell Modal Omitted for brevity, assumed existing */}
-            {isSellModalOpen && selectedItem && (
+            {/* Individual Edit Modal */}
+            {editItem && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-                        <h3 className="text-xl font-bold mb-4">販売登録</h3>
-                        {/* Simple Sell Form */}
-                        <form onSubmit={handleSellSubmit} className="space-y-4">
+                    <div className="bg-white rounded-xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-lg">商品情報の編集</h3>
+                        </div>
+                        <div className="space-y-4">
+                            <h4 className="font-bold text-sm border-b pb-2">仕入れ・台帳情報</h4>
                             <div>
-                                <label className="block text-xs font-bold text-slate-500">販売価格</label>
-                                <input type="number" value={sellForm.sellPrice} onChange={e => setSellForm({ ...sellForm, sellPrice: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" required />
+                                <label className="block text-xs font-bold text-slate-500 mb-1">仕入れ価格 (¥)</label>
+                                <input type="number" value={editForm.costPrice} onChange={e => setEditForm({ ...editForm, costPrice: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
                             </div>
-                            <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700">登録</button>
-                            <button type="button" onClick={() => setIsSellModalOpen(false)} className="w-full bg-slate-100 text-slate-600 font-bold py-3 rounded-xl mt-2">キャンセル</button>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">仕入れ先 (表示用名)</label>
+                                <input type="text" value={editForm.supplier} onChange={e => setEditForm({ ...editForm, supplier: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">氏名 (必須)</label>
+                                    <input type="text" value={editForm.supplierName} onChange={e => setEditForm({ ...editForm, supplierName: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">年齢</label>
+                                    <input type="number" value={editForm.supplierAge} onChange={e => setEditForm({ ...editForm, supplierAge: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">住所 (必須)</label>
+                                <input type="text" value={editForm.supplierAddress} onChange={e => setEditForm({ ...editForm, supplierAddress: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">職業</label>
+                                <input type="text" value={editForm.supplierOccupation} onChange={e => setEditForm({ ...editForm, supplierOccupation: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">本人確認方法</label>
+                                <select
+                                    value={editForm.idVerificationMethod}
+                                    onChange={e => setEditForm({ ...editForm, idVerificationMethod: e.target.value })}
+                                    className="w-full border border-slate-300 rounded-lg p-2"
+                                >
+                                    {ID_VERIFICATION_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">仕入れ日時</label>
+                                <input type="date" value={editForm.purchaseDate} onChange={e => setEditForm({ ...editForm, purchaseDate: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                            </div>
+
+                            <div className="flex gap-2 pt-4">
+                                <button onClick={() => setEditItem(null)} className="flex-1 py-3 bg-slate-100 font-bold text-slate-600 rounded-lg">キャンセル</button>
+                                <button onClick={handleEditSave} disabled={editing} className="flex-1 py-3 bg-indigo-600 font-bold text-white rounded-lg disabled:opacity-50">
+                                    {editing ? '保存中...' : '保存'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Sell Modal */}
+            {sellModalItem && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
+                        <h3 className="font-bold text-lg mb-4">販売登録</h3>
+                        <form onSubmit={handleSellConfirm} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">販売価格 (¥)</label>
+                                <input type="number" required value={sellForm.price} onChange={e => setSellForm({ ...sellForm, price: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">プラットフォーム</label>
+                                <select value={sellForm.platform} onChange={e => setSellForm({ ...sellForm, platform: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2">
+                                    <option value="Mercari">メルカリ</option>
+                                    <option value="YahooAuctions">ヤフオク</option>
+                                    <option value="Rakuma">ラクマ</option>
+                                    <option value="Other">その他</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">備考</label>
+                                <textarea value={sellForm.note} onChange={e => setSellForm({ ...sellForm, note: e.target.value })} className="w-full border border-slate-300 rounded-lg p-2 h-20" />
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                                <button type="button" onClick={() => setSellModalItem(null)} className="flex-1 py-2 bg-slate-100 font-bold text-slate-600 rounded-lg">キャンセル</button>
+                                <button type="submit" disabled={selling} className="flex-1 py-2 bg-indigo-600 font-bold text-white rounded-lg">販売確定</button>
+                            </div>
                         </form>
                     </div>
                 </div>

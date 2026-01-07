@@ -12,6 +12,7 @@ export default function SettingsPage() {
     const [address, setAddress] = useState("");
     const [zipCode, setZipCode] = useState(""); // Added ZipCode State
     const [phoneNumber, setPhoneNumber] = useState("");
+    const [kobutsushoNumber, setKobutsushoNumber] = useState("");
     const [isSaved, setIsSaved] = useState(false);
 
     useEffect(() => {
@@ -25,6 +26,7 @@ export default function SettingsPage() {
                     setAddress(data.address || "");
                     setZipCode(data.zipCode || ""); // Sync ZipCode
                     setPhoneNumber(data.phoneNumber || "");
+                    setKobutsushoNumber(data.kobutsushoNumber || "");
                 }
             } catch (e) {
                 console.error("Failed to fetch profile", e);
@@ -38,7 +40,7 @@ export default function SettingsPage() {
             const res = await fetch('/api/user/profile', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, address, zipCode, phoneNumber })
+                body: JSON.stringify({ email, address, zipCode, phoneNumber, kobutsushoNumber })
             });
 
             if (res.ok) {
@@ -161,11 +163,20 @@ export default function SettingsPage() {
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">ご住所</label>
                                 <textarea
-                                    value={address}
-                                    onChange={(e) => setAddress(e.target.value)}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-emerald-500 transition-colors min-h-[120px] resize-none"
                                     placeholder="東京都..."
                                 />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">古物商許可番号</label>
+                                <input
+                                    type="text"
+                                    value={kobutsushoNumber}
+                                    onChange={(e) => setKobutsushoNumber(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 outline-none focus:border-emerald-500 transition-colors"
+                                    placeholder="第123456789012号"
+                                />
+                                <p className="text-[10px] text-slate-400 mt-1">※古物台帳などに自動記載されます。</p>
                             </div>
                         </div>
                     </div>
