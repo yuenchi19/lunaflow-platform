@@ -69,11 +69,20 @@ export default function UnlockSettingsPage() {
                 })
             });
 
+            const text = await res.text();
+            console.log('API Response:', res.status, text);
+
             if (res.ok) {
                 alert('設定を保存しました');
             } else {
-                const data = await res.json();
-                throw new Error(data.error || 'Save failed');
+                let errorMessage = 'Save failed';
+                try {
+                    const data = JSON.parse(text);
+                    errorMessage = data.error || errorMessage;
+                } catch {
+                    errorMessage = `Server Error (${res.status}): ${text.slice(0, 100)}`;
+                }
+                throw new Error(errorMessage);
             }
         } catch (e: any) {
             alert(`保存に失敗しました: ${e.message}`);
