@@ -9,27 +9,11 @@ export async function uploadInventoryImage(file: File): Promise<string | null> {
     try {
         let fileToUpload = file;
 
-        // HEIC Conversion (Client-side)
-        if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic')) {
-            try {
-                // Dynamic import to avoid SSR issues
-                const heic2any = (await import('heic2any')).default;
-                const convertedBlob = await heic2any({
-                    blob: file,
-                    toType: 'image/jpeg',
-                    quality: 0.8
-                });
+        // HEIC Conversion is now handled server-side in API routes or upload handler.
+        // We skip client-side conversion for HEIC to rely on server processing if available.
+        // Or if we need client-side preview, we might needed it, but for upload, let server handle it.
+        // Since we removed 'heic2any' package, we must remove this block.
 
-                // heic2any can return Blob or Blob[]
-                const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
-
-                // Convert Blob back to File for consistency with downstream logic
-                fileToUpload = new File([blob], file.name.replace(/\.heic$/i, '.jpg'), { type: 'image/jpeg' });
-            } catch (heicError) {
-                console.warn("HEIC Conversion failed:", heicError);
-                // Continue with original file (Fallback logic will catch compression failure if any)
-            }
-        }
 
         // 1. Try Compress Image
         try {
