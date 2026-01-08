@@ -12,6 +12,7 @@ interface InventoryItem {
     category?: string;
     costPrice: number;
     images: string[];
+    damageImages?: string[];
     status: string;
     assignedToUser?: { id: string; name: string; email?: string };
     assignedToUserId?: string;

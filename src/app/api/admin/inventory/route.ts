@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const {
-        brand, name, category, costPrice, images, condition,
+        brand, name, category, costPrice, images, damageImages, condition,
         supplier, supplierName, supplierAddress, supplierOccupation, supplierAge, idVerificationMethod, purchaseDate,
         isOmakase // New boolean flag
     } = body;
@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
             condition,
             costPrice: parseInt(costPrice),
             images: images || [],
+            damageImages: damageImages || [],
             status: 'IN_STOCK',
             isOmakase: isOmakase !== undefined ? isOmakase : true, // Default to true (Pool) if not sent, wait, user wants to choose.
             // Kobutsusho Fields (For Admin Stock -> Student Assignment)

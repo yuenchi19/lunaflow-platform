@@ -34,7 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         const {
             brand, name, category, costPrice, condition,
             supplier, supplierName, supplierAddress, supplierOccupation, supplierAge,
-            idVerificationMethod, purchaseDate, images, isOmakase
+            idVerificationMethod, purchaseDate, images, damageImages, isOmakase
         } = body;
 
         const updatedItem = await prisma.inventoryItem.update({
@@ -46,6 +46,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
                 condition,
                 costPrice: costPrice ? parseInt(costPrice) : undefined,
                 images,
+                damageImages,
                 isOmakase,
                 // Kobutsusho
                 supplier,
