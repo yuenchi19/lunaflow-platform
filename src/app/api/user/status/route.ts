@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
     // 1. Verify Authentication (Standard Way)
     const cookieStore = cookies()
@@ -53,10 +55,13 @@ export async function GET(req: Request) {
         return NextResponse.json({ authenticated: true, plan: null, error: 'Profile not found' });
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
         authenticated: true,
         plan: profile.plan,
         role: profile.role,
         subscriptionStatus: profile.subscriptionStatus
     });
+
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    return response;
 }

@@ -64,17 +64,47 @@ export default function NewInventoryItemPage() {
     ];
 
     // Image Handlers
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'main' | 'damage') => {
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, type: 'main' | 'damage') => {
         if (e.target.files) {
-            const newFiles = Array.from(e.target.files);
-            if (type === 'main') {
-                if (images.length + newFiles.length > 1) return alert("メイン画像は1枚のみです");
-                setImages(prev => [...prev, ...newFiles]);
-                setPreviewUrls(prev => [...prev, ...newFiles.map(f => URL.createObjectURL(f))]);
-            } else {
-                if (damageImages.length + newFiles.length > 5) return alert("ダメージ画像は最大5枚まで");
-                setDamageImages(prev => [...prev, ...newFiles]);
-                setDamagePreviewUrls(prev => [...prev, ...newFiles.map(f => URL.createObjectURL(f))]);
+            setLoading(true);
+            try {
+                const { processImageClientSide } = await import("@/lib/client-image-processing");
+                const newFiles = Array.from(e.target.files);
+                const processedFiles: File[] = [];
+
+                for (const file of newFiles) {
+                    try {
+                        console.log(`Processing file: ${file.name}`);
+                        const processed = await processImageClientSide(file);
+                        processedFiles.push(processed);
+                    } catch (err) {
+                        console.error("File processing failed", err);
+                        alert(`ファイルの処理に失敗しました: ${file.name}`);
+                    }
+                }
+
+                if (type === 'main') {
+                    if (images.length + processedFiles.length > 1) {
+                        alert("メイン画像は1枚のみです");
+                        setLoading(false);
+                        return;
+                    }
+                    setImages(prev => [...prev, ...processedFiles]);
+                    setPreviewUrls(prev => [...prev, ...processedFiles.map(f => URL.createObjectURL(f))]);
+                } else {
+                    if (damageImages.length + processedFiles.length > 5) {
+                        alert("ダメージ画像は最大5枚まで");
+                        setLoading(false);
+                        return;
+                    }
+                    setDamageImages(prev => [...prev, ...processedFiles]);
+                    setDamagePreviewUrls(prev => [...prev, ...processedFiles.map(f => URL.createObjectURL(f))]);
+                }
+            } catch (error) {
+                console.error("Error processing images:", error);
+                alert("画像の処理中にエラーが発生しました。");
+            } finally {
+                setLoading(false);
             }
         }
     };
@@ -109,20 +139,18 @@ export default function NewInventoryItemPage() {
 
         setLoading(true);
         try {
-            // Import client-side processor dynamically or from utility
-            const { processImageClientSide } = await import("@/lib/client-image-processing");
 
-            // Upload Images
+            // Upload Images - Images are ALREADY PROCESSED in handleFileSelect
             const mainUrls = [];
             for (const file of images) {
-                const processed = await processImageClientSide(file);
-                const url = await uploadInventoryImage(processed);
+                // file is already a processed JPEG File object
+                const url = await uploadInventoryImage(file);
                 if (url) mainUrls.push(url);
             }
             const damageUrls = [];
             for (const file of damageImages) {
-                const processed = await processImageClientSide(file);
-                const url = await uploadInventoryImage(processed);
+                // file is already a processed JPEG File object
+                const url = await uploadInventoryImage(file);
                 if (url) damageUrls.push(url);
             }
 
