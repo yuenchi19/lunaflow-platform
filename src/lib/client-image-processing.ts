@@ -11,8 +11,11 @@ export const processImageClientSide = async (file: File): Promise<File> => {
             const heic2any = (await import('heic2any')).default;
             // Force conversion to ArrayBuffer first to avoid Blob issues
             const arrayBuffer = await file.arrayBuffer();
+            // EXPLICITLY set type to image/heic to ensure libheif recognizes it
+            const heicBlob = new Blob([arrayBuffer], { type: 'image/heic' });
+
             const convertedBlob = await heic2any({
-                blob: new Blob([arrayBuffer]), // Create fresh blob
+                blob: heicBlob,
                 toType: 'image/jpeg',
                 quality: 0.8
             });
