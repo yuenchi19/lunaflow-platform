@@ -11,17 +11,33 @@ export const processImageClientSide = async (file: File): Promise<File> => {
             const heic2any = (await import('heic2any')).default;
             // Force conversion to ArrayBuffer first to avoid Blob issues
             const arrayBuffer = await file.arrayBuffer();
-            // EXPLICITLY set type to image/heic to ensure libheif recognizes it
-            const heicBlob = new Blob([arrayBuffer], { type: 'image/heic' });
+            // Strategy 1: image/heic
+            try {
+                console.log('[Client] Trying HEIC conversion (Strategy 1: image/heic)...');
+                const blob = new Blob([arrayBuffer], { type: 'image/heic' });
+                const result = await heic2any({ blob, toType: 'image/jpeg', quality: 0.8 });
+                const jpgBlob = Array.isArray(result) ? result[0] : result;
+                fileToProcess = new File([jpgBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+            } catch (e1) {
+                console.warn('[Client] Strategy 1 failed.', e1);
 
-            const convertedBlob = await heic2any({
-                blob: heicBlob,
-                toType: 'image/jpeg',
-                quality: 0.8
-            });
-            const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
-            console.log(`[Client] HEIC Converted: ${file.name} -> JPEG`);
-            fileToProcess = new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+                // Strategy 2: image/heif
+                try {
+                    console.log('[Client] Trying HEIC conversion (Strategy 2: image/heif)...');
+                    const blob = new Blob([arrayBuffer], { type: 'image/heif' });
+                    const result = await heic2any({ blob, toType: 'image/jpeg', quality: 0.8 });
+                    const jpgBlob = Array.isArray(result) ? result[0] : result;
+                    fileToProcess = new File([jpgBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+                } catch (e2) {
+                    console.warn('[Client] Strategy 2 failed.', e2);
+
+                    // Strategy 3: application/octet-stream (Raw)
+                    const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
+                    const result = await heic2any({ blob, toType: 'image/jpeg', quality: 0.8 });
+                    const jpgBlob = Array.isArray(result) ? result[0] : result;
+                    fileToProcess = new File([jpgBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+                }
+            }
         } catch (e) {
             console.error('[Client] HEIC Conversion Failed:', e);
             // Don't throw immediately, fallback or specific error
