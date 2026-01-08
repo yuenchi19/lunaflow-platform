@@ -27,8 +27,19 @@ export async function POST(req: NextRequest) {
         let contentType = file.type;
         let filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-        // Sharp Conversion REMOVED - Using Client-side processing
-        // if (file.type === 'image/heic' || ...) { ... } 
+        // STRICT VALIDATION: Reject HEIC/HEIF
+        const isHeic = file.type === 'image/heic' ||
+            file.type === 'image/heif' ||
+            file.name.toLowerCase().endsWith('.heic') ||
+            file.name.toLowerCase().endsWith('.heif');
+
+        if (isHeic) {
+            console.error("Server received HEIC file. Rejecting.");
+            return NextResponse.json(
+                { error: 'HEIC形式はサーバーで処理できません。クライアント側でJPEGに変換してください。' },
+                { status: 400 }
+            );
+        }
 
         const path = `${filename}`;
 

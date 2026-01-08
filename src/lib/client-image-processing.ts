@@ -15,15 +15,17 @@ export const processImageClientSide = async (file: File): Promise<File> => {
                 quality: 0.8
             });
             const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+            console.log(`[Client] HEIC Converted: ${file.name} -> JPEG`);
             fileToProcess = new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
         } catch (e) {
-            console.error('HEIC Conversion Failed:', e);
+            console.error('[Client] HEIC Conversion Failed:', e);
             throw new Error('HEIC画像の変換に失敗しました。詳細: ' + (e as Error).message);
         }
     }
 
     // 3. Compression / Resizing
     try {
+        console.log(`[Client] Processing Image: ${fileToProcess.name}, Size: ${(fileToProcess.size / 1024).toFixed(2)}KB`);
         const options = {
             maxSizeMB: 1, // Max 1MB
             maxWidthOrHeight: 1200, // Max 1200px
@@ -31,10 +33,12 @@ export const processImageClientSide = async (file: File): Promise<File> => {
             fileType: 'image/jpeg'
         };
         const compressedFile = await imageCompression(fileToProcess, options);
+        console.log(`[Client] Compression Success: ${compressedFile.name}, Final Size: ${(compressedFile.size / 1024).toFixed(2)}KB`);
+
         // Return as File object
         return new File([compressedFile], fileToProcess.name, { type: 'image/jpeg' });
     } catch (e) {
-        console.error('Compression Failed:', e);
+        console.error('[Client] Compression Failed:', e);
         // If compression fails, try removing size limit or return original if acceptable
         throw new Error('画像の圧縮に失敗しました。ファイルが破損している可能性があります。');
     }
