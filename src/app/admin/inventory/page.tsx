@@ -563,7 +563,7 @@ export default function AdminInventoryPage() {
                                     <td className="px-6 py-4">
                                         <div className="relative w-16 h-16 bg-slate-100 rounded border border-slate-200 overflow-hidden">
                                             {item.images[0] ? (
-                                                <Image src={item.images[0]} alt={item.brand} fill className="object-cover" />
+                                                <img src={item.images[0]} alt={item.brand} className="object-cover w-full h-full" />
                                             ) : (
                                                 <div className="flex items-center justify-center h-full text-slate-300"><Package className="w-6 h-6" /></div>
                                             )}
@@ -631,7 +631,7 @@ export default function AdminInventoryPage() {
                         <h3 className="font-bold text-lg mb-4">受講生に割り当て</h3>
                         <div className="flex gap-4 mb-4 border-b pb-4">
                             <div className="w-16 h-16 relative bg-slate-100 rounded border border-slate-200 overflow-hidden flex-shrink-0">
-                                {assignModalItem.images[0] && <Image src={assignModalItem.images[0]} alt="img" fill className="object-cover" />}
+                                {assignModalItem.images[0] && <img src={assignModalItem.images[0]} alt="img" className="object-cover w-full h-full" />}
                             </div>
                             <div>
                                 <div className="font-bold">{assignModalItem.brand}</div>
@@ -725,7 +725,7 @@ export default function AdminInventoryPage() {
                                 <div className="flex gap-2 overflow-x-auto pb-2">
                                     {createImages.map((img, idx) => (
                                         <div key={idx} className="relative w-20 h-20 flex-shrink-0 bg-slate-100 rounded border border-slate-200 overflow-hidden group">
-                                            <Image src={img} alt="preview" fill className="object-cover" />
+                                            <img src={img} alt="preview" className="object-cover w-full h-full" />
                                             <button
                                                 type="button"
                                                 onClick={() => setCreateImages(createImages.filter((_, i) => i !== idx))}
@@ -877,7 +877,7 @@ export default function AdminInventoryPage() {
                                 <div className="flex gap-2 overflow-x-auto pb-2">
                                     {editImages.map((img, idx) => (
                                         <div key={idx} className="relative w-20 h-20 flex-shrink-0 bg-slate-100 rounded border border-slate-200 overflow-hidden group">
-                                            <Image src={img} alt="preview" fill className="object-cover" />
+                                            <img src={img} alt="preview" className="object-cover w-full h-full" />
                                             <button
                                                 type="button"
                                                 onClick={() => setEditImages(editImages.filter((_, i) => i !== idx))}
