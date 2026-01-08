@@ -721,7 +721,7 @@ export default function AdminInventoryPage() {
 
                             {/* Images */}
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 mb-2">商品画像 (メイン1枚 + サブ5枚) <span className="text-red-500">*</span></label>
+                                <label className="block text-xs font-bold text-slate-500 mb-2">商品画像 (メイン1枚) <span className="text-red-500">*</span></label>
                                 <div className="flex gap-2 overflow-x-auto pb-2">
                                     {createImages.map((img, idx) => (
                                         <div key={idx} className="relative w-20 h-20 flex-shrink-0 bg-slate-100 rounded border border-slate-200 overflow-hidden group">
@@ -735,7 +735,7 @@ export default function AdminInventoryPage() {
                                             </button>
                                         </div>
                                     ))}
-                                    {createImages.length < 6 && (
+                                    {createImages.length < 1 && (
                                         <label className={`w-20 h-20 flex-shrink-0 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded cursor-pointer hover:bg-slate-50 ${uploading ? 'opacity-50' : ''}`}>
                                             <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
                                             {uploading ? <Loader2 className="w-4 h-4 animate-spin text-slate-400" /> : <Plus className="w-5 h-5 text-slate-400" />}

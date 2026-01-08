@@ -68,7 +68,7 @@ export default function NewInventoryItemPage() {
         if (e.target.files) {
             const newFiles = Array.from(e.target.files);
             if (type === 'main') {
-                if (images.length + newFiles.length > 5) return alert("メイン画像は最大5枚まで");
+                if (images.length + newFiles.length > 1) return alert("メイン画像は1枚のみです");
                 setImages(prev => [...prev, ...newFiles]);
                 setPreviewUrls(prev => [...prev, ...newFiles.map(f => URL.createObjectURL(f))]);
             } else {
@@ -109,15 +109,20 @@ export default function NewInventoryItemPage() {
 
         setLoading(true);
         try {
+            // Import client-side processor dynamically or from utility
+            const { processImageClientSide } = await import("@/lib/client-image-processing");
+
             // Upload Images
             const mainUrls = [];
             for (const file of images) {
-                const url = await uploadInventoryImage(file);
+                const processed = await processImageClientSide(file);
+                const url = await uploadInventoryImage(processed);
                 if (url) mainUrls.push(url);
             }
             const damageUrls = [];
             for (const file of damageImages) {
-                const url = await uploadInventoryImage(file);
+                const processed = await processImageClientSide(file);
+                const url = await uploadInventoryImage(processed);
                 if (url) damageUrls.push(url);
             }
 
@@ -141,9 +146,9 @@ export default function NewInventoryItemPage() {
                 const d = await res.json();
                 alert(`エラー: ${d.error}`);
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert("通信エラー");
+            alert(`エラー: ${e.message}`);
         } finally {
             setLoading(false);
         }
@@ -179,7 +184,7 @@ export default function NewInventoryItemPage() {
                                             <button type="button" onClick={() => removeImage(i, 'main')} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1"><X className="w-3 h-3" /></button>
                                         </div>
                                     ))}
-                                    {images.length < 5 && (
+                                    {images.length < 1 && (
                                         <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-md border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:bg-slate-50"><Camera className="w-6 h-6" /></button>
                                     )}
                                 </div>
