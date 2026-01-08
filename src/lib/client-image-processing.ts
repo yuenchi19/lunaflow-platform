@@ -9,8 +9,10 @@ export const processImageClientSide = async (file: File): Promise<File> => {
     if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic')) {
         try {
             const heic2any = (await import('heic2any')).default;
+            // Force conversion to ArrayBuffer first to avoid Blob issues
+            const arrayBuffer = await file.arrayBuffer();
             const convertedBlob = await heic2any({
-                blob: file,
+                blob: new Blob([arrayBuffer]), // Create fresh blob
                 toType: 'image/jpeg',
                 quality: 0.8
             });
@@ -19,7 +21,8 @@ export const processImageClientSide = async (file: File): Promise<File> => {
             fileToProcess = new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
         } catch (e) {
             console.error('[Client] HEIC Conversion Failed:', e);
-            throw new Error('HEIC画像の変換に失敗しました。詳細: ' + (e as Error).message);
+            // Don't throw immediately, fallback or specific error
+            throw new Error(`HEIC変換エラー: ${(e as any).message || '不明なエラー'}`);
         }
     }
 
