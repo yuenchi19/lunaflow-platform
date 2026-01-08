@@ -27,20 +27,8 @@ export async function POST(req: NextRequest) {
         let contentType = file.type;
         let filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-        // Sharp Conversion (HEIC/HEIF -> JPEG)
-        if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
-            try {
-                const sharp = require('sharp');
-                buffer = await sharp(buffer)
-                    .toFormat('jpeg', { quality: 80 })
-                    .toBuffer();
-                contentType = 'image/jpeg';
-                filename = filename.replace(/\.(heic|heif)$/i, '.jpg');
-            } catch (e: any) {
-                console.error("Sharp conversion failed:", e);
-                return NextResponse.json({ error: '画像の変換に失敗しました' }, { status: 500 });
-            }
-        }
+        // Sharp Conversion REMOVED - Using Client-side processing
+        // if (file.type === 'image/heic' || ...) { ... } 
 
         const path = `${filename}`;
 

@@ -82,6 +82,7 @@ export default function AdminInventoryPage() {
         isOmakase: true
     });
     const [editImages, setEditImages] = useState<string[]>([]);
+    const [editDamageImages, setEditDamageImages] = useState<string[]>([]);
     const [editing, setEditing] = useState(false);
 
     // Create Modal
@@ -103,6 +104,7 @@ export default function AdminInventoryPage() {
         isOmakase: true
     });
     const [createImages, setCreateImages] = useState<string[]>([]);
+    const [createDamageImages, setCreateDamageImages] = useState<string[]>([]);
     const [uploading, setUploading] = useState(false);
     const [creating, setCreating] = useState(false);
 
@@ -163,11 +165,14 @@ export default function AdminInventoryPage() {
 
 
 
+    const { processImageClientSide } = require("@/lib/client-image-processing");
+
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length) return;
         setUploading(true);
         try {
-            const file = e.target.files[0];
+            const rawFile = e.target.files[0];
+            const file = await processImageClientSide(rawFile);
 
             const uploadFormData = new FormData();
             uploadFormData.append("file", file);
@@ -181,7 +186,33 @@ export default function AdminInventoryPage() {
             }
         } catch (err: any) {
             console.error(err);
-            alert(`通信エラー: ${err.message}`);
+            alert(`エラー: ${err.message}`);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleDamageImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files?.length) return;
+        setUploading(true);
+        try {
+            const rawFile = e.target.files[0];
+            const file = await processImageClientSide(rawFile);
+
+            const uploadFormData = new FormData();
+            uploadFormData.append("file", file);
+            const res = await fetch('/api/upload', { method: 'POST', body: uploadFormData });
+            const data = await res.json();
+
+            if (res.ok) {
+                // Assuming we add damageImages state for create modal
+                setCreateDamageImages(prev => [...prev, data.url]);
+            } else {
+                alert(`画像のアップロードに失敗しました: ${data.error}`);
+            }
+        } catch (err: any) {
+            console.error(err);
+            alert(`エラー: ${err.message}`);
         } finally {
             setUploading(false);
         }
@@ -190,8 +221,10 @@ export default function AdminInventoryPage() {
     const handleImageUploadEdit = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length) return;
         setUploading(true);
-        const file = e.target.files[0];
         try {
+            const rawFile = e.target.files[0];
+            const file = await processImageClientSide(rawFile);
+
             const uploadFormData = new FormData();
             uploadFormData.append("file", file);
             const res = await fetch('/api/upload', {
@@ -207,7 +240,32 @@ export default function AdminInventoryPage() {
             }
         } catch (err: any) {
             console.error(err);
-            alert(`通信エラー: ${err.message}`);
+            alert(`エラー: ${err.message}`);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleDamageImageUploadEdit = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files?.length) return;
+        setUploading(true);
+        try {
+            const rawFile = e.target.files[0];
+            const file = await processImageClientSide(rawFile);
+
+            const uploadFormData = new FormData();
+            uploadFormData.append("file", file);
+            const res = await fetch('/api/upload', { method: 'POST', body: uploadFormData });
+            const data = await res.json();
+
+            if (res.ok) {
+                setEditDamageImages(prev => [...prev, data.url]);
+            } else {
+                alert(`画像のアップロードに失敗しました: ${data.error}`);
+            }
+        } catch (err: any) {
+            console.error(err);
+            alert(`エラー: ${err.message}`);
         } finally {
             setUploading(false);
         }
@@ -231,6 +289,7 @@ export default function AdminInventoryPage() {
             isOmakase: item.isOmakase ?? true
         });
         setEditImages(item.images || []);
+        setEditDamageImages(item.damageImages || []);
     };
 
     const handleEditUpdate = async (e: React.FormEvent) => {
@@ -244,7 +303,8 @@ export default function AdminInventoryPage() {
                 body: JSON.stringify({
                     ...editForm,
                     costPrice: Number(editForm.costPrice),
-                    images: editImages
+                    images: editImages,
+                    damageImages: editDamageImages
                 })
             });
             const data = await res.json();
@@ -280,6 +340,7 @@ export default function AdminInventoryPage() {
                     ...createForm,
                     costPrice: Number(createForm.costPrice),
                     images: createImages,
+                    damageImages: createDamageImages,
                     status: 'IN_STOCK' // Admin Stock
                 })
             });
@@ -292,6 +353,7 @@ export default function AdminInventoryPage() {
                     isOmakase: true
                 });
                 setCreateImages([]);
+                setCreateDamageImages([]);
                 fetchData();
             } else {
                 alert("エラーが発生しました");
