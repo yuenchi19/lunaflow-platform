@@ -32,10 +32,39 @@ export const processImageClientSide = async (file: File): Promise<File> => {
                     console.warn('[Client] Strategy 2 failed.', e2);
 
                     // Strategy 3: application/octet-stream (Raw)
-                    const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
-                    const result = await heic2any({ blob, toType: 'image/jpeg', quality: 0.8 });
-                    const jpgBlob = Array.isArray(result) ? result[0] : result;
-                    fileToProcess = new File([jpgBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+                    try {
+                        console.log('[Client] Trying HEIC conversion (Strategy 3: octet-stream)...');
+                        const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
+                        const result = await heic2any({ blob, toType: 'image/jpeg', quality: 0.8 });
+                        const jpgBlob = Array.isArray(result) ? result[0] : result;
+                        fileToProcess = new File([jpgBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+                    } catch (e3) {
+                        console.warn('[Client] Strategy 3 failed.', e3);
+
+                        // Strategy 4: Native Browser Decode (Canvas/createImageBitmap)
+                        // Useful for Safari or browsers that support HEIC natively but we want JPEG
+                        try {
+                            console.log('[Client] Trying Canvas Fallback (Strategy 4)...');
+                            const bmp = await createImageBitmap(file);
+                            const canvas = document.createElement('canvas');
+                            canvas.width = bmp.width;
+                            canvas.height = bmp.height;
+                            const ctx = canvas.getContext('2d');
+                            if (ctx) {
+                                ctx.drawImage(bmp, 0, 0);
+                                const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/jpeg', 0.9));
+                                if (blob) {
+                                    console.log('[Client] Canvas Fallback Success');
+                                    fileToProcess = new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+                                    return; // Conversion done, skip logic below
+                                }
+                            }
+                            throw new Error('Canvas conversion produced null blob');
+                        } catch (e4) {
+                            console.error('[Client] All Strategies Failed.', e4);
+                            throw new Error(`HEIC変換に失敗しました (Strat 1-4 failed). 詳細: ${(e3 as any).message}`);
+                        }
+                    }
                 }
             }
         } catch (e) {
