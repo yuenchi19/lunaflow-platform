@@ -30,8 +30,8 @@ export const calculateStudentStatus = (user: any) => {
         requiredTotal = 60000 * 11;
     } else if (user.plan === 'light') {
         requiredMonths = 12;
-        // 80k * 12 = 960k
-        requiredTotal = 80000 * 12;
+        // 60k * 12 = 720k
+        requiredTotal = 60000 * 12;
     }
 
     const isDurationOk = monthsElapsed >= requiredMonths;

@@ -154,7 +154,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
     useEffect(() => {
         let target = 0;
-        if (user.plan === 'light') target = 80000;
+        if (user.plan === 'light') target = 60000;
         else if (user.plan === 'standard') target = 60000;
         else if (user.plan === 'premium') target = 30000;
         setPurchaseTarget(target);
