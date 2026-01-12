@@ -27,7 +27,10 @@ export async function POST(req: NextRequest) {
         let contentType = file.type;
         let filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-        // STRICT VALIDATION: Reject HEIC/HEIF
+        // STRICT VALIDATION REMOVED: Allow HEIC as fallback
+        // The client attempts conversion, but if it fails, we accept the raw file 
+        // to prevent blocking the user.
+        /*
         const isHeic = file.type === 'image/heic' ||
             file.type === 'image/heif' ||
             file.name.toLowerCase().endsWith('.heic') ||
@@ -40,6 +43,7 @@ export async function POST(req: NextRequest) {
                 { status: 400 }
             );
         }
+        */
 
         const path = `${filename}`;
 

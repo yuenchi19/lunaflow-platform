@@ -63,8 +63,46 @@ export const processImageClientSide = async (file: File): Promise<File> => {
                             }
                             throw new Error('Canvas conversion produced null blob');
                         } catch (e4) {
-                            console.error('[Client] All Strategies Failed.', e4);
-                            throw new Error(`HEIC変換に失敗しました (Strat 1-4 failed). 詳細: ${(e3 as any).message}`);
+                            console.warn('[Client] Strategy 4 (Bitmap) failed, trying Strategy 5 (Classic Image)...', e4);
+
+                            // Strategy 5: Classic Image Object (Last Resort Client-Side)
+                            try {
+                                const img = new Image();
+                                const url = URL.createObjectURL(file);
+                                img.src = url;
+                                await new Promise((resolve, reject) => {
+                                    img.onload = resolve;
+                                    img.onerror = reject;
+                                });
+
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                const ctx = canvas.getContext('2d');
+                                if (ctx) {
+                                    ctx.drawImage(img, 0, 0);
+                                    const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/jpeg', 0.9));
+                                    URL.revokeObjectURL(url);
+
+                                    if (blob) {
+                                        console.log('[Client] Strategy 5 Success');
+                                        fileToProcess = new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+                                        // Fall through to compression
+                                    } else {
+                                        throw new Error('Canvas blob is null');
+                                    }
+                                } else {
+                                    throw new Error('Canvas context null');
+                                }
+                            } catch (e5) {
+                                console.error('[Client] All Strategies Failed. Using Original File.', e5);
+                                // ULTIMATE FALLBACK: Return original file
+                                // Show Alert to User (using window.alert since we are client-side)
+                                if (typeof window !== 'undefined') {
+                                    alert(`画像の変換に失敗しました。\nオリジナル形式（HEIC）のままアップロードします。\n一部のデバイスで表示されない可能性があります。\n詳細: ${(e3 as any).message}`);
+                                }
+                                return file; // RETURN ORIGINAL
+                            }
                         }
                     }
                 }
