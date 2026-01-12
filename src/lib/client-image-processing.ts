@@ -56,7 +56,9 @@ export const processImageClientSide = async (file: File): Promise<File> => {
                                 if (blob) {
                                     console.log('[Client] Canvas Fallback Success');
                                     fileToProcess = new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
-                                    return; // Conversion done, skip logic below
+                                    // Fall through to compression
+                                } else {
+                                    throw new Error('Canvas conversion produced null blob');
                                 }
                             }
                             throw new Error('Canvas conversion produced null blob');
