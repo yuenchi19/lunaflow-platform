@@ -95,13 +95,11 @@ export const processImageClientSide = async (file: File): Promise<File> => {
                                     throw new Error('Canvas context null');
                                 }
                             } catch (e5) {
-                                console.error('[Client] All Strategies Failed. Using Original File.', e5);
-                                // ULTIMATE FALLBACK: Return original file
                                 // Show Alert to User (using window.alert since we are client-side)
                                 if (typeof window !== 'undefined') {
-                                    alert(`画像の変換に失敗しました。\nオリジナル形式（HEIC）のままアップロードします。\n一部のデバイスで表示されない可能性があります。\n詳細: ${(e3 as any).message}`);
+                                    alert(`画像の変換に失敗しました。\nオリジナル形式（HEIC）のままアップロードを試みます。\n※サイズが大きい場合や、一部のデバイスで表示されない可能性があります。\n詳細: ${(e3 as any).message}`);
                                 }
-                                return file; // RETURN ORIGINAL
+                                return file; // Fallback to original
                             }
                         }
                     }
