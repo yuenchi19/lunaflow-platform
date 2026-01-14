@@ -171,25 +171,58 @@ export default function AdminInventoryPage() {
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length) return;
         setUploading(true);
-        try {
-            const rawFile = e.target.files[0];
-            const file = await processImageClientSide(rawFile);
+        const rawFile = e.target.files[0];
 
+        try {
+            // Stage 1: Client-Side Processing
+            let file;
+            try {
+                file = await processImageClientSide(rawFile);
+            } catch (processError: any) {
+                alert(`[エラー詳細: 1.画像処理] 画像の圧縮・変換に失敗しました。\n詳細: ${processError.message}`);
+                setUploading(false);
+                return;
+            }
+
+            // Stage 2: Upload Request
             const uploadFormData = new FormData();
             uploadFormData.append("file", file);
-            const res = await fetch('/api/upload', { method: 'POST', body: uploadFormData });
-            const data = await res.json();
+            uploadFormData.append("bucket", "inventory-items");
 
-            if (res.ok) {
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: uploadFormData
+            });
+
+            // Stage 3: Response Handling
+            if (!res.ok) {
+                if (res.status === 413) {
+                    throw new Error(`ファイルサイズが大きすぎます (制限: 4.5MB)。\n現在のサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+                }
+                let errorMsg = 'サーバーエラー';
+                try {
+                    const errorData = await res.json();
+                    errorMsg = errorData.error || res.statusText;
+                } catch {
+                    const text = await res.text();
+                    errorMsg = `Status: ${res.status} ${res.statusText} - ${text.slice(0, 100)}`;
+                }
+                throw new Error(errorMsg);
+            }
+
+            const data = await res.json();
+            if (data.url) {
                 setCreateImages(prev => [...prev, data.url]);
             } else {
-                alert(`画像のアップロードに失敗しました: ${data.error}`);
+                throw new Error('画像のURLが取得できませんでした (Unknown Response)');
             }
+
         } catch (err: any) {
-            console.error(err);
-            alert(`エラー: ${err.message}`);
+            console.error('Upload Error:', err);
+            alert(`[エラー詳細: 2.アップロード] サーバーへの送信に失敗しました。\n原因: ${err.message}`);
         } finally {
             setUploading(false);
+            e.target.value = ''; // Reset
         }
     };
 
@@ -739,9 +772,16 @@ export default function AdminInventoryPage() {
                                     ))}
                                     {createImages.length < 1 && (
                                         <label className={`w-20 h-20 flex-shrink-0 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded cursor-pointer hover:bg-slate-50 ${uploading ? 'opacity-50' : ''}`}>
-                                            <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
+                                            const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files?.length) return;
+                                                setUploading(true);
+                                                const rawFile = e.target.files[0];
+
+                                                try {
+                                                    // Stage 1: Client-Side Processing
+                                                    <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
                                             {uploading ? <Loader2 className="w-4 h-4 animate-spin text-slate-400" /> : <Plus className="w-5 h-5 text-slate-400" />}
-                                            <span className="text-[9px] text-slate-400 font-bold mt-1">追加</span>
+                                                <span className="text-[9px] text-slate-400 font-bold mt-1">追加</span>
                                         </label>
                                     )}
                                 </div>
