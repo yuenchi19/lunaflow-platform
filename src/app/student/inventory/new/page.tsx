@@ -42,30 +42,57 @@ export default function StudentInventoryNewPage() {
                 return;
             }
 
-            // Stage 2: Upload
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("bucket", "inventory-items");
+            // Stage 2: Upload Strategy (Hybrid)
+            let publicUrl = '';
+            const FILE_SIZE_LIMIT = 4 * 1024 * 1024; // 4MB
 
-            const res = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData
-            });
+            if (file.size > FILE_SIZE_LIMIT) {
+                // Strategy A: Direct Upload (Bypass Vercel 4.5MB limit)
+                console.log(`[Upload] File size ${file.size} > 4MB. Using separate Direct Upload.`);
+                const { createClient } = await import('@/lib/supabase/client');
+                const supabase = createClient();
 
-            // Stage 3: Response
-            if (!res.ok) {
-                if (res.status === 413) throw new Error(`ファイルサイズ過大 (4.5MB制限)`);
-                let msg = 'Server Error';
-                try { msg = (await res.json()).error; } catch { }
-                throw new Error(msg || res.statusText);
+                const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+                const { data, error } = await supabase.storage
+                    .from('inventory-items')
+                    .upload(filename, file, { upsert: true });
+
+                if (error) {
+                    throw new Error(`Direct Upload Failed: ${error.message}`);
+                }
+
+                const { data: urlData } = supabase.storage.from('inventory-items').getPublicUrl(filename);
+                publicUrl = urlData.publicUrl;
+
+            } else {
+                // Strategy B: Proxy API Upload (Standard)
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("bucket", "inventory-items");
+
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    if (res.status === 413) throw new Error(`ファイルサイズ過大 (4.5MB制限)`);
+                    let msg = 'Server Error';
+                    try { msg = (await res.json()).error; } catch { }
+                    throw new Error(msg || res.statusText);
+                }
+
+                const data = await res.json();
+                publicUrl = data.url;
             }
 
-            const data = await res.json();
-            if (data.url) {
-                setImages(prev => [...prev, data.url]);
+            // Stage 3: Success Handling
+            if (publicUrl) {
+                setImages(prev => [...prev, publicUrl]);
             } else {
                 throw new Error("URL取得失敗");
             }
+
         } catch (err: any) {
             console.error(err);
             alert(`[エラー詳細: 2.アップロード] 画像の送信に失敗しました。\n原因: ${err.message}`);
