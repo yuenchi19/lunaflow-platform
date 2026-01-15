@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Upload, Plus, ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { processImageClientSide } from "@/lib/client-image-processing";
 
 export default function StudentInventoryNewPage() {
     const router = useRouter();
@@ -25,7 +26,7 @@ export default function StudentInventoryNewPage() {
     });
 
     // Image Upload
-    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, isDamageImage = false) => {
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length) return;
         setUploading(true);
         const rawFile = e.target.files[0];
@@ -61,11 +62,7 @@ export default function StudentInventoryNewPage() {
 
             const data = await res.json();
             if (data.url) {
-                if (isDamageImage) {
-                    setDamageImages([...damageImages, data.url]);
-                } else {
-                    setImages([data.url]); // Replaces main image (single)
-                }
+                setImages(prev => [...prev, data.url]);
             } else {
                 throw new Error("URL取得失敗");
             }
@@ -132,7 +129,6 @@ export default function StudentInventoryNewPage() {
 
             <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Images */}
-                {/* Images */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                     <h3 className="font-bold text-slate-700 mb-2">商品画像 (メイン1枚 + サブ5枚) <span className="text-red-500">*</span></h3>
                     <div className="flex gap-4 overflow-x-auto pb-2">
@@ -150,7 +146,7 @@ export default function StudentInventoryNewPage() {
                         ))}
                         {images.length < 6 && (
                             <label className={`w-24 h-24 flex-shrink-0 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
+                                <input type="file" accept="image/*" onChange={handleFileSelect} disabled={uploading} className="hidden" />
                                 {uploading ? <Loader2 className="w-6 h-6 animate-spin text-slate-400" /> : <Plus className="w-6 h-6 text-slate-400" />}
                                 <span className="text-[10px] text-slate-400 font-bold mt-1">追加</span>
                             </label>
