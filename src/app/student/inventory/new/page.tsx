@@ -25,31 +25,56 @@ export default function StudentInventoryNewPage() {
     });
 
     // Image Upload
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, isDamageImage = false) => {
         if (!e.target.files?.length) return;
         setUploading(true);
-        const file = e.target.files[0];
+        const rawFile = e.target.files[0];
 
         try {
-            const uploadFormData = new FormData();
-            uploadFormData.append("file", file);
+            // Stage 1: Client-Side Processing
+            let file;
+            try {
+                file = await processImageClientSide(rawFile);
+            } catch (pErr: any) {
+                alert(`[エラー詳細: 1.画像処理] 画像の圧縮・変換に失敗しました。\n詳細: ${pErr.message}`);
+                setUploading(false);
+                return;
+            }
+
+            // Stage 2: Upload
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("bucket", "inventory-items");
 
             const res = await fetch('/api/upload', {
                 method: 'POST',
-                body: uploadFormData
+                body: formData
             });
 
-            if (res.ok) {
-                const data = await res.json();
-                setImages([...images, data.url]);
-            } else {
-                alert("画像のアップロードに失敗しました");
+            // Stage 3: Response
+            if (!res.ok) {
+                if (res.status === 413) throw new Error(`ファイルサイズ過大 (4.5MB制限)`);
+                let msg = 'Server Error';
+                try { msg = (await res.json()).error; } catch { }
+                throw new Error(msg || res.statusText);
             }
-        } catch (err) {
+
+            const data = await res.json();
+            if (data.url) {
+                if (isDamageImage) {
+                    setDamageImages([...damageImages, data.url]);
+                } else {
+                    setImages([data.url]); // Replaces main image (single)
+                }
+            } else {
+                throw new Error("URL取得失敗");
+            }
+        } catch (err: any) {
             console.error(err);
-            alert("通信エラー");
+            alert(`[エラー詳細: 2.アップロード] 画像の送信に失敗しました。\n原因: ${err.message}`);
         } finally {
             setUploading(false);
+            e.target.value = '';
         }
     };
 
