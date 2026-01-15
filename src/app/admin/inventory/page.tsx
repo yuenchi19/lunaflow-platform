@@ -772,16 +772,9 @@ export default function AdminInventoryPage() {
                                     ))}
                                     {createImages.length < 1 && (
                                         <label className={`w-20 h-20 flex-shrink-0 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded cursor-pointer hover:bg-slate-50 ${uploading ? 'opacity-50' : ''}`}>
-                                            const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files?.length) return;
-                                                setUploading(true);
-                                                const rawFile = e.target.files[0];
-
-                                                try {
-                                                    // Stage 1: Client-Side Processing
-                                                    <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
+                                            <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
                                             {uploading ? <Loader2 className="w-4 h-4 animate-spin text-slate-400" /> : <Plus className="w-5 h-5 text-slate-400" />}
-                                                <span className="text-[9px] text-slate-400 font-bold mt-1">追加</span>
+                                            <span className="text-[9px] text-slate-400 font-bold mt-1">追加</span>
                                         </label>
                                     )}
                                 </div>
