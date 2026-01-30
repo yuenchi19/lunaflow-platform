@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
 
     const isProtected = protectedPrefixes.some(prefix => path.startsWith(prefix))
 
-    if (isProtected && !user) {
+    if (isProtected && !user && path !== '/admin/update-password') {
         console.log(`[Middleware] Redirecting unauthenticated user from ${path}`);
         const redirectUrl = request.nextUrl.clone()
         if (path.startsWith('/admin')) {
@@ -175,7 +175,10 @@ export async function middleware(request: NextRequest) {
         const userRole = user.user_metadata?.role;
 
         // Strict Check: Unauthorized users (student/partner) -> Top Page
-        if (!userRole || userRole === 'student' || userRole === 'partner') { // Partner has student role usually, but explicitly checking
+        // EXCEPTION: Allow access to /admin/update-password for initial setup (recovery flow)
+        if (path === '/admin/update-password') {
+            // Allow unauthenticated access so supabase.auth.onAuthStateChange can handle the recovery token
+        } else if (!userRole || userRole === 'student' || userRole === 'partner') { // Partner has student role usually, but explicitly checking
             const redirectUrl = request.nextUrl.clone()
             redirectUrl.pathname = '/'
             return NextResponse.redirect(redirectUrl)
