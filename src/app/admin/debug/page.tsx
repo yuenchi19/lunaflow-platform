@@ -20,10 +20,11 @@ export default function DebugPage() {
         }
     };
 
-    const forceFix = async (mode: 'product_only' | 'full_repair') => {
-        const msg = mode === 'full_repair'
-            ? "DANGER: Attempt to create ALL missing tables (Course, Inventory, etc.) via Raw SQL?"
-            : "Attempt to create missing Product table?";
+    const forceFix = async (mode: 'product_only' | 'full_repair' | 'test_insert') => {
+        let msg = "Are you sure?";
+        if (mode === 'full_repair') msg = "DANGER: Attempt to create ALL missing tables via Raw SQL?";
+        if (mode === 'test_insert') msg = "Attempt to INSERT dummy data (Course/Inventory) to verify DB write access?";
+        if (mode === 'product_only') msg = "Attempt to create Product table?";
 
         if (!confirm(msg)) return;
 
@@ -38,7 +39,7 @@ export default function DebugPage() {
             alert(JSON.stringify(data, null, 2));
             setTimeout(checkStatus, 1000);
         } catch (e) {
-            alert("Fix failed");
+            alert("Action failed");
         } finally {
             setLoading(false);
         }
@@ -100,6 +101,19 @@ export default function DebugPage() {
                         className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 w-full font-bold text-lg"
                     >
                         {loading ? "⚠️ REPAIR ALL MISSING TABLES" : "⚠️ REPAIR ALL MISSING TABLES"}
+                    </button>
+                </div>
+
+                <div className="border-t pt-4">
+                    <p className="text-sm text-slate-600 mb-2">
+                        Use this to verify if tables are writable.
+                    </p>
+                    <button
+                        onClick={() => forceFix('test_insert')}
+                        disabled={loading}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 w-full"
+                    >
+                        {loading ? "Testing..." : "🧪 TEST TABLE WRITES (Insert Dummy Data)"}
                     </button>
                 </div>
             </div>
