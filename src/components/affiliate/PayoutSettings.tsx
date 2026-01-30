@@ -68,7 +68,7 @@ export default function PayoutSettings({ user }: PayoutSettingsProps) {
                         <div className="md:col-span-2">
                             <label className="block text-xs font-bold text-slate-500 mb-2">プロフィール画像</label>
                             <AvatarUpload
-                                currentAvatarUrl={user.avatarUrl}
+                                currentAvatarUrl={user.avatarUrl ?? null}
                                 onUploadComplete={(url) => {
                                     // Update hidden input or state if needed, but we'll submit it with form via hidden input
                                     // or just let a separate call handle it? 
