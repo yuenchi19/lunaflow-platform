@@ -9,23 +9,48 @@ export async function GET() {
             include: {
                 _count: {
                     select: { categories: true }
+                },
+                categories: {
+                    select: {
+                        blocks: {
+                            select: { id: true }
+                        }
+                    }
                 }
             }
         });
 
-        const formatted = courses.map(c => ({
-            id: c.id,
-            title: c.title,
-            label: c.label,
-            categoryCount: c._count.categories,
-            studentCount: 0, // TODO: Implement real student count
-            order: c.order,
-            thumbnailUrl: c.thumbnailUrl,
-            published: c.published,
-            allowedPlans: c.allowedPlans
+        // Calculate student count for each course
+        // A student is counted if they have ANY progress record in ANY block of the course.
+        // This might be heavy if users grow, but okay for now.
+        const coursesWithCounts = await Promise.all(courses.map(async (course) => {
+            const blockIds = course.categories.flatMap(c => c.blocks.map(b => b.id));
+            let studentCount = 0;
+
+            if (blockIds.length > 0) {
+                const uniqueStudents = await prisma.userProgress.groupBy({
+                    by: ['userId'],
+                    where: {
+                        blockId: { in: blockIds }
+                    }
+                });
+                studentCount = uniqueStudents.length;
+            }
+
+            return {
+                id: course.id,
+                title: course.title,
+                label: course.label,
+                categoryCount: course._count.categories,
+                studentCount: studentCount,
+                order: course.order,
+                thumbnailUrl: course.thumbnailUrl,
+                published: course.published,
+                allowedPlans: course.allowedPlans
+            };
         }));
 
-        return NextResponse.json(formatted);
+        return NextResponse.json(coursesWithCounts);
     } catch (error) {
         console.error('Error fetching courses:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

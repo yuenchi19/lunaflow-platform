@@ -88,8 +88,20 @@ export default function CoursesPage() {
             // Optimistic update
             setCourses(newOrder);
 
-            // TODO: Implement API reorder sync
-            // await fetch('/api/admin/courses/reorder', { method: 'POST', body: JSON.stringify(newOrder.map((c, i) => ({ id: c.id, order: i }))) });
+            // API reorder sync
+            try {
+                await fetch('/api/admin/courses/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        list: newOrder.map((c, i) => ({ id: c.id, order: i }))
+                    })
+                });
+            } catch (error) {
+                console.error('Reorder failed', error);
+                setToastMessage("並び替えの保存に失敗しました");
+                fetchCourses(); // Revert
+            }
         }
     };
 
@@ -122,8 +134,7 @@ export default function CoursesPage() {
             });
 
             if (res.ok) {
-                const created = await res.json();
-                // setCourses([...courses, created]); // Order might vary, better refetch or append
+                // const created = await res.json();
                 fetchCourses(); // Refetch to get correct state
                 setToastMessage("コースが作成されました");
                 setTimeout(() => setToastMessage(null), 3000);
@@ -150,10 +161,26 @@ export default function CoursesPage() {
         }
     };
 
-    // TODO: Implement Duplicate in Backend
-    const handleDuplicateCourse = (course: Course) => {
-        alert('複製機能は現在メンテナンス中です。');
-        // if (!confirm(`「${course.title}」を複製しますか？`)) return;
+    const handleDuplicateCourse = async (course: Course) => {
+        if (!confirm(`「${course.title}」を複製しますか？\n（カテゴリやブロックも全てコピーされます）`)) return;
+
+        try {
+            const res = await fetch(`/api/admin/courses/${course.id}/duplicate`, {
+                method: 'POST'
+            });
+
+            if (res.ok) {
+                setToastMessage("コースを複製しました");
+                setTimeout(() => setToastMessage(null), 3000);
+                fetchCourses();
+                setOpenMenuId(null);
+            } else {
+                throw new Error('Failed');
+            }
+        } catch (e) {
+            alert('複製の作成に失敗しました');
+            console.error(e);
+        }
     };
 
     return (
