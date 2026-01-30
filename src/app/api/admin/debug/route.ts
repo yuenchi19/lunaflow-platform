@@ -198,6 +198,28 @@ export async function POST(req: Request) {
                     CONSTRAINT "UserProgress_pkey" PRIMARY KEY ("id")
                 );`,
 
+                // 6.5 LedgerEntry (NEW)
+                `CREATE TABLE IF NOT EXISTS "LedgerEntry" (
+                    "id" TEXT NOT NULL,
+                    "userId" TEXT NOT NULL,
+                    "originItemId" TEXT,
+                    "brand" TEXT NOT NULL,
+                    "purchaseDate" TIMESTAMP(3) NOT NULL,
+                    "purchasePrice" INTEGER NOT NULL,
+                    "images" TEXT[],
+                    "sellDate" TIMESTAMP(3),
+                    "sellPrice" INTEGER,
+                    "shippingCost" INTEGER,
+                    "platformFee" INTEGER,
+                    "profit" INTEGER,
+                    "salePlatform" TEXT,
+                    "saleNote" TEXT,
+                    "status" "ItemStatus" NOT NULL DEFAULT 'ASSIGNED',
+                    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    "updatedAt" TIMESTAMP(3) NOT NULL,
+                    CONSTRAINT "LedgerEntry_pkey" PRIMARY KEY ("id")
+                );`,
+
                 // 7. Fix Existing User Table (ALTER)
                 `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "status" TEXT DEFAULT 'active';`,
                 `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "plan" TEXT DEFAULT 'light';`,
@@ -207,7 +229,9 @@ export async function POST(req: Request) {
                 `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "isLedgerEnabled" BOOLEAN DEFAULT false;`,
                 `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "stripeCustomerId" TEXT;`,
                 `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "stripeSubscriptionId" TEXT;`,
-                `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "subscriptionStatus" TEXT DEFAULT 'active';`
+                `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "subscriptionStatus" TEXT DEFAULT 'active';`,
+
+                `ALTER TABLE "InventoryItem" ADD COLUMN IF NOT EXISTS "isOmakase" BOOLEAN DEFAULT true;`
             ];
 
             const results = [];
@@ -223,41 +247,8 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: true, mode: 'full_repair', results });
         }
 
-        // Default: Old Product Fix
-        const sql = `
-        CREATE TABLE IF NOT EXISTS "Product" (
-            "id" TEXT NOT NULL,
-            "name" TEXT NOT NULL,
-            "description" TEXT,
-            "price" INTEGER NOT NULL,
-            "image" TEXT,
-            "stripePriceId" TEXT,
-            "stock" INTEGER NOT NULL DEFAULT 0,
-            "isVisible" BOOLEAN NOT NULL DEFAULT true,
-            "brand" TEXT,
-            "category" TEXT,
-            "condition" TEXT,
-            "accessories" TEXT[],
-            "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            "updatedAt" TIMESTAMP(3) NOT NULL,
-
-            CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
-        );
-        `;
-        const sql2 = `
-        CREATE TABLE IF NOT EXISTS "ProductRestockSubscription" (
-            "id" TEXT NOT NULL,
-            "productId" TEXT NOT NULL,
-            "userId" TEXT,
-            "email" TEXT NOT NULL,
-            "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-            CONSTRAINT "ProductRestockSubscription_pkey" PRIMARY KEY ("id")
-        );
-        `;
-        await prisma.$executeRawUnsafe(sql);
-        await prisma.$executeRawUnsafe(sql2);
-        return NextResponse.json({ success: true, message: "Tables created" });
+        // Default
+        return NextResponse.json({ success: false, error: "Invalid mode" });
 
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
