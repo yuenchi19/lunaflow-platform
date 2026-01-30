@@ -26,6 +26,17 @@ export async function GET(req: Request) {
         return NextResponse.json({ authenticated: false, plan: null }, { status: 401 });
     }
 
+
+    // Emergency Override: Always allow specific admin email
+    if (user.email === 'yuenchi1991@gmail.com') {
+        return NextResponse.json({
+            authenticated: true,
+            plan: 'premium',
+            role: 'admin',
+            subscriptionStatus: 'active'
+        });
+    }
+
     // 2. Fetch User Profile using SERVICE ROLE (Bypass RLS)
     // This ensures we can read the profile even if RLS policies are missing/broken
     const supabaseAdmin = createClient(
