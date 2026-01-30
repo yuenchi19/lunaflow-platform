@@ -20,14 +20,23 @@ export default function DebugPage() {
         }
     };
 
-    const forceFix = async () => {
-        if (!confirm("Attempt to create missing Product table via Raw SQL?")) return;
+    const forceFix = async (mode: 'product_only' | 'full_repair') => {
+        const msg = mode === 'full_repair'
+            ? "DANGER: Attempt to create ALL missing tables (Course, Inventory, etc.) via Raw SQL?"
+            : "Attempt to create missing Product table?";
+
+        if (!confirm(msg)) return;
+
         setLoading(true);
         try {
-            const res = await fetch("/api/admin/debug", { method: "POST" });
+            const res = await fetch("/api/admin/debug", {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode })
+            });
             const data = await res.json();
             alert(JSON.stringify(data, null, 2));
-            checkStatus(); // Refresh
+            setTimeout(checkStatus, 1000);
         } catch (e) {
             alert("Fix failed");
         } finally {
@@ -53,9 +62,10 @@ export default function DebugPage() {
             <div className="bg-slate-100 p-4 rounded">
                 <h2 className="font-bold border-b mb-2">Database Counts</h2>
                 <div className="grid grid-cols-2 gap-4">
-                    <div>Product Count: <strong>{status.counts.products}</strong></div>
-                    <div>Course Count: <strong>{status.counts.courses}</strong></div>
-                    <div>User Count: <strong>{status.counts.users}</strong></div>
+                    <div>Product Count: <strong>{String(status.counts.products)}</strong></div>
+                    <div>Course Count: <strong>{String(status.counts.courses)}</strong></div>
+                    <div>Inventory Count: <strong>{String(status.counts.inventory)}</strong></div>
+                    <div>User Count: <strong>{String(status.counts.users)}</strong></div>
                 </div>
                 {status.error && (
                     <div className="mt-4 p-2 bg-red-100 text-red-800 text-sm">
@@ -64,18 +74,34 @@ export default function DebugPage() {
                 )}
             </div>
 
-            <div className="border-t pt-4">
+            <div className="border-t pt-4 space-y-4">
                 <h3 className="font-bold">Emergency Actions</h3>
-                <p className="text-sm text-slate-600 mb-4">
-                    If "Product Count" shows error or "Table not found", click below to force table creation.
-                </p>
-                <button
-                    onClick={forceFix}
-                    disabled={loading}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
-                >
-                    {loading ? "Processing..." : "Force Create Product Table (SQL)"}
-                </button>
+
+                <div>
+                    <p className="text-sm text-slate-600 mb-2">
+                        Use this if ONLY Product table is missing (older error).
+                    </p>
+                    <button
+                        onClick={() => forceFix('product_only')}
+                        disabled={loading}
+                        className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50"
+                    >
+                        {loading ? "Processing..." : "Fix Product Table Only"}
+                    </button>
+                </div>
+
+                <div className="border-t pt-4">
+                    <p className="text-sm text-red-600 font-bold mb-2">
+                        Use this if Course / Inventory tables are missing (Current Issue).
+                    </p>
+                    <button
+                        onClick={() => forceFix('full_repair')}
+                        disabled={loading}
+                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 w-full font-bold text-lg"
+                    >
+                        {loading ? "⚠️ REPAIR ALL MISSING TABLES" : "⚠️ REPAIR ALL MISSING TABLES"}
+                    </button>
+                </div>
             </div>
         </div>
     );
