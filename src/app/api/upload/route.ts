@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
         if (!file) return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
 
-        let buffer = Buffer.from(await file.arrayBuffer());
+        let buffer: Buffer = Buffer.from(await file.arrayBuffer());
         let contentType = file.type;
         let filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
