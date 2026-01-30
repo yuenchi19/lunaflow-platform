@@ -14,10 +14,12 @@ export async function GET() {
         let productCount = "Error";
         let courseCount = "Error";
         let userCount = "Error";
+        let inventoryCount = "Error";
         let dbError = null;
 
-        try { productCount = (await prisma.product.count()).toString(); } catch (e: any) { dbError = e.message; productCount = "Table Missing/Error"; }
-        try { courseCount = (await prisma.course.count()).toString(); } catch (e) { }
+        try { productCount = (await prisma.product.count()).toString(); } catch (e: any) { dbError = e.message; productCount = "Table Missing"; }
+        try { courseCount = (await prisma.course.count()).toString(); } catch (e: any) { courseCount = "Table Missing"; }
+        try { inventoryCount = (await prisma.inventoryItem.count()).toString(); } catch (e: any) { inventoryCount = "Table Missing"; }
         try { userCount = (await prisma.user.count()).toString(); } catch (e) { }
 
         return NextResponse.json({
@@ -30,6 +32,7 @@ export async function GET() {
             counts: {
                 products: productCount,
                 courses: courseCount,
+                inventory: inventoryCount,
                 users: userCount
             },
             error: dbError
