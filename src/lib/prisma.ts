@@ -1,15 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
 const prismaClientSingleton = () => {
-    // HARDCODED: Emergency Fix for Vercel Database Connection Mismatch
-    // TODO: Revert this to use process.env.DATABASE_URL after Vercel Env is confirmed fixed.
-    return new PrismaClient({
-        datasources: {
-            db: {
-                url: process.env.DATABASE_URL_OVERRIDE || 'postgresql://postgres.fksvpyrvrzxmhhvetqrx:UverLove2026@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true',
-            },
-        },
-    });
+    return new PrismaClient();
 };
 
 type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>;
