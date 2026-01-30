@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Loader2, UserPlus, Package, CheckCircle, AlertCircle, Plus, X, Edit2, Download } from "lucide-react";
+import { Search, Loader2, UserPlus, Package, CheckCircle, AlertCircle, Plus, X, Edit2, Download, Trash2 } from "lucide-react";
 import Image from "next/image";
 
 
@@ -338,6 +338,23 @@ export default function AdminInventoryPage() {
         }
     };
 
+    const handleDelete = async (item: InventoryItem) => {
+        if (!confirm(`「${item.brand} ${item.name || ''}」を削除しますか？\n※この操作は取り消せません。`)) return;
+
+        try {
+            const res = await fetch(`/api/admin/inventory/${item.id}`, { method: 'DELETE' });
+            if (res.ok) {
+                alert("削除しました");
+                fetchData();
+            } else {
+                const data = await res.json();
+                alert(`削除できませんでした: ${data.error}`);
+            }
+        } catch (e: any) {
+            alert("通信エラー");
+        }
+    };
+
     const handleCreateItem = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -627,6 +644,13 @@ export default function AdminInventoryPage() {
                                                     title="編集"
                                                 >
                                                     <Edit2 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(item)}
+                                                    className="p-1.5 text-rose-400 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+                                                    title="削除"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
                                         </td>

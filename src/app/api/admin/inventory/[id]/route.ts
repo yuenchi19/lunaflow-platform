@@ -66,3 +66,23 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+    try {
+        const id = params.id;
+
+        // Check compatibility
+        const item = await prisma.inventoryItem.findUnique({ where: { id } });
+        if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+        if (item.status !== 'IN_STOCK' || item.assignedToUserId) {
+            return NextResponse.json({ error: "割り当て済みまたは販売済みのため削除できません。" }, { status: 400 });
+        }
+
+        await prisma.inventoryItem.delete({ where: { id } });
+        return NextResponse.json({ success: true });
+
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+}
