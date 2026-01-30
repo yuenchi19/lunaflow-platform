@@ -37,9 +37,10 @@ export default function StudentInventoryNewPage() {
             try {
                 file = await processImageClientSide(rawFile);
             } catch (pErr: any) {
-                alert(`[エラー詳細: 1.画像処理] 画像の圧縮・変換に失敗しました。\n詳細: ${pErr.message}`);
-                setUploading(false);
-                return;
+                console.warn("Client-side image processing failed", pErr);
+                alert(`※画像の最適化処理に失敗したため、元のファイルのままアップロードを試みます。\n(詳細: ${pErr.message})`);
+                // Fallback to raw file
+                file = rawFile;
             }
 
             // Stage 2: Upload Strategy (Hybrid)
