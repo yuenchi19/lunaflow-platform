@@ -80,8 +80,9 @@ export async function POST(req: Request) {
         });
 
         return NextResponse.json(course);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error creating course:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        // Expose error for debugging
+        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }

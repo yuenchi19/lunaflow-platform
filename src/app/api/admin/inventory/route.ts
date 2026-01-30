@@ -53,30 +53,35 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Brand and Cost Price are required" }, { status: 400 });
     }
 
-    const newItem = await prisma.inventoryItem.create({
-        data: {
-            adminId: user.id,
-            brand,
-            name,
-            category,
-            condition,
-            costPrice: parseInt(costPrice),
-            images: images || [],
-            damageImages: damageImages || [],
-            status: 'IN_STOCK',
-            isOmakase: isOmakase !== undefined ? isOmakase : true, // Default to true (Pool) if not sent, wait, user wants to choose.
-            // Kobutsusho Fields (For Admin Stock -> Student Assignment)
-            supplier,
-            supplierName,
-            supplierAddress,
-            supplierOccupation,
-            supplierAge: supplierAge ? parseInt(supplierAge) : null,
-            idVerificationMethod,
-            purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date()
-        }
-    });
+    try {
 
-    return NextResponse.json({ success: true, item: newItem });
+        const newItem = await prisma.inventoryItem.create({
+            data: {
+                adminId: user.id || 'admin', // Fallback
+                brand,
+                name,
+                category,
+                condition,
+                costPrice: parseInt(costPrice),
+                images: images || [],
+                damageImages: damageImages || [],
+                status: 'IN_STOCK',
+                isOmakase: isOmakase !== undefined ? isOmakase : true,
+                supplier,
+                supplierName,
+                supplierAddress,
+                supplierOccupation,
+                supplierAge: supplierAge ? parseInt(supplierAge) : null,
+                idVerificationMethod,
+                purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date()
+            }
+        });
+
+        return NextResponse.json({ success: true, item: newItem });
+    } catch (e: any) {
+        console.error("Inventory Create Error:", e);
+        return NextResponse.json({ error: e.message }, { status: 500 });
+    }
 }
 
 export async function GET(req: NextRequest) {
