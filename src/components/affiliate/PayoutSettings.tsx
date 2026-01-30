@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { User } from "@/types";
 import { Loader2 } from "lucide-react";
+import AvatarUpload from "./AvatarUpload";
 
 interface PayoutSettingsProps {
     user: User;
@@ -19,7 +20,8 @@ export default function PayoutSettings({ user }: PayoutSettingsProps) {
 
         const formData = new FormData(e.currentTarget);
         const data = {
-            name: formData.get('name'), // Added name update
+            name: formData.get('name'),
+            avatarUrl: formData.get('avatarUrl'), // Added avatarUrl
             bankName: formData.get('bankName'),
             bankBranch: formData.get('bankBranch'),
             bankAccountType: formData.get('bankAccountType'),
@@ -63,6 +65,22 @@ export default function PayoutSettings({ user }: PayoutSettingsProps) {
                         <span>👤</span> プロフィール情報
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-bold text-slate-500 mb-2">プロフィール画像</label>
+                            <AvatarUpload
+                                currentAvatarUrl={user.avatarUrl}
+                                onUploadComplete={(url) => {
+                                    // Update hidden input or state if needed, but we'll submit it with form via hidden input
+                                    // or just let a separate call handle it? 
+                                    // Implementation Plan said API update. Let's use a hidden input to submit with the form for simplicity 
+                                    // OR update state to submit.
+                                    const input = document.getElementById('avatarUrlInput') as HTMLInputElement;
+                                    if (input) input.value = url;
+                                }}
+                            />
+                            <input type="hidden" name="avatarUrl" id="avatarUrlInput" defaultValue={user.avatarUrl || ''} />
+                        </div>
+
                         <div>
                             <label className="block text-xs font-bold text-slate-500 mb-1">お名前</label>
                             <input
@@ -72,7 +90,6 @@ export default function PayoutSettings({ user }: PayoutSettingsProps) {
                                 className="w-full p-2 border border-slate-200 rounded outline-none focus:border-indigo-500 text-sm"
                             />
                         </div>
-                        {/* TODO: Avatar upload is complex, for now simple text or skip */}
                     </div>
                 </div>
 

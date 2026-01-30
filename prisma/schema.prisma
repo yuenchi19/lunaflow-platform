@@ -18,6 +18,7 @@ model User {
   affiliateCode      String?             @unique
   referredBy         String?
   communityNickname  String?
+  avatarUrl          String?
   zipCode            String?
   address            String?
   payoutPreference   String              @default("offset_purchase")
