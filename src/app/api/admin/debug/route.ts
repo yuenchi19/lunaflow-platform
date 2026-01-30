@@ -180,6 +180,44 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: true, mode: 'full_repair', results });
         }
 
+        if (mode === 'test_insert') {
+            try {
+                // 1. Try creating a dummy course
+                const course = await prisma.course.create({
+                    data: {
+                        title: "DEBUG_COURSE_" + Date.now(),
+                        allowedPlans: ["light"],
+                        order: 999,
+                        published: false
+                    }
+                });
+
+                // 2. Try creating a dummy inventory item
+                // Need a mock admin ID. We saw 'User Count: 1'. Let's find first user or use 'admin-debug'.
+                const firstUser = await prisma.user.findFirst();
+                const inventory = await prisma.inventoryItem.create({
+                    data: {
+                        adminId: firstUser?.id || 'debug_admin',
+                        brand: "DEBUG_BRAND",
+                        costPrice: 1000,
+                        images: [],
+                        status: 'IN_STOCK',
+                        isOmakase: true
+                    }
+                });
+
+                return NextResponse.json({
+                    success: true,
+                    message: "Test Insert Successful!",
+                    courseId: course.id,
+                    inventoryId: inventory.id
+                });
+
+            } catch (e: any) {
+                return NextResponse.json({ success: false, error: "Insert Failed: " + e.message, stack: e.stack });
+            }
+        }
+
         // Default: Old Product Fix
         const sql = `
         CREATE TABLE IF NOT EXISTS "Product" (
