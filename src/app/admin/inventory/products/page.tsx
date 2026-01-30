@@ -28,31 +28,67 @@ export default function AdminProductPage() {
 
     const [isUploading, setIsUploading] = useState(false);
 
+    // Generic robust upload function (Reuse from Inventory)
+    const { processImageClientSide } = require("@/lib/client-image-processing");
+
+    const uploadImageRobust = async (rawFile: File, bucket = "product-images") => {
+        let file = rawFile;
+        try {
+            file = await processImageClientSide(rawFile);
+        } catch (processError: any) {
+            console.warn("Image processing failed, falling back to raw file:", processError);
+            alert(`※画像の最適化処理に失敗したため、元のファイルのままアップロードを試みます。\n(詳細: ${processError.message})`);
+            file = rawFile;
+        }
+
+        // Strategy A: Direct Upload (File > 4MB)
+        if (file.size > 4 * 1024 * 1024) {
+            const { createClient } = await import('@/lib/supabase/client');
+            const supabase = createClient();
+            const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+            const { error } = await supabase.storage.from(bucket).upload(filename, file, { upsert: true });
+
+            if (error) throw new Error(`Direct Upload Failed: ${error.message}`);
+            const { data } = supabase.storage.from(bucket).getPublicUrl(filename);
+            return data.publicUrl;
+        }
+
+        // Strategy B: Proxy API Upload
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("bucket", bucket);
+
+        // Use the robust /api/upload endpoint (NOT /api/admin/upload)
+        const res = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            throw new Error(errorData.error || `Upload failed with status ${res.status}`);
+        }
+
+        const data = await res.json();
+        return data.url;
+    };
+
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || e.target.files.length === 0) return;
         const file = e.target.files[0];
 
         setIsUploading(true);
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', file);
-
         try {
-            const res = await fetch('/api/admin/upload', {
-                method: 'POST',
-                body: uploadFormData
-            });
-            const data = await res.json();
-            if (res.ok && data.url) {
-                setFormData(prev => ({ ...prev, image: data.url }));
-                showToast("画像をアップロードしました", "success");
-            } else {
-                throw new Error(data.error || 'Upload failed');
-            }
-        } catch (e) {
+            const url = await uploadImageRobust(file);
+            setFormData(prev => ({ ...prev, image: url }));
+            showToast("画像をアップロードしました", "success");
+        } catch (e: any) {
             showToast("画像のアップロードに失敗しました", "error");
             console.error(e);
+            alert(`アップロードエラー: ${e.message}`);
         } finally {
             setIsUploading(false);
+            e.target.value = ''; // Reset input
         }
     };
 

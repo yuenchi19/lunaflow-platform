@@ -391,16 +391,41 @@ function CourseTopVideoModal({ onClose }: { onClose: () => void }) {
 }
 
 function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmit: (data: any) => void }) {
-    const handleSubmit = (e: React.FormEvent) => {
-        console.log("Submit button clicked, form submitting...");
+    const [title, setTitle] = useState('');
+    const [label, setLabel] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Default checked
+    const [plans, setPlans] = useState<string[]>(['light', 'standard', 'premium']);
+
+    const handlePlanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { value, checked } = e.target;
+        if (checked) {
+            setPlans([...plans, value]);
+        } else {
+            setPlans(plans.filter(p => p !== value));
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const formData = new FormData(e.target as HTMLFormElement);
-        const allowedPlans = Array.from(formData.getAll('allowedPlans')); // Get all checked values
-        onSubmit({
-            title: formData.get('title'),
-            label: formData.get('label'),
-            allowedPlans: allowedPlans.length > 0 ? allowedPlans : ['light', 'standard', 'premium'], // Default fallback if empty? Or validate.
-        });
+        if (!title.trim()) return;
+
+        setIsSubmitting(true);
+        try {
+            await onSubmit({
+                title,
+                label,
+                allowedPlans: plans.length > 0 ? plans : ['light', 'standard', 'premium'],
+            });
+            // onSubmit (handleCreateCourse) calls setIsCreateModalOpen(false) on success
+            // So we don't need to manually close or stop loading unless it fails
+        } catch (error) {
+            console.error(error);
+            alert('作成エラーが発生しました');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -408,6 +433,7 @@ function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
             <div className={styles.modal}>
                 <div className={styles.modalHeader}>
                     <div className={styles.modalTitle}>新規コース作成</div>
+                    <button type="button" onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
                 </div>
 
                 <form onSubmit={handleSubmit}>
@@ -423,22 +449,25 @@ function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
                                 placeholder="例）フロントエンジニアコース"
                                 className={styles.input}
                                 required
+                                value={title}
+                                onChange={e => setTitle(e.target.value)}
                             />
-                            <div className={styles.charCount}>0 / 100</div>
+                            <div className={styles.charCount}>{title.length} / 100</div>
                         </div>
 
-                        {/* Course Days */}
+                        {/* Course Days (Placeholder for now) */}
                         <div>
                             <div className={styles.formLabel}>
                                 コース日数 <span className={styles.helpIcon}>?</span>
                             </div>
                             <input
+                                name="days"
                                 className={styles.input}
-                                placeholder="コース日数"
+                                placeholder="コース日数 (任意)"
                             />
                             <div style={{ marginTop: '0.5rem' }}>
                                 <label className={styles.checkboxGroup}>
-                                    <input type="checkbox" />
+                                    <input type="checkbox" name="forceSchedule" />
                                     受講生にスケジュールの設定を強制する
                                 </label>
                             </div>
@@ -450,7 +479,7 @@ function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
                                 コース進捗 <span className={styles.helpIcon}>?</span>
                             </div>
                             <label className={styles.checkboxGroup}>
-                                <input type="checkbox" />
+                                <input type="checkbox" name="unlockAll" />
                                 最初から全てのカテゴリ・ブロックを受講可能にする
                             </label>
                         </div>
@@ -458,10 +487,10 @@ function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
                         {/* Hashtag */}
                         <div>
                             <div className={styles.formLabel}>
-                                ハッシュタグを設定 <span className={styles.helpIcon}>?</span>
+                                ハッシュタグ <span className={styles.helpIcon}>?</span>
                             </div>
                             <label className={styles.checkboxGroup}>
-                                <input type="checkbox" />
+                                <input type="checkbox" name="useHashtag" />
                                 ハッシュタグを設定する
                             </label>
                         </div>
@@ -475,6 +504,8 @@ function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
                                 name="label"
                                 className={styles.input}
                                 placeholder="例）基礎編、○○向け、重要度：高"
+                                value={label}
+                                onChange={e => setLabel(e.target.value)}
                             />
                         </div>
 
@@ -485,19 +516,19 @@ function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
                             </div>
                             <div className="space-y-2">
                                 <label className="flex items-center gap-2">
-                                    <input type="checkbox" name="allowedPlans" value="light" defaultChecked />
+                                    <input type="checkbox" name="allowedPlans" value="light" checked={plans.includes('light')} onChange={handlePlanChange} />
                                     ライトプラン (Light)
                                 </label>
                                 <label className="flex items-center gap-2">
-                                    <input type="checkbox" name="allowedPlans" value="standard" defaultChecked />
+                                    <input type="checkbox" name="allowedPlans" value="standard" checked={plans.includes('standard')} onChange={handlePlanChange} />
                                     スタンダードプラン (Standard)
                                 </label>
                                 <label className="flex items-center gap-2">
-                                    <input type="checkbox" name="allowedPlans" value="premium" defaultChecked />
+                                    <input type="checkbox" name="allowedPlans" value="premium" checked={plans.includes('premium')} onChange={handlePlanChange} />
                                     プレミアムプラン (Premium)
                                 </label>
                                 <label className="flex items-center gap-2">
-                                    <input type="checkbox" name="allowedPlans" value="partner" />
+                                    <input type="checkbox" name="allowedPlans" value="partner" checked={plans.includes('partner')} onChange={handlePlanChange} />
                                     パートナープラン (Partner)
                                 </label>
                             </div>
@@ -509,11 +540,17 @@ function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
                             type="button"
                             className={styles.cancelButton}
                             onClick={onClose}
+                            disabled={isSubmitting}
                         >
                             キャンセル
                         </button>
-                        <button type="submit" className={styles.submitButton}>
-                            新規コース作成
+                        <button
+                            type="submit"
+                            className={styles.submitButton}
+                            disabled={isSubmitting || !title.trim()}
+                            style={{ opacity: !title.trim() ? 0.5 : 1, cursor: !title.trim() ? 'not-allowed' : 'pointer' }}
+                        >
+                            {isSubmitting ? '作成中...' : '新規コース作成'}
                         </button>
                     </div>
                 </form>

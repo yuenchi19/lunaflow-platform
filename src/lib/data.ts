@@ -361,16 +361,7 @@ export function getBlocks(categoryId: string): Block[] {
     return MOCK_BLOCKS.filter(b => b.categoryId === categoryId).sort((a, b) => a.order - b.order);
 }
 
-export const MOCK_FEEDBACKS: Feedback[] = [
-    {
-        id: 'fb1', userId: 'u1', blockId: 'b1', content: 'とても分かりやすかったです！',
-        status: 'pending', submittedAt: '2023-12-25 10:00', type: 'feedback'
-    },
-    {
-        id: 'as1', userId: 'u1', blockId: 'b2', content: '課題提出します。',
-        status: 'pending', submittedAt: '2023-12-25 11:30', type: 'assignment', attachmentUrls: ['https://example.com/assignment.pdf']
-    }
-];
+export const MOCK_FEEDBACKS: Feedback[] = [];
 
 // Global Feedbacks (using localStorage for simulation)
 export function getFeedbacks(): Feedback[] {
