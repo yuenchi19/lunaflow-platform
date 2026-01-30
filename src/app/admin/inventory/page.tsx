@@ -66,7 +66,7 @@ export default function AdminInventoryPage() {
     const [ledger, setLedger] = useState<LedgerEntry[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'pool' | 'assigned' | 'sold' | 'admin_stock'>('pool');
+    const [activeTab, setActiveTab] = useState<'pool' | 'assigned' | 'sold' | 'admin_stock' | 'all'>('pool');
     const [searchQuery, setSearchQuery] = useState('');
 
     // Assign Modal
