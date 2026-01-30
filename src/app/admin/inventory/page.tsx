@@ -168,61 +168,71 @@ export default function AdminInventoryPage() {
 
     const { processImageClientSide } = require("@/lib/client-image-processing");
 
+    const uploadImageRobust = async (rawFile: File, bucket = "inventory-items") => {
+        let file = rawFile;
+        try {
+            file = await processImageClientSide(rawFile);
+        } catch (processError: any) {
+            console.warn("Image processing failed, falling back to raw file:", processError);
+            alert(`※画像の最適化処理に失敗したため、元のファイルのままアップロードを試みます。\n(詳細: ${processError.message})`);
+            file = rawFile;
+        }
+
+        // Strategy A: Direct Upload (File > 4MB)
+        if (file.size > 4 * 1024 * 1024) {
+            console.log(`[Upload] File size ${file.size} > 4MB. Using Direct Upload.`);
+            const { createClient } = await import('@/lib/supabase/client');
+            const supabase = createClient();
+            const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+            const { error } = await supabase.storage.from(bucket).upload(filename, file, { upsert: true });
+
+            if (error) throw new Error(`Direct Upload Failed: ${error.message}`);
+
+            const { data } = supabase.storage.from(bucket).getPublicUrl(filename);
+            return data.publicUrl;
+        }
+
+        // Strategy B: Proxy API Upload
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("bucket", bucket);
+
+        const res = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!res.ok) {
+            if (res.status === 413) throw new Error(`ファイルサイズが大きすぎます (制限: 4.5MB)`);
+            let errorMsg = 'サーバーエラー';
+            try {
+                const errorData = await res.json();
+                errorMsg = errorData.error || res.statusText;
+            } catch {
+                const text = await res.text();
+                errorMsg = `Status: ${res.status} ${res.statusText} - ${text.slice(0, 100)}`;
+            }
+            throw new Error(errorMsg);
+        }
+
+        const data = await res.json();
+        if (!data.url) throw new Error('画像のURLが取得できませんでした (Unknown Response)');
+        return data.url;
+    };
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length) return;
         setUploading(true);
         const rawFile = e.target.files[0];
 
         try {
-            // Stage 1: Client-Side Processing
-            let file;
-            try {
-                file = await processImageClientSide(rawFile);
-            } catch (processError: any) {
-                alert(`[エラー詳細: 1.画像処理] 画像の圧縮・変換に失敗しました。\n詳細: ${processError.message}`);
-                setUploading(false);
-                return;
-            }
-
-            // Stage 2: Upload Request
-            const uploadFormData = new FormData();
-            uploadFormData.append("file", file);
-            uploadFormData.append("bucket", "inventory-items");
-
-            const res = await fetch('/api/upload', {
-                method: 'POST',
-                body: uploadFormData
-            });
-
-            // Stage 3: Response Handling
-            if (!res.ok) {
-                if (res.status === 413) {
-                    throw new Error(`ファイルサイズが大きすぎます (制限: 4.5MB)。\n現在のサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
-                }
-                let errorMsg = 'サーバーエラー';
-                try {
-                    const errorData = await res.json();
-                    errorMsg = errorData.error || res.statusText;
-                } catch {
-                    const text = await res.text();
-                    errorMsg = `Status: ${res.status} ${res.statusText} - ${text.slice(0, 100)}`;
-                }
-                throw new Error(errorMsg);
-            }
-
-            const data = await res.json();
-            if (data.url) {
-                setCreateImages(prev => [...prev, data.url]);
-            } else {
-                throw new Error('画像のURLが取得できませんでした (Unknown Response)');
-            }
-
+            const url = await uploadImageRobust(rawFile);
+            setCreateImages(prev => [...prev, url]);
         } catch (err: any) {
             console.error('Upload Error:', err);
-            alert(`[エラー詳細: 2.アップロード] サーバーへの送信に失敗しました。\n原因: ${err.message}`);
+            alert(`[エラー詳細: 2.アップロード] 送信に失敗しました。\n原因: ${err.message}`);
         } finally {
             setUploading(false);
-            e.target.value = ''; // Reset
+            e.target.value = '';
         }
     };
 
@@ -232,44 +242,8 @@ export default function AdminInventoryPage() {
         const rawFile = e.target.files[0];
 
         try {
-            // Stage 1: Client-Side Processing
-            let file;
-            try {
-                file = await processImageClientSide(rawFile);
-            } catch (processError: any) {
-                alert(`[エラー詳細: 1.画像処理] 画像の圧縮・変換に失敗しました。\n詳細: ${processError.message}`);
-                setUploading(false);
-                return;
-            }
-
-            // Stage 2: Upload Request
-            const uploadFormData = new FormData();
-            uploadFormData.append("file", file);
-            uploadFormData.append("bucket", "inventory-items");
-
-            const res = await fetch('/api/upload', { method: 'POST', body: uploadFormData });
-
-            // Stage 3: Response Handling
-            if (!res.ok) {
-                if (res.status === 413) throw new Error(`ファイルサイズが大きすぎます (制限: 4.5MB)。\n現在のサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
-
-                let errorMsg = 'サーバーエラー';
-                try {
-                    const errorData = await res.json();
-                    errorMsg = errorData.error || res.statusText;
-                } catch {
-                    const text = await res.text();
-                    errorMsg = `Status: ${res.status} ${res.statusText} - ${text.slice(0, 100)}`;
-                }
-                throw new Error(errorMsg);
-            }
-
-            const data = await res.json();
-            if (data.url) {
-                setCreateDamageImages(prev => [...prev, data.url]);
-            } else {
-                throw new Error('画像のURLが取得できませんでした (Unknown Response)');
-            }
+            const url = await uploadImageRobust(rawFile);
+            setCreateDamageImages(prev => [...prev, url]);
         } catch (err: any) {
             console.error(err);
             alert(`[エラー詳細: 2.アップロード] ダメージ画像の送信失敗\n原因: ${err.message}`);
@@ -285,44 +259,8 @@ export default function AdminInventoryPage() {
         const rawFile = e.target.files[0];
 
         try {
-            // Stage 1: Client-Side Processing
-            let file;
-            try {
-                file = await processImageClientSide(rawFile);
-            } catch (processError: any) {
-                alert(`[エラー詳細: 1.画像処理] 画像の圧縮・変換に失敗しました。\n詳細: ${processError.message}`);
-                setUploading(false);
-                return;
-            }
-
-            // Stage 2: Upload Request
-            const uploadFormData = new FormData();
-            uploadFormData.append("file", file);
-            uploadFormData.append("bucket", "inventory-items");
-
-            const res = await fetch('/api/upload', { method: 'POST', body: uploadFormData });
-
-            // Stage 3: Response Handling
-            if (!res.ok) {
-                if (res.status === 413) throw new Error(`ファイルサイズが大きすぎます (制限: 4.5MB)。\n現在のサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
-
-                let errorMsg = 'サーバーエラー';
-                try {
-                    const errorData = await res.json();
-                    errorMsg = errorData.error || res.statusText;
-                } catch {
-                    const text = await res.text();
-                    errorMsg = `Status: ${res.status} ${res.statusText} - ${text.slice(0, 100)}`;
-                }
-                throw new Error(errorMsg);
-            }
-
-            const data = await res.json();
-            if (data.url) {
-                setEditImages(prev => [...prev, data.url]);
-            } else {
-                throw new Error('画像のURLが取得できませんでした (Unknown Response)');
-            }
+            const url = await uploadImageRobust(rawFile);
+            setEditImages(prev => [...prev, url]);
         } catch (err: any) {
             console.error(err);
             alert(`[エラー詳細: 2.アップロード] 編集画像の送信失敗\n原因: ${err.message}`);
@@ -338,44 +276,8 @@ export default function AdminInventoryPage() {
         const rawFile = e.target.files[0];
 
         try {
-            // Stage 1: Client-Side Processing
-            let file;
-            try {
-                file = await processImageClientSide(rawFile);
-            } catch (processError: any) {
-                alert(`[エラー詳細: 1.画像処理] 画像の圧縮・変換に失敗しました。\n詳細: ${processError.message}`);
-                setUploading(false);
-                return;
-            }
-
-            // Stage 2: Upload Request
-            const uploadFormData = new FormData();
-            uploadFormData.append("file", file);
-            uploadFormData.append("bucket", "inventory-items");
-
-            const res = await fetch('/api/upload', { method: 'POST', body: uploadFormData });
-
-            // Stage 3: Response Handling
-            if (!res.ok) {
-                if (res.status === 413) throw new Error(`ファイルサイズが大きすぎます (制限: 4.5MB)。\n現在のサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
-
-                let errorMsg = 'サーバーエラー';
-                try {
-                    const errorData = await res.json();
-                    errorMsg = errorData.error || res.statusText;
-                } catch {
-                    const text = await res.text();
-                    errorMsg = `Status: ${res.status} ${res.statusText} - ${text.slice(0, 100)}`;
-                }
-                throw new Error(errorMsg);
-            }
-
-            const data = await res.json();
-            if (data.url) {
-                setEditDamageImages(prev => [...prev, data.url]);
-            } else {
-                throw new Error('画像のURLが取得できませんでした (Unknown Response)');
-            }
+            const url = await uploadImageRobust(rawFile);
+            setEditDamageImages(prev => [...prev, url]);
         } catch (err: any) {
             console.error(err);
             alert(`[エラー詳細: 2.アップロード] 編集ダメージ画像の送信失敗\n原因: ${err.message}`);
