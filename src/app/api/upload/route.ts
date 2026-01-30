@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
+import sharp from 'sharp';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,23 +28,27 @@ export async function POST(req: NextRequest) {
         let contentType = file.type;
         let filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-        // STRICT VALIDATION REMOVED: Allow HEIC as fallback
-        // The client attempts conversion, but if it fails, we accept the raw file 
-        // to prevent blocking the user.
-        /*
+        // Server-Side HEIC Conversion
         const isHeic = file.type === 'image/heic' ||
             file.type === 'image/heif' ||
             file.name.toLowerCase().endsWith('.heic') ||
             file.name.toLowerCase().endsWith('.heif');
 
         if (isHeic) {
-            console.error("Server received HEIC file. Rejecting.");
-            return NextResponse.json(
-                { error: 'HEIC形式はサーバーで処理できません。クライアント側でJPEGに変換してください。' },
-                { status: 400 }
-            );
+            try {
+                console.log(`[Server] Converting HEIC to JPEG: ${file.name}`);
+                buffer = await sharp(buffer)
+                    .toFormat('jpeg', { quality: 80 })
+                    .toBuffer();
+                contentType = 'image/jpeg';
+                // Replace extension with .jpg
+                filename = filename.replace(/\.(heic|heif)$/i, '.jpg');
+                if (!filename.endsWith('.jpg')) filename += '.jpg';
+            } catch (convError: any) {
+                console.error("[Server] HEIC Conversion Failed:", convError);
+                return NextResponse.json({ error: `HEIC変換エラー: ${convError.message}` }, { status: 500 });
+            }
         }
-        */
 
         const path = `${filename}`;
 
@@ -71,3 +76,4 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `システムエラー: ${e.message}` }, { status: 500 });
     }
 }
+

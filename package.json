@@ -29,6 +29,7 @@
     "react-markdown": "^10.1.0",
     "recharts": "^3.6.0",
     "resend": "^6.4.2",
+    "sharp": "^0.34.5",
     "stripe": "^20.1.0"
   },
   "devDependencies": {
@@ -37,6 +38,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/sharp": "^0.31.1",
     "autoprefixer": "^10.4.23",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.0",
