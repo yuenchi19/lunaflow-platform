@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     // This ensures we can read the profile even if RLS policies are missing/broken
     const supabaseAdmin = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
+        process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrc3ZweXJ2cnp4bWhodmV0cXJ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjkxMzAxMSwiZXhwIjoyMDgyNDg5MDExfQ.65o0Qbg4fBMPAPVHeKLi8z_OaimA0wS46GDk8WRgrqw"
     );
 
     const { data: profile, error } = await supabaseAdmin
