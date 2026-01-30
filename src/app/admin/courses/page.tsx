@@ -139,9 +139,18 @@ export default function CoursesPage() {
                 setToastMessage("コースが作成されました");
                 setTimeout(() => setToastMessage(null), 3000);
                 setIsCreateModalOpen(false);
+            } else {
+                const data = await res.json().catch(() => ({}));
+                const msg = data.error || res.statusText || 'Unknown Error';
+                alert(`作成に失敗しました: ${msg}`);
+                throw new Error(msg); // To propagate to modal
             }
-        } catch (error) {
-            alert('作成に失敗しました');
+        } catch (error: any) {
+            // alert handled above for fetch errors, but network errors land here
+            if (!error.message.includes('作成に失敗しました')) {
+                alert(`作成に失敗しました (Network/System): ${error.message}`);
+            }
+            throw error;
         }
     };
 
@@ -419,10 +428,15 @@ function CreateCourseModal({ onClose, onSubmit }: { onClose: () => void, onSubmi
                 allowedPlans: plans.length > 0 ? plans : ['light', 'standard', 'premium'],
             });
             // onSubmit (handleCreateCourse) calls setIsCreateModalOpen(false) on success
-            // So we don't need to manually close or stop loading unless it fails
-        } catch (error) {
+            // If it fails, parent throws, caught below
+        } catch (error: any) {
             console.error(error);
-            alert('作成エラーが発生しました');
+            // Parent handleCreateCourse will handle the actual alert now, or we can do it here.
+            // Actually parent handleCreateCourse catches everything and alerts generic "Failed".
+            // We need to change parent logic or this logic. 
+            // In parent: `if (res.ok) ... else throw new Error(...)`
+            // Let's rely on parent to pass error message? No, onSubmit is async. 
+            // Better to handle in parent `handleCreateCourse` to parse response.
         } finally {
             setIsSubmitting(false);
         }

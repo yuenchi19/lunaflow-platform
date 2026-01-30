@@ -372,10 +372,11 @@ export default function AdminInventoryPage() {
                 setCreateDamageImages([]);
                 fetchData();
             } else {
-                alert("エラーが発生しました");
+                const data = await res.json().catch(() => ({}));
+                alert(`エラーが発生しました: ${data.error || res.statusText}`);
             }
-        } catch (e) {
-            alert("通信エラー");
+        } catch (e: any) {
+            alert(`通信エラー: ${e.message}`);
         } finally {
             setCreating(false);
         }
