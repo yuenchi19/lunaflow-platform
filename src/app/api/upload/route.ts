@@ -45,8 +45,21 @@ export async function POST(req: NextRequest) {
                 filename = filename.replace(/\.(heic|heif)$/i, '.jpg');
                 if (!filename.endsWith('.jpg')) filename += '.jpg';
             } catch (convError: any) {
-                console.error("[Server] HEIC Conversion Failed:", convError);
-                return NextResponse.json({ error: `HEIC変換エラー: ${convError.message}` }, { status: 500 });
+                console.warn("[Server] HEIC Conversion Failed (falling back to original):", convError);
+                // Fallback: Proceed with original buffer and filename
+                // Reset to original if buffer was modified? (buffer is const reference, but content might be replaced if reassigned. 
+                // Actually buffer is let. If sharp failed mid-way, buffer might be partial?
+                // No, sharp(buffer) returns NEW buffer. 'buffer =' assignment only happens on success.
+                // Wait, I did `buffer = await sharp...`. If it throws, buffer remains original.
+                // Reset filename to original HEIC extension just in case it was modified before throw?
+                // Actually filename is modified inside try block after success.
+                // Wait, in my previous code:
+                /*
+                buffer = await sharp(buffer)...
+                filename = filename.replace...
+                */
+                // If await throws, buffer is NOT reassigned. filename is NOT reassigned.
+                // So state is clean. We just proceed.
             }
         }
 
