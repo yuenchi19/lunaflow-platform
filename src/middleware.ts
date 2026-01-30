@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
 
     const isProtected = protectedPrefixes.some(prefix => path.startsWith(prefix))
 
-    if (isProtected && !user && path !== '/admin/update-password') {
+    if (isProtected && !user && path !== '/admin/update-password' && path !== '/admin/login') {
         console.log(`[Middleware] Redirecting unauthenticated user from ${path}`);
         const redirectUrl = request.nextUrl.clone()
         if (path.startsWith('/admin')) {
