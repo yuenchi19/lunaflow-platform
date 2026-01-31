@@ -6,8 +6,30 @@ import { cookies } from 'next/headers';
 
 const prisma = new PrismaClient();
 
-export async function GET() {
+export async function GET(req: any) { // req needed for cookies
     try {
+        const cookieStore = cookies();
+        const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    getAll() { return cookieStore.getAll() },
+                    setAll(cookiesToSet) { try { cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) } catch { } },
+                },
+            }
+        );
+        const { data: { user } } = await supabase.auth.getUser();
+
+        let currentUserInfo = "Not Authenticated";
+        if (user && user.email) {
+            const dbUser = await prisma.user.findUnique({
+                where: { email: user.email },
+                select: { role: true, id: true, email: true }
+            });
+            currentUserInfo = `Email: ${user.email}, DB_Role: ${dbUser?.role || 'null'}`;
+        }
+
         const dbUrl = process.env.DATABASE_URL || "";
         // ... (keep existing GET logic if possible, or just replace imports and keep GET same)
 
@@ -37,6 +59,7 @@ export async function GET() {
                 inventory: inventoryCount,
                 users: userCount
             },
+            currentUser: currentUserInfo,
             error: dbError
         }, { status: 200 });
 

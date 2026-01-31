@@ -59,6 +59,13 @@ export default function DebugPage() {
             <h1 className="text-2xl font-bold text-red-600">Admin Debug Console</h1>
 
             <div className="bg-slate-100 p-4 rounded">
+                <h2 className="font-bold border-b mb-2">Current Session</h2>
+                <div className="text-lg font-mono text-blue-700 bg-white p-2 border rounded">
+                    {status.currentUser || 'Loading...'}
+                </div>
+            </div>
+
+            <div className="bg-slate-100 p-4 rounded">
                 <h2 className="font-bold border-b mb-2">Environment</h2>
                 <pre className="text-xs overflow-auto">{JSON.stringify(status.env, null, 2)}</pre>
             </div>
