@@ -17,10 +17,7 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
     const [course, setCourse] = useState<any | null>(null); // Use any for now or update Course type to include categories
     const [targetDates, setTargetDates] = useState<Record<string, string>>({});
     const [user] = useState<User>(MOCK_USERS[0]); // Mock student
-    const [completedBlockIds, setCompletedBlockIds] = useState<string[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [allProgress, setAllProgress] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchCourseData = async () => {
@@ -56,6 +53,7 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                 .then(res => res.json())
                 .then(data => {
                     if (Array.isArray(data)) {
+                        setAllProgress(data);
                         const completed = data
                             .filter((item: any) => item.status === 'completed')
                             .map((item: any) => item.blockId);
@@ -130,6 +128,39 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                                 {course.categories?.map((cat: any, idx: number) => {
                                     const catBlocks = cat.blocks || [];
                                     const isCatCompleted = catBlocks.length > 0 && catBlocks.every((b: any) => completedBlockIds.includes(b.id));
+
+                                    // Category Locking Logic
+                                    // Locked if previous category exists (idx > 0) AND previous category is NOT full completed
+                                    const prevCat = idx > 0 ? course.categories[idx - 1] : null;
+                                    const prevCatBlocks = prevCat ? (prevCat.blocks || []) : [];
+                                    const isPrevCatCompleted = prevCatBlocks.length > 0 && prevCatBlocks.every((b: any) => completedBlockIds.includes(b.id));
+
+                                    // If idx=0 (first cat), isLocked=false. 
+                                    // If idx>0, isLocked = !isPrevCatCompleted
+                                    const isLocked = idx > 0 && !isPrevCatCompleted && prevCatBlocks.length > 0;
+
+                                    if (isLocked) {
+                                        return (
+                                            <div
+                                                key={cat.id}
+                                                className="block p-5 flex items-center justify-between bg-slate-50 cursor-not-allowed opacity-60 select-none grayscale"
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-serif text-sm font-bold bg-slate-200 text-slate-400">
+                                                        🔒
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-bold text-slate-500">{cat.title}</h3>
+                                                        <p className="text-xs text-slate-400 mt-0.5">前のカテゴリ全レッスン完了で解放</p>
+                                                        <p className="text-[10px] text-slate-400">{catBlocks.length} レッスン</p>
+                                                    </div>
+                                                </div>
+                                                <span className="text-[10px] px-3 py-1 rounded-full font-bold border bg-slate-100 text-slate-400 border-slate-200">
+                                                    未解禁
+                                                </span>
+                                            </div>
+                                        );
+                                    }
 
                                     return (
                                         <Link
@@ -249,13 +280,67 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                 )}
 
                 {activeTab === 'feedback' && (
-                    <div className="p-12 bg-white rounded-xl border border-slate-100 shadow-sm text-center space-y-4">
-                        <MessageSquare className="w-12 h-12 text-slate-200 mx-auto" />
-                        <h3 className="text-slate-400 font-serif italic">感想履歴はまだありません</h3>
-                        <p className="text-xs text-slate-300">レッスンを受講して感想を提出すると、ここに履歴が表示されます。</p>
+                    <div className="space-y-6">
+                        <h2 className="text-xl font-serif font-bold text-slate-700">感想・フィードバック履歴</h2>
+                        {allProgress.filter(p => p.feedbackContent).length === 0 ? (
+                            <div className="p-12 bg-white rounded-xl border border-slate-100 shadow-sm text-center space-y-4">
+                                <MessageSquare className="w-12 h-12 text-slate-200 mx-auto" />
+                                <h3 className="text-slate-400 font-serif italic">感想履歴はまだありません</h3>
+                                <p className="text-xs text-slate-300">レッスン受講時に感想を送信すると、ここに記録されます。</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-4">
+                                {allProgress.filter(p => p.feedbackContent).map((progress) => {
+                                    // Find block title
+                                    let blockTitle = "Unknown Lesson";
+                                    course.categories?.forEach((c: any) => {
+                                        const b = c.blocks?.find((blk: any) => blk.id === progress.blockId);
+                                        if (b) blockTitle = b.title;
+                                    });
+
+                                    return (
+                                        <div key={progress.id} className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                                            <div className="flex flex-col md:flex-row gap-6">
+                                                <div className="flex-1 space-y-3">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="text-xs font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded">レッスン</span>
+                                                        <h3 className="font-bold text-slate-700">{blockTitle}</h3>
+                                                        <span className="text-[10px] text-slate-300 ml-auto">
+                                                            {new Date(progress.updatedAt).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                    <div className="bg-slate-50 p-4 rounded-lg text-sm text-slate-600">
+                                                        <p className="text-xs text-slate-400 font-bold mb-1">あなたの感想:</p>
+                                                        {progress.feedbackContent}
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 border-l border-slate-100 pl-0 md:pl-6 space-y-3">
+                                                    {progress.feedbackResponse ? (
+                                                        <>
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <MessageSquare className="w-4 h-4 text-emerald-500" />
+                                                                <h4 className="font-bold text-emerald-700 text-sm">フィードバック</h4>
+                                                            </div>
+                                                            <div className="bg-emerald-50/50 p-4 rounded-lg text-sm text-slate-700 whitespace-pre-wrap">
+                                                                {progress.feedbackResponse}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="h-full flex items-center justify-center text-slate-300 text-sm italic">
+                                                            フィードバック待ち...
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 )}
             </main>
         </div>
     );
 }
+
