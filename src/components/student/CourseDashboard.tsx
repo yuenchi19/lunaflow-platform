@@ -114,31 +114,7 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
 
                 {activeTab === 'course' && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        {/* Learning Progress Section */}
-                        <section className="bg-white rounded-xl border border-slate-100 shadow-xl overflow-hidden flex flex-col md:flex-row">
-                            <div className="w-full md:w-2/3 bg-slate-900 aspect-video flex items-center justify-center relative group">
-                                <PlayCircle className="w-20 h-20 text-white opacity-80 group-hover:scale-110 group-hover:opacity-100 transition-all cursor-pointer" />
-                                <div className="absolute bottom-4 left-4 text-white text-xs opacity-60">学習の進捗</div>
-                            </div>
-                            <div className="p-8 flex-1 flex flex-col justify-center items-start gap-4">
-                                <p className="text-slate-600 leading-relaxed text-sm font-bold">
-                                    {course.title}へようこそ！<br />まずは動画を確認して感想を記載して受講を開始してください。
-                                </p>
-                                {/* Link to first block of first category if available */}
-                                {course.categories?.[0]?.blocks?.[0] ? (
-                                    <Link
-                                        href={`/student/course/${course.id}/learn/${course.categories[0].blocks[0].id}`}
-                                        className="bg-rose-600 text-white px-8 py-3 rounded-md font-bold hover:bg-rose-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                                    >
-                                        感想を送ってスタート
-                                    </Link>
-                                ) : (
-                                    <button disabled className="bg-slate-300 text-white px-8 py-3 rounded-md font-bold cursor-not-allowed">
-                                        コンテンツ準備中
-                                    </button>
-                                )}
-                            </div>
-                        </section>
+
 
                         {/* Curriculum Section */}
                         <section className="space-y-4">

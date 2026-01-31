@@ -12,32 +12,53 @@ export default function CategoryDetailPage() {
     const courseId = params.id as string;
     const categoryId = params.categoryId as string;
 
-    // Assume we can get course and category from mock data
-    const course = MOCK_COURSES.find(c => c.id === courseId);
-    const category = getCategories(courseId || "").find(c => c.id === categoryId);
-    const blocks = getBlocks(categoryId || "");
-
+    const [course, setCourse] = useState<any | null>(null);
+    const [category, setCategory] = useState<any | null>(null);
+    const [blocks, setBlocks] = useState<any[]>([]);
     const [completedBlockIds, setCompletedBlockIds] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
     const supabase = createClient();
 
     useEffect(() => {
-        // Fetch progress details including status
-        fetch('/api/student/progress')
-            .then(res => res.json())
-            .then(data => {
-                if (Array.isArray(data)) {
-                    // Extract completed blocks
-                    const completed = data
-                        .filter((item: any) => item.status === 'completed')
-                        .map((item: any) => item.blockId);
-                    setCompletedBlockIds(completed);
-                }
-            })
-            .catch(err => console.error("Failed to fetch progress", err));
-    }, []);
+        const fetchData = async () => {
+            try {
+                // Fetch Course Data (including categories and blocks)
+                const courseRes = await fetch(`/api/courses/${courseId}`);
+                if (courseRes.ok) {
+                    const courseData = await courseRes.json();
+                    setCourse(courseData);
 
+                    const foundCat = courseData.categories?.find((c: any) => c.id === categoryId);
+                    setCategory(foundCat || null);
+                    setBlocks(foundCat?.blocks || []);
+                }
+
+                // Fetch Progress
+                const progressRes = await fetch('/api/student/progress');
+                if (progressRes.ok) {
+                    const progressData = await progressRes.json();
+                    if (Array.isArray(progressData)) {
+                        const completed = progressData
+                            .filter((item: any) => item.status === 'completed')
+                            .map((item: any) => item.blockId);
+                        setCompletedBlockIds(completed);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (courseId && categoryId) {
+            fetchData();
+        }
+    }, [courseId, categoryId]);
+
+    if (loading) return <div className="p-10 text-center text-slate-500 font-serif italic">Loading...</div>;
     if (!course || !category) {
-        return <div className="p-10 text-center">Category not found</div>;
+        return <div className="p-10 text-center text-slate-500">category/course not found.</div>;
     }
 
     return (
