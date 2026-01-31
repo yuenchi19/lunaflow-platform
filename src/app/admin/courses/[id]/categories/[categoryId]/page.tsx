@@ -24,6 +24,47 @@ interface Category {
     blockCount: number;
 }
 
+
+const FeedbackSettings = ({ required, setRequired, type, setType, title, setTitle }: any) => {
+    return (
+        <div style={{ marginTop: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>フィードバック設定</label>
+            <div className={styles.checkboxGroup}>
+                <label className={styles.checkLabel}>
+                    <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} />
+                    受講生からの返信（感想・課題）を必須にする
+                </label>
+            </div>
+            {required && (
+                <div style={{ marginTop: '15px' }}>
+                    <div style={{ marginBottom: '10px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>課題のタイトル（受講生に表示）</label>
+                        <input
+                            type="text"
+                            className={styles.modalInput}
+                            placeholder="例: この記事を読んで学んだことを3つ挙げてください"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                        />
+                    </div>
+
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>返信方法</label>
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px' }}>
+                            <input type="radio" checked={type === 'ai'} onChange={() => setType('ai')} />
+                            AI自動返信
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px' }}>
+                            <input type="radio" checked={type === 'manual'} onChange={() => setType('manual')} />
+                            手動返信
+                        </label>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function CategoryBlockEditPage({ params }: { params: { id: string, categoryId: string } }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [blocks, setBlocks] = useState<Block[]>([]);
@@ -277,45 +318,7 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
     };
 
     // ... (FeedbackSettings and SortableBlockItem remain similar, we can reuse if defined below or inline)
-    const FeedbackSettings = ({ required, setRequired, type, setType, title, setTitle }: any) => {
-        return (
-            <div style={{ marginTop: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>フィードバック設定</label>
-                <div className={styles.checkboxGroup}>
-                    <label className={styles.checkLabel}>
-                        <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} />
-                        受講生からの返信（感想・課題）を必須にする
-                    </label>
-                </div>
-                {required && (
-                    <div style={{ marginTop: '15px' }}>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>課題のタイトル（受講生に表示）</label>
-                            <input
-                                type="text"
-                                className={styles.modalInput}
-                                placeholder="例: この記事を読んで学んだことを3つ挙げてください"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                            />
-                        </div>
 
-                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>返信方法</label>
-                        <div style={{ display: 'flex', gap: '15px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px' }}>
-                                <input type="radio" checked={type === 'ai'} onChange={() => setType('ai')} />
-                                AI自動返信
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px' }}>
-                                <input type="radio" checked={type === 'manual'} onChange={() => setType('manual')} />
-                                手動返信
-                            </label>
-                        </div>
-                    </div>
-                )}
-            </div>
-        );
-    }
 
     function SortableBlockItem({ block, index, icon, label, onEdit, onDelete }: any) {
         const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: block.id });
@@ -521,4 +524,6 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
         </div>
     );
 }
+
+
 

@@ -100,7 +100,6 @@ export default function CategoryDetailPage() {
                                         </div>
                                         <div>
                                             <h3 className="font-bold text-slate-700 group-hover:text-rose-700 transition-colors">{block.title}</h3>
-                                            <p className="text-xs text-slate-400 mt-1">{block.type === 'video' ? '動画レッスン' : 'テキスト/クイズ'}</p>
                                         </div>
                                     </div>
                                     {isCompleted && (
