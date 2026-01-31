@@ -29,6 +29,8 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
     const [blocks, setBlocks] = useState<Block[]>([]);
     const [categoryTitle, setCategoryTitle] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const { showToast } = useToast();
+    const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -88,7 +90,84 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
         showToast(`${name} を選択しました（モック機能）`, 'info');
     };
 
-    // ...
+    const handleAddSurveyQuestion = () => {
+        setSurveyQuestions([...surveyQuestions, { type: 'text', title: '', options: [''] }]);
+    };
+
+    const handleToggleFormat = (format: string) => {
+        if (assignmentFormats.includes(format)) {
+            setAssignmentFormats(assignmentFormats.filter(f => f !== format));
+        } else {
+            setAssignmentFormats([...assignmentFormats, format]);
+        }
+    };
+
+    const handleDeleteOption = (index: number) => {
+        if (quizOptions.length > 1) {
+            setQuizOptions(quizOptions.filter((_, i) => i !== index));
+        }
+    };
+
+    const handleClearQuiz = () => {
+        setQuizTitle('');
+        setQuizBody('');
+        setQuizExplanation('');
+        setQuizOptions(['']);
+    };
+
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+    const getPreviewBlock = (): Block => {
+        return {
+            id: 'preview',
+            type: activeType,
+            title: quizTitle || `${activeType} ブロック`,
+            content: activeType === 'survey' ? { questions: surveyQuestions } :
+                activeType === 'video' ? { url: quizBody } :
+                    activeType === 'quiz' ? { body: quizBody, explanation: quizExplanation, options: quizOptions } : undefined
+        };
+    };
+
+    // DnD Sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (active.id !== over?.id) {
+            const oldIndex = blocks.findIndex((item) => item.id === active.id);
+            const newIndex = blocks.findIndex((item) => item.id === over?.id);
+
+            const newItems = arrayMove(blocks, oldIndex, newIndex);
+
+            // Optimistic update
+            setBlocks(newItems);
+
+            // API Sync
+            try {
+                await fetch('/api/admin/blocks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'reorder',
+                        items: newItems.map((b, i) => ({ id: b.id, order: i + 1 }))
+                    })
+                });
+            } catch (e) {
+                console.error("Reorder failed", e);
+                fetchData(); // Revert on failure
+            }
+        }
+    };
+
+
+    const handlePreview = () => {
+        setIsPreviewOpen(true);
+    };
 
     const handleEditBlock = (block: Block) => {
         setEditingBlockId(block.id);
