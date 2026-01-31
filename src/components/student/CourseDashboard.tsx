@@ -20,6 +20,8 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
     const [completedBlockIds, setCompletedBlockIds] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
     useEffect(() => {
         const fetchCourseData = async () => {
             try {
@@ -27,9 +29,13 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                 if (res.ok) {
                     const data = await res.json();
                     setCourse(data);
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    setErrorMsg(errData.error || `Error ${res.status}`);
                 }
             } catch (e) {
                 console.error("Failed to fetch course", e);
+                setErrorMsg("Communication Error");
             } finally {
                 setLoading(false);
             }
@@ -56,7 +62,8 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
     }, [courseId, user.id]);
 
     if (loading) return <div className="p-10 text-center text-slate-500 font-serif italic">Loading course...</div>;
-    if (!course) return <div className="p-10 text-center text-slate-500 font-serif italic">Course not found.</div>;
+    if (errorMsg) return <div className="p-10 text-center text-rose-500 font-bold">Error: {errorMsg}</div>;
+    if (!course) return <div className="p-10 text-center text-slate-500 font-serif italic">Course not found (Unknown).</div>;
 
     // Helper to get blocks from the nested structure
     const getBlocksForCategory = (catId: string) => {

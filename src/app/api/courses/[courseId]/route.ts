@@ -23,11 +23,14 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
     try {
         // 1. Get Auth User
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+        console.log(`[CourseAPI] Debug: AuthUser=${authUser?.email}, AuthError=${authError?.message}`);
 
         // 2. Check User Plan & Access
         const userPlan = authUser && !authError ?
             (await prisma.user.findUnique({ where: { email: authUser.email! }, select: { plan: true, role: true } }))
             : null;
+
+        console.log(`[CourseAPI] Debug: DB Role=${userPlan?.role}, Plan=${userPlan?.plan}`);
 
         const isStaff = userPlan?.role === 'admin' || userPlan?.role === 'staff';
         const currentUserPlan = userPlan?.plan || 'light';
@@ -48,19 +51,21 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
         });
 
         if (!course) {
-            return NextResponse.json({ error: 'Course not found' }, { status: 404 });
+            return NextResponse.json({ error: 'Course ID not found in DB' }, { status: 404 });
         }
 
         // 4. Access Checks
-        // Allow staff to see unpublished courses context
+        // Allow staff to see unpublished courses
         if (!course.published && !isStaff) {
-            return NextResponse.json({ error: 'Course not found (unpublished)' }, { status: 404 });
+            console.log(`[CourseAPI] Denying access: Unpublished and user is not staff (Role: ${userPlan?.role})`);
+            return NextResponse.json({ error: `Course is unpublished and you are not Admin/Staff (Role: ${userPlan?.role || 'guest'})` }, { status: 404 });
         }
 
         const allowedPlans = new Set(course.allowedPlans || []);
 
         if (!isStaff && allowedPlans.size > 0 && !allowedPlans.has(currentUserPlan)) {
-            return NextResponse.json({ error: 'Plan upgrade required to access this course.' }, { status: 403 });
+            console.log(`[CourseAPI] Denying access: Plan mismatch. User=${currentUserPlan}, Allowed=${Array.from(allowedPlans)}`);
+            return NextResponse.json({ error: `Plan upgrade required (Yours: ${currentUserPlan})` }, { status: 403 });
         }
 
         return NextResponse.json(course);
