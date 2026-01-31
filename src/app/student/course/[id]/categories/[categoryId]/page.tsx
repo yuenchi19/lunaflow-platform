@@ -86,6 +86,29 @@ export default function CategoryDetailPage() {
                 <div className="space-y-4">
                     {blocks.map((block, idx) => {
                         const isCompleted = completedBlockIds.includes(block.id);
+                        // Lock if previous block (idx-1) is NOT completed, unless it's the first block (idx 0)
+                        const isLocked = idx > 0 && !completedBlockIds.includes(blocks[idx - 1].id);
+
+                        if (isLocked) {
+                            return (
+                                <div
+                                    key={block.id}
+                                    className="block bg-slate-50 rounded-xl border border-slate-200 p-5 opacity-60 cursor-not-allowed select-none"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-200 text-slate-400">
+                                                <div className="w-5 h-5 flex items-center justify-center">🔒</div>
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-slate-500">{block.title}</h3>
+                                                <p className="text-xs text-slate-400 mt-1">前のレッスンを完了すると解放されます</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
 
                         return (
                             <Link

@@ -124,12 +124,14 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                     window.location.href = `/student/course/${courseId}`;
                 }
             } else {
-                alert("送信に失敗しました。");
+                const data = await res.json().catch(() => ({}));
+                console.error("Submit Error:", data);
+                alert(`送信に失敗しました。\n${data.error || res.statusText}`);
                 setIsSubmitting(false);
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert("エラーが発生しました。");
+            alert(`エラーが発生しました。\n${e.message}`);
             setIsSubmitting(false);
         }
     };
