@@ -120,6 +120,7 @@ model UserProgress {
   status          String   // 'completed', 'in_progress', 'not_started'
   completedAt     DateTime?
   feedbackContent String?  @db.Text
+  feedbackResponse String?  @db.Text
   feedbackStatus  String? // 'pending', 'completed'
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

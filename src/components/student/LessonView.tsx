@@ -64,6 +64,7 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                             feedbackStatus: entry.feedbackStatus || 'pending',
                             completedAt: entry.completedAt,
                             feedbackContent: entry.feedbackContent,
+                            feedbackResponse: entry.feedbackResponse,
                             userId: user.id,
                             createdAt: entry.createdAt,
                             updatedAt: entry.updatedAt,
@@ -203,6 +204,19 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                             <div className="max-w-3xl mx-auto space-y-6 bg-slate-50 p-6 rounded-xl border border-slate-200">
                                 {isApproved ? (
                                     <div className="text-center space-y-4 py-4">
+                                        {currentProgress?.feedbackResponse && (
+                                            <div className="bg-blue-50 border border-blue-100 p-6 rounded-lg text-left mb-6 mx-auto w-full">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <div className="bg-blue-100 p-1.5 rounded-full">
+                                                        <MessageSquare className="w-4 h-4 text-blue-600" />
+                                                    </div>
+                                                    <span className="font-bold text-blue-800 text-sm">フィードバック（返信）</span>
+                                                </div>
+                                                <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
+                                                    {currentProgress.feedbackResponse}
+                                                </p>
+                                            </div>
+                                        )}
                                         <div className="flex items-center justify-center gap-2 text-emerald-600 font-bold text-lg">
                                             <CheckCircle className="w-6 h-6" />
                                             <span>提出済み・完了</span>

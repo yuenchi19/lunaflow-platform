@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
                 status: true,
                 feedbackContent: true,
                 feedbackStatus: true,
+                feedbackResponse: true,
                 completedAt: true
             }
         });
@@ -90,6 +91,21 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
+        // Fetch block to check settings
+        const block = await prisma.block.findUnique({
+            where: { id: blockId },
+            select: { feedbackType: true }
+        });
+
+        let feedbackResponse = undefined;
+        let feedbackStatus = feedbackContent ? 'pending' : undefined;
+
+        if (block?.feedbackType === 'ai' && feedbackContent) {
+            // Mock AI Response
+            feedbackResponse = "提出ありがとうございます！内容を確認いたしました。\n素晴らしい気づきですね。この調子で学習を続けましょう！（AI自動返信）";
+            feedbackStatus = 'completed';
+        }
+
         const result = await prisma.userProgress.upsert({
             where: {
                 userId_blockId: {
@@ -101,7 +117,8 @@ export async function POST(req: NextRequest) {
                 status,
                 completedAt: status === 'completed' ? new Date() : undefined,
                 feedbackContent: feedbackContent || undefined,
-                feedbackStatus: feedbackContent ? 'pending' : undefined
+                feedbackResponse: feedbackResponse,
+                feedbackStatus: feedbackStatus
             },
             create: {
                 userId: user.id,
@@ -109,7 +126,8 @@ export async function POST(req: NextRequest) {
                 status,
                 completedAt: status === 'completed' ? new Date() : undefined,
                 feedbackContent: feedbackContent || undefined,
-                feedbackStatus: feedbackContent ? 'pending' : undefined
+                feedbackResponse: feedbackResponse,
+                feedbackStatus: feedbackStatus
             }
         });
 

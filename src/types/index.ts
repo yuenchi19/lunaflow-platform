@@ -201,6 +201,7 @@ export interface ProgressDetail {
     status: 'completed' | 'viewed' | 'not_started';
     feedbackStatus?: 'pending' | 'completed';
     feedbackContent?: string;
+    feedbackResponse?: string;
     feedbackAt?: string; // scheduled or actual feedback time
     createdAt?: string;
     updatedAt?: string;
