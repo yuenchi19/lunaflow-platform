@@ -143,15 +143,18 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                                     const catBlocks = cat.blocks || [];
                                     const isCatCompleted = catBlocks.length > 0 && catBlocks.every((b: any) => completedBlockIds.includes(b.id));
 
-                                    // Category Locking Logic
-                                    // Locked if previous category exists (idx > 0) AND previous category is NOT full completed
-                                    const prevCat = idx > 0 ? course.categories[idx - 1] : null;
-                                    const prevCatBlocks = prevCat ? (prevCat.blocks || []) : [];
-                                    const isPrevCatCompleted = prevCatBlocks.length > 0 && prevCatBlocks.every((b: any) => completedBlockIds.includes(b.id));
+                                    // Category Locking Logic (Global Sequential)
+                                    // Find the index of the first incomplete category
+                                    const firstIncompleteIndex = course.categories.findIndex((c: any) => {
+                                        const cBlocks = c.blocks || [];
+                                        if (cBlocks.length === 0) return false; // Empty categories are "completed" for flow purposes
+                                        return !cBlocks.every((b: any) => completedBlockIds.includes(b.id));
+                                    });
 
-                                    // If idx=0 (first cat), isLocked=false. 
-                                    // If idx>0, isLocked = !isPrevCatCompleted
-                                    const isLocked = idx > 0 && !isPrevCatCompleted && prevCatBlocks.length > 0;
+                                    // If everything is complete (index -1), nothing is locked.
+                                    // Otherwise, any category AFTER the first incomplete one is locked.
+                                    // Also, strict sequential: current one is unlocked, next ones are locked.
+                                    const isLocked = firstIncompleteIndex !== -1 && idx > firstIncompleteIndex;
 
                                     if (isLocked) {
                                         return (
