@@ -81,93 +81,14 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
     const [assignmentFormats, setAssignmentFormats] = useState<string[]>(['text']);
     const [feedbackRequired, setFeedbackRequired] = useState(false);
     const [feedbackType, setFeedbackType] = useState('manual');
+    const [feedbackTitle, setFeedbackTitle] = useState('');
 
     const handleFileSelect = (name: string) => {
         setSelectedFile(name);
         showToast(`${name} を選択しました（モック機能）`, 'info');
     };
 
-    const handleAddSurveyQuestion = () => {
-        setSurveyQuestions([...surveyQuestions, { type: 'text', title: '', options: [''] }]);
-    };
-
-    const handleToggleFormat = (format: string) => {
-        if (assignmentFormats.includes(format)) {
-            setAssignmentFormats(assignmentFormats.filter(f => f !== format));
-        } else {
-            setAssignmentFormats([...assignmentFormats, format]);
-        }
-    };
-
-    const handleDeleteOption = (index: number) => {
-        if (quizOptions.length > 1) {
-            setQuizOptions(quizOptions.filter((_, i) => i !== index));
-        }
-    };
-
-    const handleClearQuiz = () => {
-        setQuizTitle('');
-        setQuizBody('');
-        setQuizExplanation('');
-        setQuizOptions(['']);
-    };
-
-    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-
-    const getPreviewBlock = (): Block => {
-        return {
-            id: 'preview',
-            type: activeType,
-            title: quizTitle || `${activeType} ブロック`,
-            content: activeType === 'survey' ? { questions: surveyQuestions } :
-                activeType === 'video' ? { url: quizBody } :
-                    activeType === 'quiz' ? { body: quizBody, explanation: quizExplanation, options: quizOptions } : undefined
-        };
-    };
-
-    // DnD Sensors
-    const sensors = useSensors(
-        useSensor(PointerSensor),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates,
-        })
-    );
-
-    const handleDragEnd = async (event: DragEndEvent) => {
-        const { active, over } = event;
-        if (active.id !== over?.id) {
-            const oldIndex = blocks.findIndex((item) => item.id === active.id);
-            const newIndex = blocks.findIndex((item) => item.id === over?.id);
-
-            const newItems = arrayMove(blocks, oldIndex, newIndex);
-
-            // Optimistic update
-            setBlocks(newItems);
-
-            // API Sync
-            try {
-                await fetch('/api/admin/blocks', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'reorder',
-                        items: newItems.map((b, i) => ({ id: b.id, order: i + 1 }))
-                    })
-                });
-            } catch (e) {
-                console.error("Reorder failed", e);
-                fetchData(); // Revert on failure
-            }
-        }
-    };
-
-
-    const handlePreview = () => {
-        setIsPreviewOpen(true);
-    };
-
-    const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
-    const { showToast } = useToast();
+    // ...
 
     const handleEditBlock = (block: Block) => {
         setEditingBlockId(block.id);
@@ -194,6 +115,7 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
         // Load Feedback Settings
         setFeedbackRequired(content.feedbackRequired || false);
         setFeedbackType(content.feedbackType || 'manual');
+        setFeedbackTitle(content.feedbackTitle || '');
 
         setIsModalOpen(true);
     };
@@ -208,6 +130,7 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
 
         content.feedbackRequired = feedbackRequired;
         content.feedbackType = feedbackType;
+        content.feedbackTitle = feedbackTitle;
 
         const blockData = {
             categoryId: params.categoryId,
@@ -252,6 +175,7 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
         setAssignmentFormats(['text']);
         setFeedbackRequired(false);
         setFeedbackType('manual');
+        setFeedbackTitle('');
     };
 
     const handleDeleteBlock = async (id: string) => {
@@ -274,18 +198,29 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
     };
 
     // ... (FeedbackSettings and SortableBlockItem remain similar, we can reuse if defined below or inline)
-    const FeedbackSettings = ({ required, setRequired, type, setType }: any) => {
+    const FeedbackSettings = ({ required, setRequired, type, setType, title, setTitle }: any) => {
         return (
             <div style={{ marginTop: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>フィードバック設定</label>
                 <div className={styles.checkboxGroup}>
                     <label className={styles.checkLabel}>
                         <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} />
-                        受講生からの返信を必須にする
+                        受講生からの返信（感想・課題）を必須にする
                     </label>
                 </div>
                 {required && (
                     <div style={{ marginTop: '15px' }}>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>課題のタイトル（受講生に表示）</label>
+                            <input
+                                type="text"
+                                className={styles.modalInput}
+                                placeholder="例: この記事を読んで学んだことを3つ挙げてください"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                            />
+                        </div>
+
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>返信方法</label>
                         <div style={{ display: 'flex', gap: '15px' }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px' }}>
@@ -332,6 +267,8 @@ export default function CategoryBlockEditPage({ params }: { params: { id: string
                 setRequired={setFeedbackRequired}
                 type={feedbackType}
                 setType={setFeedbackType}
+                title={feedbackTitle}
+                setTitle={setFeedbackTitle}
             />
         );
         // ... (Switch case activeType logic)

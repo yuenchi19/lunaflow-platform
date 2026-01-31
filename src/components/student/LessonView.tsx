@@ -15,11 +15,13 @@ interface LessonViewProps {
 export default function LessonView({ courseId, blockId }: LessonViewProps) {
     const [block, setBlock] = useState<Block | null>(null);
     const [category, setCategory] = useState<Category | null>(null);
+    const [parsedContent, setParsedContent] = useState<any>({});
     const [user] = useState<User>(MOCK_USERS[0]);
     const [feedbackContent, setFeedbackContent] = useState("");
     const [currentProgress, setCurrentProgress] = useState<ProgressDetail | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccessToast, setShowSuccessToast] = useState(false);
+    const [nav, setNav] = useState<{ next: string | null, prev: string | null, nextCategoryId?: string | null }>({ next: null, prev: null });
 
     const loadData = async () => {
         let fetchedBlock: Block | null = null;
@@ -34,6 +36,19 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                 setBlock(data.block);
                 setCategory(data.category);
                 setNav({ next: data.nextBlockId, prev: data.prevBlockId, nextCategoryId: data.nextBlockCategoryId });
+
+                // Parse content if it's JSON
+                if (data.block && data.block.content) {
+                    try {
+                        const parsed = typeof data.block.content === 'string'
+                            ? JSON.parse(data.block.content)
+                            : data.block.content;
+                        setParsedContent(parsed);
+                    } catch (e) {
+                        // Fallback if not JSON
+                        setParsedContent({ body: data.block.content });
+                    }
+                }
             }
 
             // Fetch progress
@@ -67,15 +82,27 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
         }
     };
 
-    const [nav, setNav] = useState<{ next: string | null, prev: string | null, nextCategoryId?: string | null }>({ next: null, prev: null });
-
     useEffect(() => {
         loadData();
     }, [blockId, user.id]);
 
-    const handleSubmit = async () => {
-        if (!feedbackContent.trim() || !block) return;
+    const handleNext = () => {
+        // Just navigate if not required to submit feedback or already completed
+        // But we should mark as completed if not already
+        if (!currentProgress || currentProgress.status !== 'completed') {
+            handleSubmit('completed_no_feedback');
+        }
+        // Actually handleSubmit handles navigation? No, handleSubmit just submits.
+        // We need logic to submit then navigate?
+        // Let's make handleSubmit distinct from navigation.
+    };
+
+    const handleSubmit = async (overrideStatus?: string) => {
+        if (!block) return;
         setIsSubmitting(true);
+
+        const status = 'completed';
+        const content = overrideStatus === 'completed_no_feedback' ? 'Completed without feedback' : feedbackContent;
 
         try {
             const res = await fetch('/api/student/progress', {
@@ -83,18 +110,18 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     blockId: block.id,
-                    status: 'completed',
-                    feedbackContent: feedbackContent
+                    status: status,
+                    feedbackContent: content
                 })
             });
 
             if (res.ok) {
-                setTimeout(() => {
-                    setIsSubmitting(false);
-                    setShowSuccessToast(true);
-                    loadData();
-                    setTimeout(() => setShowSuccessToast(false), 3000);
-                }, 800);
+                // Determine where to go
+                if (nav.next) {
+                    window.location.href = `/student/course/${courseId}/learn/${nav.next}`;
+                } else {
+                    window.location.href = `/student/course/${courseId}`;
+                }
             } else {
                 alert("送信に失敗しました。");
                 setIsSubmitting(false);
@@ -109,156 +136,144 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
     if (!block) return <div className="p-10 text-center font-serif italic">Loading lesson...</div>;
 
     const isApproved = currentProgress?.status === 'completed' || currentProgress?.feedbackStatus === 'completed';
-    const isPending = currentProgress?.feedbackStatus === 'pending';
-    const isRejected = false; // We don't have rejection logic in new AI flow yet, assuming always constructive or pending
+    const isPending = currentProgress?.feedbackStatus === 'pending' && currentProgress?.status !== 'completed';
+    const isRejected = false;
+
+    // Logic: If feedbackRequired is FALSE, we show the "Next" button immediately without blocking.
+    // Logic: If feedbackRequired is TRUE, we show the Form and block "Next" until submitted/approved.
+
+    // BUT user says: "If absent, proceed with button".
+    // So if feedbackRequired is false, we just show a "Finished? Go Next" button that marks complete and moves on.
+
+    const isFeedbackRequired = parsedContent.feedbackRequired === true;
+    const feedbackTitle = parsedContent.feedbackTitle || "感想 / 課題を提出しましょう";
 
     return (
         <div className="min-h-screen bg-[#FDFCFB] text-slate-800">
-            {/* Toast Notification (Image 4/5 style) */}
-            {showSuccessToast && (
-                <div className="fixed top-8 right-8 z-50 bg-[#DAF2E9] border border-[#B5E1D1] text-[#2D6A4F] px-6 py-3 rounded-md shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-4">
-                    <CheckCircle className="w-5 h-5" />
-                    <span className="font-bold text-sm">感想を提出しました</span>
-                    <button onClick={() => setShowSuccessToast(false)} className="ml-4 opacity-50 hover:opacity-100">×</button>
-                </div>
-            )}
-
-            {/* Breadcrumb */}
+            {/* Header / Breadcrumb */}
             <div className="bg-white border-b border-slate-100 px-8 py-4 shadow-sm">
                 <div className="max-w-5xl mx-auto flex items-center gap-2 text-sm text-slate-400">
-                    <Link href={`/student/course/${courseId}`} className="hover:text-rose-700 transition-colors">テスト</Link>
+                    <Link href={`/student/course/${courseId}`} className="hover:text-rose-700 transition-colors">コースTOP</Link>
                     <span>/</span>
                     <span className="text-slate-600 font-bold">{category?.title}</span>
                 </div>
             </div>
 
-            <main className="max-w-5xl mx-auto p-8 space-y-8">
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden">
-                    {/* Header */}
-                    <div className="p-10 border-b border-slate-50 flex items-start gap-4">
-                        <div className="bg-blue-500 p-2.5 rounded-full text-white shadow-lg">
-                            <PlayCircle className="w-6 h-6" />
+            <main className="max-w-5xl mx-auto p-4 md:p-8 space-y-8">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden pb-8">
+                    {/* Lesson Header */}
+                    <div className="p-8 md:p-12 border-b border-slate-50">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="bg-blue-600 p-2 rounded-full text-white">
+                                <PlayCircle className="w-5 h-5" />
+                            </div>
+                            <h1 className="text-2xl md:text-3xl font-serif font-bold text-slate-800">{block.title}</h1>
                         </div>
-                        <div className="space-y-2">
-                            <h1 className="text-3xl font-serif font-bold text-slate-800">{block.title}</h1>
-                            <p className="text-slate-500 font-medium">{block.content}</p>
+
+                        {/* Content Renders Here */}
+                        <div className="prose prose-slate max-w-none">
+                            {block.type === 'video' && parsedContent.url && (
+                                <div className="aspect-video bg-slate-900 rounded-lg overflow-hidden shadow-lg mb-8">
+                                    <iframe
+                                        width="100%"
+                                        height="100%"
+                                        src={parsedContent.url}
+                                        title="Video player"
+                                        frameBorder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        allowFullScreen
+                                    ></iframe>
+                                </div>
+                            )}
+
+                            {(parsedContent.body) && (
+                                <div className="text-slate-600 leading-relaxed whitespace-pre-wrap text-lg">
+                                    {parsedContent.body}
+                                </div>
+                            )}
+
+                            {/* If it was a quiz/survey etc, render specific UI here in future */}
                         </div>
                     </div>
 
-                    {/* Feedback Form / Area */}
-                    <div className="p-10 bg-slate-50/30">
-                        {isApproved ? (
-                            <div className="space-y-8">
-                                {block.type === 'video' && (
-                                    <div className="aspect-video bg-slate-900 rounded-lg overflow-hidden shadow-inner flex items-center justify-center">
-                                        <iframe
-                                            width="100%"
-                                            height="100%"
-                                            src={block.videoUrl}
-                                            title="YouTube video player"
-                                            frameBorder="0"
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                            allowFullScreen
-                                        ></iframe>
+                    {/* Action Area */}
+                    <div className="px-8 md:px-12 pt-8">
+                        {/* CASE 1: Feedback Required */}
+                        {isFeedbackRequired && (
+                            <div className="max-w-3xl mx-auto space-y-6 bg-slate-50 p-6 rounded-xl border border-slate-200">
+                                {isApproved ? (
+                                    <div className="text-center space-y-4 py-4">
+                                        <div className="flex items-center justify-center gap-2 text-emerald-600 font-bold text-lg">
+                                            <CheckCircle className="w-6 h-6" />
+                                            <span>提出済み・完了</span>
+                                        </div>
+                                        {/* Next Button */}
+                                        <div className="flex justify-center pt-4">
+                                            {(() => {
+                                                if (nav.next) {
+                                                    const isNextCat = nav.nextCategoryId && nav.nextCategoryId !== block.categoryId;
+                                                    return (
+                                                        <Link
+                                                            href={`/student/course/${courseId}/learn/${nav.next}`}
+                                                            className="bg-[#0047AB] text-white px-8 py-3 rounded-md font-bold hover:bg-[#003580] transition-all flex items-center gap-2"
+                                                        >
+                                                            {isNextCat ? "次のカテゴリへ" : "次のレッスンへ"}
+                                                            <ChevronRight className="w-5 h-5" />
+                                                        </Link>
+                                                    );
+                                                } else {
+                                                    return (
+                                                        <Link
+                                                            href={`/student/course/${courseId}`}
+                                                            className="bg-emerald-600 text-white px-8 py-3 rounded-md font-bold hover:bg-emerald-700 transition-all"
+                                                        >
+                                                            コース完了！一覧へ
+                                                        </Link>
+                                                    );
+                                                }
+                                            })()}
+                                        </div>
                                     </div>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-2 text-slate-800 font-bold">
+                                            <MessageSquare className="w-5 h-5 text-blue-500" />
+                                            <span>{feedbackTitle}</span>
+                                        </div>
+                                        <textarea
+                                            className="w-full h-32 bg-white border border-slate-300 p-4 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                                            placeholder="ここに回答・感想を入力してください..."
+                                            value={feedbackContent}
+                                            onChange={(e) => setFeedbackContent(e.target.value)}
+                                            disabled={isPending}
+                                        />
+                                        <div className="flex justify-center">
+                                            <button
+                                                onClick={() => handleSubmit()}
+                                                disabled={!feedbackContent.trim() || isSubmitting}
+                                                className="bg-rose-600 text-white px-10 py-3 rounded-md font-bold hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md flex items-center gap-2"
+                                            >
+                                                {isSubmitting ? "送信中..." : "提出して次へ"}
+                                                <Send className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </>
                                 )}
-                                <div className="flex flex-col items-center gap-6">
-                                    <div className="flex items-center gap-2 text-emerald-600 font-bold">
-                                        <CheckCircle className="w-6 h-6" />
-                                        <span>このステップは受講完了です！</span>
-                                    </div>
-
-                                    {(() => {
-                                        if (nav.next) {
-                                            const isNextCat = nav.nextCategoryId && nav.nextCategoryId !== block.categoryId;
-                                            return (
-                                                <Link
-                                                    href={`/student/course/${courseId}/learn/${nav.next}`}
-                                                    className="bg-[#0047AB] text-white px-12 py-4 rounded-md font-bold text-lg hover:bg-[#003580] transition-all shadow-xl flex items-center gap-4 group"
-                                                >
-                                                    {isNextCat ? (
-                                                        <>
-                                                            <span>次のカテゴリへ進む</span>
-                                                            <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <span>受講完了して次へ</span>
-                                                            <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                                                        </>
-                                                    )}
-                                                </Link>
-                                            );
-                                        } else {
-                                            return (
-                                                <Link
-                                                    href={`/student/course/${courseId}`}
-                                                    className="bg-emerald-600 text-white px-12 py-4 rounded-md font-bold text-lg hover:bg-emerald-700 transition-all shadow-xl flex items-center gap-2"
-                                                >
-                                                    全コース受講完了！一覧へ戻る
-                                                </Link>
-                                            );
-                                        }
-                                    })()}
-                                </div>
                             </div>
-                        ) : (
-                            <div className="max-w-2xl mx-auto space-y-6">
-                                <div className="flex items-center gap-2 text-slate-800 font-bold mb-4">
-                                    <MessageSquare className="w-5 h-5 text-blue-500" />
-                                    <span>感想 / 課題を提出しましょう</span>
-                                </div>
+                        )}
 
-                                <div className="relative">
-                                    <div className="absolute -top-2.5 left-4 bg-[#FDFCFB] px-2 text-[10px] text-rose-500 font-bold uppercase tracking-widest">
-                                        提出内容
-                                    </div>
-                                    <textarea
-                                        className={`w-full h-40 bg-white border-2 p-6 rounded-lg text-slate-700 focus:outline-none transition-all resize-none shadow-inner ${isRejected ? "border-rose-200 focus:border-rose-400" : "border-rose-100 focus:border-rose-400"}`}
-                                        placeholder="あとからご自身でもレッスンの振り返りができます。思い出すためのヒントとして感想を残しましょう！"
-                                        value={feedbackContent}
-                                        onChange={(e) => setFeedbackContent(e.target.value)}
-                                        disabled={isPending}
-                                    />
-                                    <div className="absolute bottom-4 right-4 text-[10px] text-slate-300 font-bold">
-                                        {feedbackContent.length}
-                                    </div>
-                                </div>
-
-                                {isRejected && (
-                                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-md flex items-start gap-3">
-                                        <RotateCcw className="w-5 h-5 text-rose-600 mt-0.5" />
-                                        <div className="space-y-1">
-                                            <div className="font-bold text-rose-800 text-sm">再提出のお願い</div>
-                                            <p className="text-rose-700 text-xs leading-relaxed">
-                                                {"スタッフからのコメント"}
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {isPending && (
-                                    <div className="bg-blue-50 border border-blue-100 p-4 rounded-md flex items-center gap-3">
-                                        <Clock className="w-5 h-5 text-blue-600" />
-                                        <div className="font-bold text-blue-800 text-sm">
-                                            {block.feedbackType === 'ai' ? "AI講師が確認中です。フィードバックをお待ちください。" : "スタッフが確認中です。承認されるまでお待ちください。"}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {!isPending && (
-                                    <div className="flex flex-col items-center gap-4">
-                                        <p className="text-[10px] text-rose-500 font-bold">感想を入力してください</p>
-                                        <button
-                                            onClick={handleSubmit}
-                                            disabled={!feedbackContent.trim() || isSubmitting}
-                                            className="bg-slate-300 text-slate-500 hover:bg-rose-700 hover:text-white disabled:bg-slate-200 disabled:text-slate-400 px-12 py-3 rounded-md font-bold transition-all shadow-md active:scale-95 flex items-center gap-2"
-                                        >
-                                            {isSubmitting ? "送信中..." : "感想を提出する"}
-                                            <Send className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                )}
+                        {/* CASE 2: Feedback NOT Required - Just Show Next Button */}
+                        {!isFeedbackRequired && (
+                            <div className="flex flex-col items-center justify-center gap-4 py-8">
+                                <p className="text-slate-500 text-sm font-bold">このレッスンの学習は完了です</p>
+                                <button
+                                    onClick={() => handleSubmit('completed_no_feedback')} // This function handles navigation now
+                                    disabled={isSubmitting}
+                                    className="bg-[#0047AB] text-white px-12 py-4 rounded-md font-bold text-lg hover:bg-[#003580] transition-all shadow-xl flex items-center gap-2 hover:scale-105"
+                                >
+                                    {isSubmitting ? "処理中..." : "理解して次へ"}
+                                    <ChevronRight className="w-5 h-5" />
+                                </button>
                             </div>
                         )}
                     </div>
