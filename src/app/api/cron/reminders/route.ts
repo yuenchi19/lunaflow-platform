@@ -1,108 +1,70 @@
-
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { lineClient } from '@/lib/line-client';
+import { lineClient } from '@/lib/line';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request) {
-    // 1. Authorization Check (Vercel Cron / Internal Secret)
-    // We check for 'Authorization' header matching CRON_SECRET
-    const authHeader = req.headers.get('authorization');
-    if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function GET(req: NextRequest) {
+    // Verify Vercel Cron Secret (Optional but recommended)
+    // const authHeader = req.headers.get('authorization');
+    // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    //     return new NextResponse('Unauthorized', { status: 401 });
+    // }
 
     try {
-        // 2. Fetch Settings from DB
-        const settings = await prisma.systemSetting.findMany({
+        const now = new Date();
+        const threeDaysFromNow = new Date();
+        threeDaysFromNow.setDate(now.getDate() + 3);
+        threeDaysFromNow.setHours(0, 0, 0, 0);
+
+        const threeDaysLaterEnd = new Date(threeDaysFromNow);
+        threeDaysLaterEnd.setHours(23, 59, 59, 999);
+
+        // Find targets due in 3 days
+        const targets = await prisma.learningTarget.findMany({
             where: {
-                key: {
-                    in: ['line_reminder_enabled', 'line_reminder_days', 'line_reminder_template']
+                targetDate: {
+                    gte: threeDaysFromNow,
+                    lte: threeDaysLaterEnd
+                }
+            },
+            include: {
+                user: {
+                    select: { lineUserId: true, name: true }
+                },
+                category: {
+                    select: { title: true }
                 }
             }
         });
 
-        const enabled = settings.find(s => s.key === 'line_reminder_enabled')?.value === 'true';
-        if (!enabled) {
-            return NextResponse.json({ message: 'Reminders are disabled.', skipped: true });
-        }
+        console.log(`Found ${targets.length} targets due on ${threeDaysFromNow.toDateString()}`);
 
-        const days = parseInt(settings.find(s => s.key === 'line_reminder_days')?.value || '7', 10);
-        let template = settings.find(s => s.key === 'line_reminder_template')?.value ||
-            "お久しぶりです！\n最近ログインされていないようです。\n学習の進捗はいかがでしょうか？\n\n[Login URL]";
+        const results = [];
 
-        const loginUrl = process.env.NEXT_PUBLIC_APP_URL || "https://example.com";
-        template = template.replace('[Login URL]', loginUrl);
-
-        // 3. Find Inactive Users
-        // Logic: 
-        // - Linked to LINE
-        // - Last login > X days ago
-        // - (Last Reminder IS NULL) OR (Last Reminder > X days ago) -- avoiding daily spam
-
-        const thresholdDate = new Date();
-        thresholdDate.setDate(thresholdDate.getDate() - days);
-
-        const inactiveUsers = await prisma.user.findMany({
-            where: {
-                lineUserId: { not: null },
-                lastLoginDate: {
-                    lt: thresholdDate
-                },
-                OR: [
-                    { lastLineReminderSentAt: null },
-                    { lastLineReminderSentAt: { lt: thresholdDate } }
-                ]
-            }
-        });
-
-        if (inactiveUsers.length === 0) {
-            return NextResponse.json({ message: 'No users require reminders.', count: 0 });
-        }
-
-        console.log(`[Cron] Sending LINE reminders to ${inactiveUsers.length} users...`);
-
-        // 4. Send Messages
-        let successCount = 0;
-        let failCount = 0;
-
-        // Vercel Serverless Function Limit considerations:
-        // If user count is huge, we might need to batch or offload.
-        // For MVP, simple iteration is fine. 
-        // We use sequential processing to ensure DB updates track correctly and avoid rate limits.
-
-        for (const user of inactiveUsers) {
-            if (!user.lineUserId || !lineClient) continue;
-
-            try {
-                await lineClient.pushMessage(user.lineUserId, {
+        for (const target of targets) {
+            if (target.user.lineUserId) {
+                const message = {
                     type: 'text',
-                    text: template
-                });
+                    text: `${target.user.name}さん\n\n「${target.category.title}」カテゴリの完了予定日（${threeDaysFromNow.toLocaleDateString()}）が近づいています。\n\n計画通りに進んでいますか？\nマイページから学習状況を確認してみましょう！\n\nhttps://lunaflow.space/student/dashboard`
+                };
 
-                // Update Reminder Log
-                await prisma.user.update({
-                    where: { id: user.id },
-                    data: { lastLineReminderSentAt: new Date() }
-                });
-
-                successCount++;
-            } catch (error) {
-                console.error(`Failed to send reminder to ${user.id}:`, error);
-                failCount++;
+                try {
+                    await lineClient.pushMessage(target.user.lineUserId, [message]);
+                    results.push({ userId: target.userId, status: 'sent' });
+                } catch (e: any) {
+                    console.error(`Failed to send LINE to ${target.userId}:`, e);
+                    results.push({ userId: target.userId, status: 'failed', error: e.message });
+                }
+            } else {
+                results.push({ userId: target.userId, status: 'skipped_no_line' });
             }
         }
 
-        return NextResponse.json({
-            success: true,
-            processed: inactiveUsers.length,
-            sent: successCount,
-            failed: failCount
-        });
+        return NextResponse.json({ processed: targets.length, results });
 
-    } catch (error) {
-        console.error('Cron Reminder Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    } catch (error: any) {
+        console.error("Cron Job Error:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

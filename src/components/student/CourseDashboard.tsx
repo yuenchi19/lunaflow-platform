@@ -25,6 +25,7 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
     useEffect(() => {
         const fetchCourseData = async () => {
             try {
+                // Fetch Course
                 const res = await fetch(`/api/courses/${courseId}`);
                 if (res.ok) {
                     const data = await res.json();
@@ -33,6 +34,14 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                     const errData = await res.json().catch(() => ({}));
                     setErrorMsg(errData.error || `Error ${res.status}`);
                 }
+
+                // Fetch Targets
+                const targetsRes = await fetch('/api/student/targets');
+                if (targetsRes.ok) {
+                    const targetsData = await targetsRes.json();
+                    setTargetDates(targetsData);
+                }
+
             } catch (e) {
                 console.error("Failed to fetch course", e);
                 setErrorMsg("Communication Error");
@@ -40,8 +49,6 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                 setLoading(false);
             }
         };
-
-        setTargetDates(getTargetDates(user.id));
 
         // Load progress
         if (typeof window !== 'undefined') {
@@ -191,7 +198,22 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                                             <div className="flex items-center gap-8">
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] text-slate-400 uppercase font-bold mb-1">カテゴリ終了目安</span>
-                                                    <span className="text-sm font-serif italic text-slate-500">{idx === 0 ? "なし" : "1 時間"}</span>
+                                                    <span className="text-sm font-serif italic text-slate-500">
+                                                        {(() => {
+                                                            const dateStr = targetDates[cat.id];
+                                                            if (!dateStr) return "未設定";
+                                                            const target = new Date(dateStr);
+                                                            const today = new Date();
+                                                            target.setHours(0, 0, 0, 0);
+                                                            today.setHours(0, 0, 0, 0);
+                                                            const diffTime = target.getTime() - today.getTime();
+                                                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                                                            if (diffDays < 0) return `${Math.abs(diffDays)}日超過`;
+                                                            if (diffDays === 0) return "今日まで";
+                                                            return `あと ${diffDays} 日`;
+                                                        })()}
+                                                    </span>
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] text-slate-400 uppercase font-bold mb-1">あなたの完了予定日</span>
@@ -202,8 +224,17 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                                                             className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 transition-all font-serif"
                                                             value={targetDates[cat.id] || ""}
                                                             onChange={(e) => {
-                                                                saveTargetDate(user.id, cat.id, e.target.value);
-                                                                setTargetDates(prev => ({ ...prev, [cat.id]: e.target.value }));
+                                                                const newDate = e.target.value;
+                                                                setTargetDates(prev => ({ ...prev, [cat.id]: newDate })); // Optimistic update
+
+                                                                fetch('/api/student/targets', {
+                                                                    method: 'POST',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    body: JSON.stringify({
+                                                                        categoryId: cat.id,
+                                                                        targetDate: newDate
+                                                                    })
+                                                                }).catch(err => console.error("Failed to save target", err));
                                                             }}
                                                         />
                                                     </div>

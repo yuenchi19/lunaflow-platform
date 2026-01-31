@@ -44,6 +44,7 @@ model User {
   inventoryAssignments InventoryItem[]
   oneTimeTokens      OneTimeToken[]
   progress           UserProgress[]
+  learningTargets    LearningTarget[]
   
   // Partner Payout Info
   bankName           String?
@@ -91,6 +92,7 @@ model Category {
   published Boolean  @default(true)
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   blocks    Block[]
+  learningTargets LearningTarget[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -307,4 +309,18 @@ model ProductRestockSubscription {
   userId    String?
   email     String   // Can be guest or user
   createdAt DateTime @default(now())
+}
+
+model LearningTarget {
+  id         String   @id @default(cuid())
+  userId     String
+  categoryId String
+  targetDate DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
 }
