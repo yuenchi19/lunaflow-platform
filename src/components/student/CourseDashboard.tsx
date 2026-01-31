@@ -9,68 +9,32 @@ import Link from "next/link";
 
 interface CourseDashboardProps {
     courseId: string;
+    initialCourse: any;
+    initialProgress: any[];
+    initialTargets: Record<string, string>;
 }
 
-
-export default function CourseDashboard({ courseId }: CourseDashboardProps) {
+export default function CourseDashboard({ courseId, initialCourse, initialProgress, initialTargets }: CourseDashboardProps) {
     const [activeTab, setActiveTab] = useState<'course' | 'plan' | 'feedback'>('course');
-    const [course, setCourse] = useState<any | null>(null); // Use any for now or update Course type to include categories
-    const [targetDates, setTargetDates] = useState<Record<string, string>>({});
+    const [course, setCourse] = useState<any | null>(initialCourse);
+    const [targetDates, setTargetDates] = useState<Record<string, string>>(initialTargets);
     const [user] = useState<User>(MOCK_USERS[0]); // Mock student
-    const [allProgress, setAllProgress] = useState<any[]>([]);
-    const [completedBlockIds, setCompletedBlockIds] = useState<string[]>([]);
-    const [loading, setLoading] = useState(true);
+    // Progress State
+    const [allProgress, setAllProgress] = useState<any[]>(initialProgress);
+
+    // Derive completed blocks from initial progress
+    const [completedBlockIds, setCompletedBlockIds] = useState<string[]>(() => {
+        return initialProgress
+            .filter((item: any) => item.status === 'completed')
+            .map((item: any) => item.blockId);
+    });
+
+    const [loading, setLoading] = useState(false); // No longer needed, kept false
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchCourseData = async () => {
-            try {
-                // Fetch Course
-                const res = await fetch(`/api/courses/${courseId}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setCourse(data);
-                } else {
-                    const errData = await res.json().catch(() => ({}));
-                    setErrorMsg(errData.error || `Error ${res.status}`);
-                }
+    // No useEffect fetching needed!
+    // Data is already here via SSR.
 
-                // Fetch Targets
-                const targetsRes = await fetch('/api/student/targets');
-                if (targetsRes.ok) {
-                    const targetsData = await targetsRes.json();
-                    setTargetDates(targetsData);
-                }
-
-            } catch (e) {
-                console.error("Failed to fetch course", e);
-                setErrorMsg("Communication Error");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        // Load progress
-        if (typeof window !== 'undefined') {
-            fetch('/api/student/progress')
-                .then(res => res.json())
-                .then(data => {
-                    if (Array.isArray(data)) {
-                        setAllProgress(data);
-                        const completed = data
-                            .filter((item: any) => item.status === 'completed')
-                            .map((item: any) => item.blockId);
-                        setCompletedBlockIds(completed);
-                    }
-                })
-                .catch(err => console.error("Failed to fetch progress", err));
-        }
-
-        fetchCourseData();
-    }, [courseId, user.id]);
-
-    if (loading) return <div className="p-10 text-center text-slate-500 font-serif italic">Loading course...</div>;
-    if (errorMsg) return <div className="p-10 text-center text-rose-500 font-bold">Error: {errorMsg}</div>;
     if (!course) return <div className="p-10 text-center text-slate-500 font-serif italic">Course not found (Unknown).</div>;
 
     // Check for unread feedback
