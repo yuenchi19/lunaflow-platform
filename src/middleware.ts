@@ -220,8 +220,7 @@ export async function middleware(request: NextRequest) {
     return response
 }
 
-// Middleware Debug
-console.log(`[Middleware] Loaded at ${new Date().toISOString()}`);
+
 
 export const config = {
     matcher: [
