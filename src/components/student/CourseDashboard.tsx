@@ -18,6 +18,9 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
     const [targetDates, setTargetDates] = useState<Record<string, string>>({});
     const [user] = useState<User>(MOCK_USERS[0]); // Mock student
     const [allProgress, setAllProgress] = useState<any[]>([]);
+    const [completedBlockIds, setCompletedBlockIds] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchCourseData = async () => {
