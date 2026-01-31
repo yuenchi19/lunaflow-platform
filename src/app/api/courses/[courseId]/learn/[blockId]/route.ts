@@ -40,13 +40,19 @@ export async function GET(req: Request, { params }: { params: { courseId: string
 
         let nextBlockId = null;
         let prevBlockId = null;
+        let nextBlockCategoryId = null;
 
         if (course && course.categories) {
             const allBlocks = course.categories.flatMap(c => c.blocks.map(b => ({ ...b, categoryId: c.id })));
             const idx = allBlocks.findIndex(b => b.id === blockId);
             if (idx >= 0) {
-                if (idx < allBlocks.length - 1) nextBlockId = allBlocks[idx + 1].id;
-                if (idx > 0) prevBlockId = allBlocks[idx - 1].id;
+                if (idx < allBlocks.length - 1) {
+                    nextBlockId = allBlocks[idx + 1].id;
+                    nextBlockCategoryId = allBlocks[idx + 1].categoryId;
+                }
+                if (idx > 0) {
+                    prevBlockId = allBlocks[idx - 1].id;
+                }
             }
         }
 
@@ -54,6 +60,7 @@ export async function GET(req: Request, { params }: { params: { courseId: string
             block,
             category,
             nextBlockId,
+            nextBlockCategoryId,
             prevBlockId
         });
 

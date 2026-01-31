@@ -33,7 +33,7 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                 fetchedCategory = data.category;
                 setBlock(data.block);
                 setCategory(data.category);
-                setNav({ next: data.nextBlockId, prev: data.prevBlockId });
+                setNav({ next: data.nextBlockId, prev: data.prevBlockId, nextCategoryId: data.nextBlockCategoryId });
             }
 
             // Fetch progress
@@ -67,7 +67,7 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
         }
     };
 
-    const [nav, setNav] = useState<{ next: string | null, prev: string | null }>({ next: null, prev: null });
+    const [nav, setNav] = useState<{ next: string | null, prev: string | null, nextCategoryId?: string | null }>({ next: null, prev: null });
 
     useEffect(() => {
         loadData();
@@ -169,20 +169,11 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                                     </div>
 
                                     {(() => {
-                                        const allBlocks = [...MOCK_BLOCKS].sort((a, b) => {
-                                            const catA = MOCK_CATEGORIES.find(c => c.id === a.categoryId)!;
-                                            const catB = MOCK_CATEGORIES.find(c => c.id === b.categoryId)!;
-                                            if (catA.order !== catB.order) return catA.order - catB.order;
-                                            return a.order - b.order;
-                                        });
-                                        const currentIndex = allBlocks.findIndex(b => b.id === block.id);
-                                        const nextBlock = allBlocks[currentIndex + 1];
-
-                                        if (nextBlock) {
-                                            const isNextCat = nextBlock.categoryId !== block.categoryId;
+                                        if (nav.next) {
+                                            const isNextCat = nav.nextCategoryId && nav.nextCategoryId !== block.categoryId;
                                             return (
                                                 <Link
-                                                    href={`/student/course/${courseId}/learn/${nextBlock.id}`}
+                                                    href={`/student/course/${courseId}/learn/${nav.next}`}
                                                     className="bg-[#0047AB] text-white px-12 py-4 rounded-md font-bold text-lg hover:bg-[#003580] transition-all shadow-xl flex items-center gap-4 group"
                                                 >
                                                     {isNextCat ? (
