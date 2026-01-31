@@ -46,24 +46,7 @@ export default function DebugPage() {
         }
     };
 
-    // ...
 
-    // (Inside return, adding new button)
-    <div className="border-t pt-4">
-        <p className="text-sm text-purple-600 font-bold mb-2">
-            Use this to fix "Role: student" error.
-        </p>
-        <button
-            onClick={() => forceFix('promote_admin')}
-            disabled={loading}
-            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 w-full"
-        >
-            {loading ? "Promoting..." : "👑 GRANT ME ADMIN ROLE"}
-        </button>
-    </div>
-            </div >
-        </div >
-    );
 
     useEffect(() => {
         checkStatus();
