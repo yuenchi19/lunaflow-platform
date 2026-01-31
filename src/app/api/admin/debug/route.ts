@@ -1,12 +1,16 @@
 
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 const prisma = new PrismaClient();
 
 export async function GET() {
     try {
         const dbUrl = process.env.DATABASE_URL || "";
+        // ... (keep existing GET logic if possible, or just replace imports and keep GET same)
+
         const maskedUrl = dbUrl.replace(/:[^:@]+@/, ':****@');
 
         let productCount = "Error";
@@ -45,6 +49,36 @@ export async function POST(req: Request) {
     try {
         const body = await req.json().catch(() => ({}));
         const mode = body.mode || 'product_only';
+
+        if (mode === 'promote_admin') {
+            const cookieStore = cookies();
+            const supabase = createServerClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+                {
+                    cookies: {
+                        getAll() { return cookieStore.getAll() },
+                        setAll(cookiesToSet) { try { cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) } catch { } },
+                    },
+                }
+            );
+
+            const { data: { user }, error } = await supabase.auth.getUser();
+            if (error || !user || !user.email) {
+                return NextResponse.json({ success: false, error: "Not authenticated" });
+            }
+
+            // Update user role
+            try {
+                const updatedUser = await prisma.user.update({
+                    where: { email: user.email },
+                    data: { role: 'admin' }
+                });
+                return NextResponse.json({ success: true, message: `User ${user.email} promoted to ADMIN.`, user: updatedUser });
+            } catch (e: any) {
+                return NextResponse.json({ success: false, error: "Update failed: " + e.message });
+            }
+        }
 
         if (mode === 'test_insert') {
             try {
