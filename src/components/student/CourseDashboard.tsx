@@ -73,11 +73,19 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
     if (errorMsg) return <div className="p-10 text-center text-rose-500 font-bold">Error: {errorMsg}</div>;
     if (!course) return <div className="p-10 text-center text-slate-500 font-serif italic">Course not found (Unknown).</div>;
 
-    // Helper to get blocks from the nested structure
-    const getBlocksForCategory = (catId: string) => {
-        const cat = course.categories?.find((c: any) => c.id === catId);
-        return cat?.blocks || [];
-    };
+    // Check for unread feedback
+    const hasUnreadFeedback = allProgress.some(p => !p.isFeedbackRead && p.feedbackResponse);
+
+    useEffect(() => {
+        if (activeTab === 'feedback' && hasUnreadFeedback) {
+            // Optimistic update
+            setAllProgress(prev => prev.map(p => ({ ...p, isFeedbackRead: true })));
+
+            // API Call
+            fetch('/api/student/progress/read', { method: 'POST' })
+                .catch(err => console.error("Failed to mark read", err));
+        }
+    }, [activeTab, hasUnreadFeedback]);
 
     return (
         <div className="min-h-screen bg-[#FDFCFB] text-slate-800">
@@ -115,6 +123,9 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                             className={`px-8 py-3 text-sm font-bold transition-all relative flex-shrink-0 ${activeTab === 'feedback' ? "text-rose-700" : "text-slate-400 hover:text-slate-600"}`}
                         >
                             感想履歴
+                            {hasUnreadFeedback && (
+                                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+                            )}
                             {activeTab === 'feedback' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-700" />}
                         </button>
                     </div>
@@ -289,7 +300,7 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                             <div className="p-12 bg-white rounded-xl border border-slate-100 shadow-sm text-center space-y-4">
                                 <MessageSquare className="w-12 h-12 text-slate-200 mx-auto" />
                                 <h3 className="text-slate-400 font-serif italic">感想履歴はまだありません</h3>
-                                <p className="text-xs text-slate-300">レッスン受講時に感想を送信すると、ここに記録されます。</p>
+                                <p className="text-xs text-slate-300">レッスンを受講して感想を提出すると、ここに履歴が表示されます。</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 gap-4">
@@ -302,7 +313,14 @@ export default function CourseDashboard({ courseId }: CourseDashboardProps) {
                                     });
 
                                     return (
-                                        <div key={progress.id} className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                                        <div key={progress.id} className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative">
+                                            {/* Unread Badge for specific item if needed, but tab badge is main request */}
+                                            {!progress.isFeedbackRead && progress.feedbackResponse && (
+                                                <div className="absolute top-4 right-4 text-xs font-bold text-rose-600 animate-pulse">
+                                                    NEW!
+                                                </div>
+                                            )}
+
                                             <div className="flex flex-col md:flex-row gap-6">
                                                 <div className="flex-1 space-y-3">
                                                     <div className="flex items-center gap-2 mb-2">

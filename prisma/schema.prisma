@@ -124,6 +124,7 @@ model UserProgress {
   feedbackContent String?  @db.Text
   feedbackResponse String?  @db.Text
   feedbackStatus  String? // 'pending', 'completed'
+  isFeedbackRead  Boolean  @default(true) // New: For tracking unread feedback
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   

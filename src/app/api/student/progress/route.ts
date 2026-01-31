@@ -101,9 +101,8 @@ export async function POST(req: NextRequest) {
         let feedbackStatus = feedbackContent ? 'pending' : undefined;
 
         if (block?.feedbackType === 'ai' && feedbackContent) {
-            // Mock AI Response
-            feedbackResponse = "提出ありがとうございます！内容を確認いたしました。\n素晴らしい気づきですね。この調子で学習を続けましょう！（AI自動返信）";
-            feedbackStatus = 'completed';
+            // Scheduled for delayed processing (Cron)
+            feedbackStatus = 'pending';
         }
 
         const result = await prisma.userProgress.upsert({
