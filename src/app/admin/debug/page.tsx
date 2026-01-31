@@ -20,11 +20,12 @@ export default function DebugPage() {
         }
     };
 
-    const forceFix = async (mode: 'product_only' | 'full_repair' | 'test_insert') => {
+    const forceFix = async (mode: 'product_only' | 'full_repair' | 'test_insert' | 'promote_admin') => {
         let msg = "Are you sure?";
         if (mode === 'full_repair') msg = "DANGER: Attempt to create ALL missing tables via Raw SQL?";
         if (mode === 'test_insert') msg = "Attempt to INSERT dummy data (Course/Inventory) to verify DB write access?";
         if (mode === 'product_only') msg = "Attempt to create Product table?";
+        if (mode === 'promote_admin') msg = "Grant yourself ADMIN role? (This will refresh your session)";
 
         if (!confirm(msg)) return;
 
@@ -44,6 +45,25 @@ export default function DebugPage() {
             setLoading(false);
         }
     };
+
+    // ...
+
+    // (Inside return, adding new button)
+    <div className="border-t pt-4">
+        <p className="text-sm text-purple-600 font-bold mb-2">
+            Use this to fix "Role: student" error.
+        </p>
+        <button
+            onClick={() => forceFix('promote_admin')}
+            disabled={loading}
+            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 w-full"
+        >
+            {loading ? "Promoting..." : "👑 GRANT ME ADMIN ROLE"}
+        </button>
+    </div>
+            </div >
+        </div >
+    );
 
     useEffect(() => {
         checkStatus();
@@ -116,7 +136,21 @@ export default function DebugPage() {
                         {loading ? "Testing..." : "🧪 TEST TABLE WRITES (Insert Dummy Data)"}
                     </button>
                 </div>
+
+                <div className="border-t pt-4 pb-8">
+                    <p className="text-sm text-purple-600 font-bold mb-2">
+                        Fix "Access Denied" by upgrading your role.
+                    </p>
+                    <button
+                        onClick={() => forceFix('promote_admin')}
+                        disabled={loading}
+                        className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 w-full font-bold text-lg"
+                    >
+                        {loading ? "Promoting..." : "👑 GRANT ME ADMIN ROLE"}
+                    </button>
+                </div>
             </div>
+
         </div>
     );
 }
