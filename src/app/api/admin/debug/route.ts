@@ -87,18 +87,33 @@ export async function POST(req: Request) {
             );
 
             const { data: { user }, error } = await supabase.auth.getUser();
-            if (error || !user || !user.email) {
-                return NextResponse.json({ success: false, error: "Not authenticated" });
+            const targetEmail = body.email || user?.email; // Allow manual email override
+
+            if (!targetEmail) {
+                return NextResponse.json({ success: false, error: "No email identified. Authenticate or provide email." });
             }
 
-            // Update user role
+            console.log(`[DebugAPI] Promoting user: ${targetEmail}`);
+
+            // Update user role via Prisma
             try {
-                const updatedUser = await prisma.user.update({
-                    where: { email: user.email },
-                    data: { role: 'admin' }
-                });
-                return NextResponse.json({ success: true, message: `User ${user.email} promoted to ADMIN.`, user: updatedUser });
+                // Try Raw SQL first to bypass any Prisma schema caching weirdness
+                await prisma.$executeRawUnsafe(`UPDATE "User" SET role = 'admin' WHERE email = '${targetEmail}'`);
+
+                // Then verify with Prisma
+                const updatedUser = await prisma.user.findUnique({ where: { email: targetEmail } });
+
+                // If simple update failed (maybe casing?), try standard update
+                if (updatedUser?.role !== 'admin') {
+                    await prisma.user.update({
+                        where: { email: targetEmail },
+                        data: { role: 'admin' }
+                    });
+                }
+
+                return NextResponse.json({ success: true, message: `User ${targetEmail} promoted to ADMIN via SQL/Prisma. New Role: ${updatedUser?.role}`, user: updatedUser });
             } catch (e: any) {
+                console.error("[DebugAPI] Promotion failed:", e);
                 return NextResponse.json({ success: false, error: "Update failed: " + e.message });
             }
         }

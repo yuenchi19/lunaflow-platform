@@ -22,10 +22,24 @@ export default function DebugPage() {
 
     const forceFix = async (mode: 'product_only' | 'full_repair' | 'test_insert' | 'promote_admin') => {
         let msg = "Are you sure?";
+        let bodyPayload: any = { mode };
+
         if (mode === 'full_repair') msg = "DANGER: Attempt to create ALL missing tables via Raw SQL?";
         if (mode === 'test_insert') msg = "Attempt to INSERT dummy data (Course/Inventory) to verify DB write access?";
         if (mode === 'product_only') msg = "Attempt to create Product table?";
-        if (mode === 'promote_admin') msg = "Grant yourself ADMIN role? (This will refresh your session)";
+        if (mode === 'promote_admin') {
+            msg = "Grant yourself ADMIN role?";
+            // Extract email from status if available to confirm
+            const currentEmail = status?.currentUser?.split(',')[0]?.split(': ')[1]?.trim();
+            if (currentEmail) {
+                msg += `\nTarget Email: ${currentEmail}`;
+                bodyPayload.email = currentEmail;
+            } else {
+                const manualEmail = prompt("Could not auto-detect email. Please enter your email address:");
+                if (!manualEmail) return;
+                bodyPayload.email = manualEmail;
+            }
+        }
 
         if (!confirm(msg)) return;
 
@@ -34,7 +48,7 @@ export default function DebugPage() {
             const res = await fetch("/api/admin/debug", {
                 method: "POST",
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mode })
+                body: JSON.stringify(bodyPayload)
             });
             const data = await res.json();
             alert(JSON.stringify(data, null, 2));
