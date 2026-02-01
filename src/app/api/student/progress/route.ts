@@ -101,8 +101,9 @@ export async function POST(req: NextRequest) {
         let feedbackStatus = feedbackContent ? 'pending' : undefined;
 
         if (block?.feedbackType === 'ai' && feedbackContent) {
-            // Scheduled for delayed processing (Cron)
-            feedbackStatus = 'pending';
+            // Immediate AI Response (No Cron)
+            feedbackResponse = "提出ありがとうございます！内容を確認いたしました。\n素晴らしい気づきですね。この調子で学習を続けましょう！";
+            feedbackStatus = 'completed';
         }
 
         const result = await prisma.userProgress.upsert({
@@ -117,7 +118,8 @@ export async function POST(req: NextRequest) {
                 completedAt: status === 'completed' ? new Date() : undefined,
                 feedbackContent: feedbackContent || undefined,
                 feedbackResponse: feedbackResponse,
-                feedbackStatus: feedbackStatus
+                feedbackStatus: feedbackStatus,
+                isFeedbackRead: feedbackResponse ? false : undefined
             },
             create: {
                 userId: user.id,
@@ -126,7 +128,8 @@ export async function POST(req: NextRequest) {
                 completedAt: status === 'completed' ? new Date() : undefined,
                 feedbackContent: feedbackContent || undefined,
                 feedbackResponse: feedbackResponse,
-                feedbackStatus: feedbackStatus
+                feedbackStatus: feedbackStatus,
+                isFeedbackRead: feedbackResponse ? false : undefined
             }
         });
 
