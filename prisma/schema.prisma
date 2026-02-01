@@ -46,6 +46,7 @@ model User {
   progress           UserProgress[]
   learningTargets    LearningTarget[]
   messages           Message[]
+  payoutRequests     PayoutRequest[]
   
   // Partner Payout Info
   bankName           String?
@@ -349,4 +350,15 @@ model Inquiry {
   status    String   @default("open")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model PayoutRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Int
+  status    String   @default("pending")
+  requestedAt DateTime @default(now())
+  processedAt DateTime?
+  note      String?
 }

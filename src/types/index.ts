@@ -179,7 +179,8 @@ export interface RewardTransaction {
 export interface AffiliateEarnings {
     directReferrals: number;
     indirectReferrals: number;
-    monthlyEarnings: number;
+    monthlyEarnings: number; // This month's earnings
+    totalBalance?: number; // Current claimable balance
 }
 
 export interface Payment {

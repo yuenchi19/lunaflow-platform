@@ -54,9 +54,12 @@ export default function PartnerDashboardPage() {
                         setIsComplianceModalOpen(true);
                     }
 
-                    // Fetch Earnings
-                    const e = getAffiliateEarnings(profile.id);
-                    setEarnings(e);
+                    // Fetch Earnings from API
+                    const earningsRes = await fetch('/api/affiliate/earnings');
+                    if (earningsRes.ok) {
+                        const e = await earningsRes.json();
+                        setEarnings(e);
+                    }
                 } else {
                     const errData = await res.json().catch(() => ({}));
                     console.error("Profile fetch error:", res.status, errData);
@@ -84,6 +87,37 @@ export default function PartnerDashboardPage() {
         const url = `${window.location.origin}?mode=register&ref=${user.affiliateCode}`;
         navigator.clipboard.writeText(url);
         alert("紹介リンクをコピーしました！");
+    };
+
+    const handlePayoutRequest = async () => {
+        // Simple "Request All" or Prompt
+        // If balance < 1000, block
+        // earnings.totalBalance comes from API (added to state type?)
+        // Need to update state type `AffiliateEarnings` in `types.ts` or extend locally.
+        const balance = (earnings as any).totalBalance || 0;
+        if (balance < 1000) {
+            alert("最低出金額（¥1,000）に達していません。");
+            return;
+        }
+
+        if (!confirm(`現在の報酬残高 ¥${balance.toLocaleString()} の出金申請を行いますか？`)) return;
+
+        try {
+            const res = await fetch('/api/affiliate/payout/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: balance })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert("出金申請を受け付けました。");
+                window.location.reload();
+            } else {
+                alert(`エラー: ${data.error}`);
+            }
+        } catch (e) {
+            alert("通信エラーが発生しました");
+        }
     };
 
     if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-[#FDFCFB]">Loading...</div>;
@@ -169,9 +203,16 @@ export default function PartnerDashboardPage() {
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
                         <div className="text-xs font-bold text-slate-400 uppercase tracking-wilder mb-2 flex items-center gap-2">
                             <TrendingUp className="w-4 h-4" />
-                            今月の見込み収益
+                            現在の未出金残高
                         </div>
-                        <div className="text-3xl font-black text-emerald-600">¥{earnings.monthlyEarnings.toLocaleString()}</div>
+                        <div className="text-3xl font-black text-emerald-600">¥{((earnings as any).totalBalance || 0).toLocaleString()}</div>
+                        <button
+                            onClick={handlePayoutRequest}
+                            disabled={((earnings as any).totalBalance || 0) < 1000}
+                            className="mt-2 text-xs bg-emerald-600 text-white px-3 py-1 rounded-full font-bold hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 transition-colors w-full"
+                        >
+                            出金申請する
+                        </button>
                     </div>
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
                         <div className="text-xs font-bold text-slate-400 uppercase tracking-wilder mb-2 flex items-center gap-2">
