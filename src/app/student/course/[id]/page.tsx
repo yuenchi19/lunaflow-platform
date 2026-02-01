@@ -1,6 +1,7 @@
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import CourseDashboard from "@/components/student/CourseDashboard";
 import { prisma } from "@/lib/prisma";
 import { MOCK_USERS } from "@/lib/data";
@@ -9,7 +10,6 @@ import { MOCK_USERS } from "@/lib/data";
 export const revalidate = 0;
 
 export default async function StudentCoursePage({ params }: { params: { id: string } }) {
-    // 1. Resolve User (Real Auth -> Mock Fallback)
     const cookieStore = cookies();
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,60 +22,61 @@ export default async function StudentCoursePage({ params }: { params: { id: stri
                 setAll(cookiesToSet) {
                     try {
                         cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
-                    } catch {
-                        // The `setAll` method was called from a Server Component.
-                        // This can be ignored if you have middleware refreshing tokens.
-                    }
+                    } catch { }
                 },
             },
         }
     );
 
     let userId: string | null = null;
+    let userRole = 'student';
 
-    // Try Real Auth
-    try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser?.email) {
-            const dbUser = await prisma.user.findUnique({
-                where: { email: authUser.email },
-                select: { id: true }
-            });
-            if (dbUser) {
-                userId = dbUser.id;
-            }
-        }
-    } catch (e) {
-        console.warn("Auth check failed:", e);
+    // 1. Strict Auth Check
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+
+    if (!authUser) {
+        // GUEST DETECTED -> BLOCK ACCESS
+        // Try fallback to Local Mock (Dev Environment Only)
+        // If in Production, this is a SECURITY RISK if we default to mock.
+        // We will ONLY allow mock fallback if we clearly are in a dev scenario or if the user is clearly a dev.
+        // But for safety:
+        return redirect('/login?error=login_required');
     }
 
-    // Fallback to Mock if no real user found (Dev/Emergency)
-    if (!userId) {
-        const mockEmail = MOCK_USERS[0].email;
-        const mockUser = await prisma.user.findUnique({
-            where: { email: mockEmail },
-            select: { id: true }
+    // 2. Resolve Database User
+    if (authUser?.email) {
+        const dbUser = await prisma.user.findUnique({
+            where: { email: authUser.email },
+            select: { id: true, role: true }
         });
-        if (mockUser) {
-            userId = mockUser.id;
+
+        if (dbUser) {
+            userId = dbUser.id;
+            userRole = dbUser.role;
         }
     }
 
-    // Checking if we still don't have a user
+    // 3. Handle "User Missing in DB" (Edge Case)
     if (!userId) {
-        // If we really can't find a user, we should probably redirect to login or show a generic preview.
-        // For now, let's treat it as "Preview Mode" with no progress.
-        // We do trigger a "User not found" error if strict, but let's be lenient for preview.
-        // We can just pass a dummy ID that won't match any progress.
-        console.warn("User not found in DB. Entering Preview Mode.");
-        userId = "preview-guest";
+        // Only allow Preview if Admin/Staff
+        const metadataRole = authUser.user_metadata?.role || 'student';
+        if (metadataRole === 'admin' || metadataRole === 'staff') {
+            console.warn(`Admin/Staff user ${authUser.email} missing in DB. Allowing Preview Mode.`);
+            userId = "preview-admin";
+        } else {
+            // Student missing in DB -> Block
+            console.error(`Student user ${authUser.email} missing in DB. Blocking access.`);
+            return <div className="p-10 text-center text-rose-600">
+                Account setup incomplete. Please contact support.<br />
+                (User ID missing)
+            </div>;
+        }
     }
 
+    // ... Fetch Data using userId ...
     const courseId = params.id;
 
-    // 2. Fetch Data in Parallel
     const [courseData, progressData, targetsData] = await Promise.all([
-        // Course
         prisma.course.findUnique({
             where: { id: courseId },
             include: {
@@ -85,18 +86,12 @@ export default async function StudentCoursePage({ params }: { params: { id: stri
                 }
             }
         }),
-        // Progress (Empty if guest)
         prisma.userProgress.findMany({
             where: {
                 userId: userId,
-                block: {
-                    category: {
-                        courseId: courseId
-                    }
-                }
+                block: { category: { courseId: courseId } }
             }
         }),
-        // Targets (Empty if guest)
         prisma.learningTarget.findMany({
             where: { userId: userId }
         })
@@ -106,9 +101,7 @@ export default async function StudentCoursePage({ params }: { params: { id: stri
         return <div className="p-10 text-center">Course not found</div>;
     }
 
-    // 3. Serialize Data
     const serializedCourse = JSON.parse(JSON.stringify(courseData));
-
     const serializedProgress = progressData.map(p => ({
         ...p,
         createdAt: p.createdAt.toISOString(),
