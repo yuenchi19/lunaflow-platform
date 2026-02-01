@@ -98,6 +98,10 @@ export async function POST(req: Request) {
                                 await tx.ledgerEntry.create({
                                     data: {
                                         userId: userId!,
+                                        brand: dbProduct.brand || 'LunaFlow',
+                                        purchaseDate: new Date(),
+                                        purchasePrice: 0,
+                                        images: dbProduct.image ? [dbProduct.image] : [],
                                         sellDate: new Date(),
                                         sellPrice: (item.amount_total || 0),
                                         profit: (item.amount_total || 0),
