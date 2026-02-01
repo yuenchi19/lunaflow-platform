@@ -45,6 +45,7 @@ model User {
   oneTimeTokens      OneTimeToken[]
   progress           UserProgress[]
   learningTargets    LearningTarget[]
+  messages           Message[]
   
   // Partner Payout Info
   bankName           String?
@@ -324,4 +325,17 @@ model LearningTarget {
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@unique([userId, categoryId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  channelId String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String   @db.Text
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([channelId])
 }

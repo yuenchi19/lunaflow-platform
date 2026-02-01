@@ -127,7 +127,9 @@ export interface Message {
     channelId: string;
     userId: string;
     content: string;
+    imageUrl?: string;
     createdAt: string;
+    user?: User;
 }
 
 export interface Course {
