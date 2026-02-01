@@ -41,6 +41,12 @@ export async function POST(req: Request) {
             });
         }
 
+        // Fetch User Referrer
+        const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { referredBy: true }
+        });
+
         // Create Checkout Session
         const session = await stripe.checkout.sessions.create({
             customer_email: user.email,
@@ -48,9 +54,9 @@ export async function POST(req: Request) {
             line_items: lineItems,
             mode: 'payment',
             metadata: {
-                type: 'cart_purchase',
-                item_count: items.length,
-                // We can't store complex arrays easily, so maybe store summary or just rely on lineItems
+                type: 'product_purchase',
+                referral: dbUser?.referredBy || '',
+                item_count: items.length
             },
             success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://lunaflow.space'}/student/store/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://lunaflow.space'}/student/store/cart`,
