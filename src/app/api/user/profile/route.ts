@@ -35,28 +35,31 @@ export async function PUT(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { name, avatarUrl, zipCode, address, communityNickname, bankName, bankBranch, bankAccountType, bankAccountNumber, bankAccountHolder, invoiceRegistrationNumber, kobutsushoNumber } = body;
+        const { name, avatarUrl, zipCode, address, communityNickname, bankName, bankBranch, bankAccountType, bankAccountNumber, bankAccountHolder, invoiceRegistrationNumber, kobutsushoNumber, agreedToCompliance, communityRulesAgreed, communityIntroRead } = body;
 
-        // Note: Email update is more complex due to Auth provider sync, so we might skip it here or just update the DB record if it's display only.
-        // For now, we update the DB fields.
+        // Construct update data dynamically to ensure we only update fields that are present
+        const updateData: any = {};
+        if (name !== undefined) updateData.name = name;
+        if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+        if (zipCode !== undefined) updateData.zipCode = zipCode;
+        if (address !== undefined) updateData.address = address;
+        if (communityNickname !== undefined) updateData.communityNickname = communityNickname;
+        if (bankName !== undefined) updateData.bankName = bankName;
+        if (bankBranch !== undefined) updateData.bankBranch = bankBranch;
+        if (bankAccountType !== undefined) updateData.bankAccountType = bankAccountType;
+        if (bankAccountNumber !== undefined) updateData.bankAccountNumber = bankAccountNumber;
+        if (bankAccountHolder !== undefined) updateData.bankAccountHolder = bankAccountHolder;
+        if (invoiceRegistrationNumber !== undefined) updateData.invoiceRegistrationNumber = invoiceRegistrationNumber;
+        if (kobutsushoNumber !== undefined) updateData.kobutsushoNumber = kobutsushoNumber;
+        if (agreedToCompliance !== undefined) updateData.agreedToCompliance = agreedToCompliance;
+        if (communityRulesAgreed !== undefined) updateData.communityRulesAgreed = communityRulesAgreed;
+        if (communityIntroRead !== undefined) updateData.communityIntroRead = communityIntroRead;
+
+        console.log('Updating Profile for:', authUser.id, updateData);
 
         const updatedUser = await prisma.user.update({
-            where: { id: authUser.id }, // Assuming ID matches Auth ID for now, or we lookup by Email
-            data: {
-                name,
-                avatarUrl,
-                zipCode,
-                address,
-                communityNickname,
-                bankName,
-                bankBranch,
-                bankAccountType,
-                bankAccountNumber,
-                bankAccountHolder,
-                invoiceRegistrationNumber,
-                kobutsushoNumber
-                // Not updating email here to avoid desync with Auth
-            }
+            where: { id: authUser.id },
+            data: updateData
         });
 
         return NextResponse.json(updatedUser);

@@ -7,9 +7,10 @@ import AvatarUpload from "./AvatarUpload";
 
 interface PayoutSettingsProps {
     user: User;
+    onUpdate?: () => void;
 }
 
-export default function PayoutSettings({ user }: PayoutSettingsProps) {
+export default function PayoutSettings({ user, onUpdate }: PayoutSettingsProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -40,6 +41,7 @@ export default function PayoutSettings({ user }: PayoutSettingsProps) {
             if (!res.ok) throw new Error('保存に失敗しました');
 
             setMessage({ type: 'success', text: '口座情報を保存しました' });
+            if (onUpdate) onUpdate(); // Call callback
         } catch (error) {
             setMessage({ type: 'error', text: 'エラーが発生しました' });
         } finally {

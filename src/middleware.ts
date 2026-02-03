@@ -171,7 +171,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Role Based Access Control (RBAC)
-    if (path.startsWith('/admin') && user) {
+    if (path.startsWith('/admin') && user && path !== '/admin/login' && path !== '/admin/update-password') {
         const userRole = user.user_metadata?.role;
 
         // Strict Check: Unauthorized users (student/partner) -> Top Page

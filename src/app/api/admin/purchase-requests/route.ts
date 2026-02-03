@@ -40,7 +40,8 @@ export async function GET(req: NextRequest) {
     // Data Fetch
     const requests = await prisma.purchaseRequest.findMany({
         include: {
-            user: true
+            user: true,
+            inventoryItems: true
         },
         orderBy: {
             createdAt: 'desc'

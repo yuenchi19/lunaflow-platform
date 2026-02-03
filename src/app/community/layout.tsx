@@ -9,6 +9,7 @@ import { CommunityProvider, useCommunity } from "@/components/community/Communit
 import { User } from "@/types";
 import { Menu } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
+import { createClient } from "@/lib/supabase/client";
 
 export default function CommunityLayout({ children }: { children: React.ReactNode }) {
     // Determine current channel from URL path
@@ -18,12 +19,23 @@ export default function CommunityLayout({ children }: { children: React.ReactNod
     // Simulate current user
     const [user, setUser] = useState<User>(MOCK_USERS[0]); // Default to Alice (Free)
 
+    const supabase = createClient();
+
     useEffect(() => {
-        const storedUserId = localStorage.getItem("currentUserId");
-        if (storedUserId) {
-            const found = MOCK_USERS.find(u => u.id === storedUserId);
-            if (found) setUser(found);
-        }
+        const fetchUser = async () => {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (authUser) {
+                const res = await fetch('/api/user/profile');
+                if (res.ok) {
+                    const profile = await res.json();
+                    setUser(profile);
+                }
+            } else {
+                // Handle unauth or just keep mock/redirect? 
+                // Middleware handles redirect.
+            }
+        };
+        fetchUser();
     }, []);
 
     const channels = getChannels();

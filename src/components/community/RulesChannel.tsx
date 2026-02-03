@@ -11,14 +11,34 @@ interface RulesChannelProps {
 export function RulesChannel({ userId, onAgree }: RulesChannelProps) {
     const [hasAgreed, setHasAgreed] = useState(false);
 
+    const [content, setContent] = useState<string | null>(null);
+
     useEffect(() => {
         setHasAgreed(hasAgreedToRules(userId));
+        // Fetch Content
+        fetch('/api/system/content?keys=community_rules_content')
+            .then(res => res.json())
+            .then(data => {
+                if (data.community_rules_content) setContent(data.community_rules_content);
+            })
+            .catch(err => console.error(err));
     }, [userId]);
 
-    const handleAgree = () => {
-        setAgreedToRules(userId);
-        setHasAgreed(true);
-        onAgree();
+    const handleAgree = async () => {
+        try {
+            await fetch('/api/user/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ communityRulesAgreed: true })
+            });
+            // Fallback to local storage for immediate UI update if API is slow or offline (though likely online)
+            setAgreedToRules(userId);
+            setHasAgreed(true);
+            onAgree();
+        } catch (e) {
+            console.error(e);
+            alert("エラーが発生しました");
+        }
     };
 
     return (
@@ -35,37 +55,45 @@ export function RulesChannel({ userId, onAgree }: RulesChannelProps) {
                 </div>
 
                 <div className="p-8 text-gray-300 space-y-6">
-                    <div className="bg-[#1e1f22] p-6 rounded-lg border border-[#3f4147]">
-                        <h3 className="text-xl font-bold text-blue-400 mb-4 flex items-center gap-2">
-                            📘 ルール
-                        </h3>
-                        <div className="space-y-4 text-lg">
-                            <div className="flex items-start gap-3">
-                                <span className="text-2xl">1️⃣</span>
-                                <span className="pt-1">仲間へのリスペクトを忘れないこと</span>
-                            </div>
-                            <div className="flex items-start gap-3">
-                                <span className="text-2xl">2️⃣</span>
-                                <span className="pt-1">スパム・勧誘・外部リンクは禁止</span>
-                            </div>
-                            <div className="flex items-start gap-3">
-                                <span className="text-2xl">3️⃣</span>
-                                <span className="pt-1">売れた人を祝おう！</span>
-                            </div>
+                    {content ? (
+                        <div className="prose prose-invert max-w-none whitespace-pre-wrap">
+                            {content}
                         </div>
-                    </div>
+                    ) : (
+                        <>
+                            <div className="bg-[#1e1f22] p-6 rounded-lg border border-[#3f4147]">
+                                <h3 className="text-xl font-bold text-blue-400 mb-4 flex items-center gap-2">
+                                    📘 ルール
+                                </h3>
+                                <div className="space-y-4 text-lg">
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-2xl">1️⃣</span>
+                                        <span className="pt-1">仲間へのリスペクトを忘れないこと</span>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-2xl">2️⃣</span>
+                                        <span className="pt-1">スパム・勧誘・外部リンクは禁止</span>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-2xl">3️⃣</span>
+                                        <span className="pt-1">売れた人を祝おう！</span>
+                                    </div>
+                                </div>
+                            </div>
 
-                    <div className="text-center bg-[#35373c] p-4 rounded-lg">
-                        <p className="text-yellow-400 font-medium mb-1">
-                            確認してお約束できる人は、
-                        </p>
-                        <p className="text-white font-bold text-lg mb-2">
-                            【約束します】を押してください。
-                        </p>
-                        <p className="text-gray-400 text-sm">
-                            次の【はじめに②】が解放されます
-                        </p>
-                    </div>
+                            <div className="text-center bg-[#35373c] p-4 rounded-lg">
+                                <p className="text-yellow-400 font-medium mb-1">
+                                    確認してお約束できる人は、
+                                </p>
+                                <p className="text-white font-bold text-lg mb-2">
+                                    【約束します】を押してください。
+                                </p>
+                                <p className="text-gray-400 text-sm">
+                                    次の【はじめに②】が解放されます
+                                </p>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 <div className="p-6 border-t border-[#1e1f22] bg-[#2b2d31] flex justify-center">

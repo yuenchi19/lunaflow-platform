@@ -3,14 +3,24 @@
 import { useEffect, useState } from "react";
 import { getChannels, MOCK_USERS } from "@/lib/data";
 import { Channel, Plan } from "@/types";
-import { Settings, Shield, UserCheck, Save, CheckCircle } from "lucide-react";
+import { Settings, Shield, UserCheck, Save, CheckCircle, FileText } from "lucide-react";
 
 export default function CommunitySettingsPage() {
     const [channels, setChannels] = useState<Channel[]>([]);
     const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
+    const [rulesContent, setRulesContent] = useState("");
+    const [introContent, setIntroContent] = useState("");
 
     useEffect(() => {
         setChannels(getChannels());
+        // Fetch System Config
+        fetch('/api/system/content?keys=community_rules_content,community_intro_content')
+            .then(res => res.json())
+            .then(data => {
+                setRulesContent(data.community_rules_content || "");
+                setIntroContent(data.community_intro_content || "");
+            })
+            .catch(err => console.error(err));
     }, []);
 
     const handleTogglePlan = (channelId: string, plan: Plan) => {
@@ -25,11 +35,20 @@ export default function CommunitySettingsPage() {
         }));
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         setStatus("saving");
-        // In real app, save to backend. For mock, just show saved state.
-        setTimeout(() => setStatus("saved"), 800);
-        setTimeout(() => setStatus("idle"), 3000);
+        try {
+            await Promise.all([
+                fetch('/api/system/content', { method: 'POST', body: JSON.stringify({ key: 'community_rules_content', value: rulesContent }) }),
+                fetch('/api/system/content', { method: 'POST', body: JSON.stringify({ key: 'community_intro_content', value: introContent }) })
+            ]);
+            setStatus("saved");
+            setTimeout(() => setStatus("idle"), 3000);
+        } catch (e) {
+            console.error(e);
+            alert("保存に失敗しました");
+            setStatus("idle");
+        }
     };
 
     return (
@@ -116,6 +135,35 @@ export default function CommunitySettingsPage() {
                                 <div className="text-xs text-slate-500">スタッフは「学習サポート」チャンネルのみ作業可能にする（シミュレーション）。</div>
                             </div>
                             <div className="px-3 py-1 bg-slate-100 rounded text-xs font-bold text-slate-500">有効</div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Content Settings */}
+                <section className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-2 text-rose-800 font-bold mb-6">
+                        <FileText className="w-5 h-5" />
+                        <span>チャンネル内テキスト設定</span>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">コミュニティルール (#ルール)</label>
+                            <textarea
+                                value={rulesContent}
+                                onChange={(e) => setRulesContent(e.target.value)}
+                                className="w-full h-40 border border-slate-200 rounded-lg p-3 text-sm focus:border-rose-500 outline-none"
+                                placeholder="Markdown形式で入力可能です..."
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">はじめに② (#はじめに②)</label>
+                            <textarea
+                                value={introContent}
+                                onChange={(e) => setIntroContent(e.target.value)}
+                                className="w-full h-40 border border-slate-200 rounded-lg p-3 text-sm focus:border-rose-500 outline-none"
+                                placeholder="Markdown形式で入力可能です..."
+                            />
                         </div>
                     </div>
                 </section>

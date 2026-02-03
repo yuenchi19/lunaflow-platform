@@ -73,7 +73,10 @@ export interface User {
     githubId?: string;
     githubUsername?: string;
     githubInviteStatus?: 'none' | 'pending' | 'invited' | 'joined';
-    complianceAgreed?: boolean;
+    complianceAgreed?: boolean; // Deprecated, use agreedToCompliance
+    agreedToCompliance?: boolean;
+    communityRulesAgreed?: boolean;
+    communityIntroRead?: boolean;
     // Payout Info
     bankName?: string;
     bankBranch?: string;

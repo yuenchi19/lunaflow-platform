@@ -179,9 +179,6 @@ export async function POST(req: NextRequest) {
                             name: v.product.name,
                             category: v.product.category || 'Goods',
                             costPrice: v.product.price,
-                            // Status: ASSIGNED (Pending Payment). Webhook will flip to SOLD/PAID?
-                            // User said: "InventoryItem (Bag) and StoreOrder (Goods) status -> Paid"
-                            // We use 'ASSIGNED' as "In user's possession/allocated" for now.
                             status: 'ASSIGNED',
                             assignedToUserId: user.id,
                             purchaseRequestId: purchaseRequest.id,

@@ -23,6 +23,12 @@ interface AdminPurchaseRequest {
         zipCode: string | null;
         address: string | null;
     };
+    inventoryItems?: {
+        id: string;
+        name: string | null;
+        costPrice: number;
+        brand: string;
+    }[];
 }
 
 export default function PurchaseRequestsPage() {
@@ -51,34 +57,66 @@ export default function PurchaseRequestsPage() {
         fetchRequests();
     }, []);
 
-    const toggleStatus = async (id: string, currentStatus: string) => {
-        const newStatus = currentStatus === "pending" ? "completed" : "pending";
+    const [selectedRequest, setSelectedRequest] = useState<AdminPurchaseRequest | null>(null);
+    const [trackingNumber, setTrackingNumber] = useState("");
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
-        if (newStatus === 'completed') {
-            const confirmed = confirm("このリクエストを完了にしますか？\n完了にすると、該当する受講生の「おまかせ仕入れ」実績に加算されます。");
-            if (!confirmed) return;
+    const openCompleteModal = (req: AdminPurchaseRequest) => {
+        setSelectedRequest(req);
+        setTrackingNumber("");
+        setIsModalOpen(true);
+    };
+
+    const handleComplete = async () => {
+        if (!selectedRequest) return;
+        if (!trackingNumber) {
+            alert("追跡番号を入力してください。");
+            return;
         }
 
         try {
-            const res = await fetch(`/api/admin/purchase-requests/${id}`, {
+            const res = await fetch(`/api/admin/purchase-requests/${selectedRequest.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus }),
+                body: JSON.stringify({ status: 'completed', trackingNumber }),
             });
 
             if (res.ok) {
-                // Optimistic update or refetch
-                fetchRequests(); // Refetch to be sure, or map local
-                if (newStatus === 'completed') {
-                    showToast("ステータスを更新しました。", 'success');
-                }
+                fetchRequests();
+                showToast("完了ステータスに更新し、追跡番号を保存しました。", 'success');
+                setIsModalOpen(false);
             } else {
                 showToast("更新に失敗しました。", 'error');
             }
         } catch (error) {
-            console.error("Error updating status:", error);
+            console.error(error);
             showToast("通信エラーが発生しました。", 'error');
         }
+    };
+
+    const toggleStatus = async (id: string, currentStatus: string) => {
+        if (currentStatus === 'completed') {
+            // Revert to pending
+            const confirmed = confirm("未完了に戻しますか？");
+            if (!confirmed) return;
+
+            try {
+                const res = await fetch(`/api/admin/purchase-requests/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'pending' }),
+                });
+                if (res.ok) fetchRequests();
+            } catch (e) {
+                console.error(e);
+            }
+            return;
+        }
+
+        // If pending -> completed, use Modal
+        // Find existing req object (optimization: pass entire obj)
+        const req = requests.find(r => r.id === id);
+        if (req) openCompleteModal(req);
     };
 
     const filteredRequests = requests.filter(req => {
@@ -148,71 +186,169 @@ export default function PurchaseRequestsPage() {
                             </tr>
                         ) : (
                             filteredRequests.map((req) => (
-                                <tr key={req.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="p-4">
-                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${req.status === 'completed'
-                                            ? 'bg-emerald-100 text-emerald-700'
-                                            : 'bg-amber-100 text-amber-700'
-                                            }`}>
-                                            {req.status === 'completed' ? (
-                                                <>
-                                                    <CheckCircle className="w-3 h-3" />
-                                                    対応済
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Clock className="w-3 h-3" />
-                                                    未対応
-                                                </>
-                                            )}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-sm text-slate-500">
-                                        {new Date(req.createdAt).toLocaleDateString('ja-JP')}
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="font-bold text-slate-800 text-sm">{req.user?.name || "未設定"}</div>
-                                        <div className="text-xs text-slate-500 mt-0.5">{req.plan}</div>
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="font-bold text-slate-800 text-sm">{req.amount.toLocaleString()}円</div>
-                                        <div className="text-xs text-slate-500 mt-0.5">請求書払い</div>{/* Fixed as invoice for now */}
-                                    </td>
-                                    <td className="p-4 text-sm text-slate-600">
-                                        <div className="font-mono text-xs text-slate-400 mb-0.5">{req.user?.zipCode || "-"}</div>
-                                        <div className="whitespace-pre-wrap mb-1" title={(req.user?.address || "")}>
-                                            {req.user?.address || "-"}
-                                        </div>
-                                        <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded w-fit">
-                                            <span>✉️</span> {req.user?.email}
-                                        </div>
-                                    </td>
-                                    <td className="p-4 text-sm text-slate-600">
-                                        {req.carrier === 'jp' ? "日本郵便" :
-                                            req.carrier === 'ym' ? "ヤマト運輸" :
-                                                req.carrier === 'sg' ? "佐川急便" :
-                                                    req.carrier || "-"}
-                                    </td>
-                                    <td className="p-4 text-sm text-slate-500 max-w-xs truncate" title={req.note || ""}>
-                                        {req.note || "-"}
-                                    </td>
-                                    <td className="p-4 text-right">
-                                        <button
-                                            onClick={() => toggleStatus(req.id, req.status)}
-                                            className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${req.status === 'pending'
-                                                ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
-                                                : 'border-slate-200 text-slate-400 hover:bg-slate-50'
-                                                }`}
-                                        >
-                                            {req.status === 'pending' ? '完了にする' : '未完了に戻す'}
-                                        </button>
-                                    </td>
-                                </tr>
+                                <PurchaseRequestRow key={req.id} req={req} toggleStatus={toggleStatus} />
                             ))
                         )}
                     </tbody>
                 </table>
             </div>
+
+            {/* Tracking Modal */}
+            {isModalOpen && selectedRequest && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-6 border-b border-slate-100 bg-slate-50">
+                            <h3 className="text-lg font-bold text-slate-800">発送情報の入力</h3>
+                            <p className="text-xs text-slate-500 mt-1">
+                                {selectedRequest.user.name} 様への商品を発送し、完了にします。
+                            </p>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">
+                                    追跡番号 (必須)
+                                </label>
+                                <input
+                                    type="text"
+                                    className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none font-mono"
+                                    placeholder="1234-5678-9012"
+                                    value={trackingNumber}
+                                    onChange={(e) => setTrackingNumber(e.target.value)}
+                                />
+                                <p className="text-xs text-slate-400 mt-1">
+                                    ※ 追跡番号を入力すると受講生に通知されます（今回はデータ保存のみ）。
+                                </p>
+                            </div>
+                        </div>
+                        <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="px-4 py-2 text-slate-500 font-bold text-sm hover:bg-slate-200 rounded-lg"
+                            >
+                                キャンセル
+                            </button>
+                            <button
+                                onClick={handleComplete}
+                                disabled={!trackingNumber}
+                                className="px-6 py-2 bg-emerald-600 text-white font-bold text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-50 shadow-md shadow-emerald-200"
+                            >
+                                完了にする
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
+    );
+}
+
+function PurchaseRequestRow({ req, toggleStatus }: { req: AdminPurchaseRequest, toggleStatus: (id: string, s: string) => void }) {
+    const [expanded, setExpanded] = useState(false);
+
+    return (
+        <>
+            <tr className={`hover:bg-slate-50 transition-colors ${expanded ? 'bg-slate-50' : ''}`}>
+                <td className="p-4">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${req.status === 'completed'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-amber-100 text-amber-700'
+                        }`}>
+                        {req.status === 'completed' ? (
+                            <>
+                                <CheckCircle className="w-3 h-3" />
+                                対応済
+                            </>
+                        ) : (
+                            <>
+                                <Clock className="w-3 h-3" />
+                                未対応
+                            </>
+                        )}
+                    </span>
+                </td>
+                <td className="p-4 text-sm text-slate-500">
+                    {new Date(req.createdAt).toLocaleDateString('ja-JP')}
+                </td>
+                <td className="p-4">
+                    <div className="font-bold text-slate-800 text-sm">{req.user?.name || "未設定"}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{req.plan}</div>
+                </td>
+                <td className="p-4">
+                    <div className="font-bold text-slate-800 text-sm">{req.amount.toLocaleString()}円</div>
+                    <div className="text-xs text-slate-500 mt-0.5">請求書払い</div>
+                </td>
+                <td className="p-4 text-sm text-slate-600">
+                    <div className="font-mono text-xs text-slate-400 mb-0.5">{req.user?.zipCode || "-"}</div>
+                    <div className="whitespace-pre-wrap mb-1" title={(req.user?.address || "")}>
+                        {req.user?.address || "-"}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded w-fit">
+                        <span>✉️</span> {req.user?.email}
+                    </div>
+                </td>
+                <td className="p-4 text-sm text-slate-600">
+                    {req.carrier === 'jp' ? "日本郵便" :
+                        req.carrier === 'ym' ? "ヤマト運輸" :
+                            req.carrier === 'sg' ? "佐川急便" :
+                                req.carrier || "-"}
+                </td>
+                <td className="p-4 text-sm text-slate-500 max-w-xs truncate" title={req.note || ""}>
+                    {req.note || "-"}
+                </td>
+                <td className="p-4 text-right">
+                    <div className="flex justify-end gap-2">
+                        <button
+                            onClick={() => setExpanded(!expanded)}
+                            className="text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 transition-colors"
+                        >
+                            {expanded ? '詳細を閉じる' : '詳細'}
+                        </button>
+                        <button
+                            onClick={() => toggleStatus(req.id, req.status)}
+                            className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${req.status === 'pending'
+                                ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                                : 'border-slate-200 text-slate-400 hover:bg-slate-50'
+                                }`}
+                        >
+                            {req.status === 'pending' ? '完了にする' : '未完了に戻す'}
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {expanded && (
+                <tr className="bg-slate-50">
+                    <td colSpan={8} className="p-4 pl-12">
+                        <div className="bg-white border border-slate-200 rounded-lg p-4">
+                            <h4 className="font-bold text-sm text-slate-700 mb-2">購入商品詳細</h4>
+                            <div className="text-xs text-slate-500 mb-2">
+                                ※仕入れ希望金額内訳: {(req.amount).toLocaleString()}円 (おまかせ) + ストア購入分
+                            </div>
+                            {req.inventoryItems && req.inventoryItems.length > 0 ? (
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-slate-100 text-left text-slate-400">
+                                            <th className="py-2">商品名</th>
+                                            <th className="py-2">ブランド</th>
+                                            <th className="py-2 text-right">単価(Cost)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {req.inventoryItems.map((item: any) => (
+                                            <tr key={item.id} className="border-b border-slate-50">
+                                                <td className="py-2">{item.name}</td>
+                                                <td className="py-2">{item.brand}</td>
+                                                <td className="py-2 text-right">{item.costPrice.toLocaleString()}円</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p className="text-sm text-slate-400 italic">商品詳細情報がありません（おまかせのみ、または未割り当て）</p>
+                            )}
+                        </div>
+                    </td>
+                </tr>
+            )}
+        </>
     );
 }

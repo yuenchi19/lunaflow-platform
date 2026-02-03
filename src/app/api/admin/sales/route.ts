@@ -53,10 +53,24 @@ export async function GET(req: NextRequest) {
 
             // Platform
             const platform = sale.salePlatform || 'Unspecified';
-            if (!platformStats[platform]) platformStats[platform] = { revenue: 0, profit: 0, count: 0 };
-            platformStats[platform].revenue += sale.sellPrice || 0;
             platformStats[platform].profit += sale.profit || 0;
             platformStats[platform].count += 1;
+        });
+
+        // Fetch Purchase Requests (Revenue)
+        const requests = await prisma.purchaseRequest.findMany({
+            where: { status: 'completed' }
+        });
+
+        requests.forEach(req => {
+            const date = new Date(req.createdAt);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            if (!monthlyStats[monthKey]) monthlyStats[monthKey] = { revenue: 0, profit: 0, count: 0 };
+
+            // Assuming "Amount" is pure revenue for platform (Omakase money deposited).
+            // Profit depends on margin but here we treat it as Revenue inflow.
+            // If profit is not calculated, we just add revenue.
+            monthlyStats[monthKey].revenue += req.amount;
         });
 
         return NextResponse.json({

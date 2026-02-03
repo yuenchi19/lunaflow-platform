@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
     try {
         const supabase = createClient();
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
@@ -14,16 +14,24 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { status } = await req.json();
+        const { status, trackingNumber } = await req.json();
 
         if (!status) {
             return NextResponse.json({ error: 'Status is required' }, { status: 400 });
         }
 
+        const data: any = { status };
+        if (trackingNumber) {
+            data.trackingNumber = trackingNumber;
+        }
+
         const updatedRequest = await prisma.purchaseRequest.update({
             where: { id: params.id },
-            data: { status }
+            data: data
         });
+
+        // If Completed and Tracking Number exists, we might wanted to trigger a notification
+        // For now, saving it allows the frontend to show the "Delivery Note" info.
 
         return NextResponse.json(updatedRequest);
 

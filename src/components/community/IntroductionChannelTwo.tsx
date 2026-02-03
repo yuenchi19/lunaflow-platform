@@ -12,15 +12,37 @@ interface IntroChannelTwoProps {
 
 export function IntroductionChannelTwo({ userId, onRead }: IntroChannelTwoProps) {
     const [hasRead, setHasRead] = useState(false);
+    const [content, setContent] = useState<string | null>(null);
+
+    useEffect(() => {
+        setHasRead(hasReadIntro2(userId));
+        fetch('/api/system/content?keys=community_intro_content')
+            .then(res => res.json())
+            .then(data => {
+                if (data.community_intro_content) setContent(data.community_intro_content);
+            })
+            .catch(err => console.error(err));
+    }, [userId]);
 
     useEffect(() => {
         setHasRead(hasReadIntro2(userId));
     }, [userId]);
 
-    const handleRead = () => {
-        setReadIntro2(userId);
-        setHasRead(true);
-        onRead();
+    const handleRead = async () => {
+        try {
+            await fetch('/api/user/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ communityIntroRead: true })
+            });
+            // Fallback
+            setReadIntro2(userId);
+            setHasRead(true);
+            onRead();
+        } catch (e) {
+            console.error(e);
+            alert("エラーが発生しました");
+        }
     };
 
     return (
@@ -36,7 +58,7 @@ export function IntroductionChannelTwo({ userId, onRead }: IntroChannelTwoProps)
                 <div className="p-8 text-gray-300 space-y-6 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-[#1e1f22] scrollbar-track-transparent">
                     <div className="prose prose-invert max-w-none">
                         <ReactMarkdown>
-                            {CHANNEL_INTRO_CONTENT["c2"]}
+                            {content || CHANNEL_INTRO_CONTENT["c2"]}
                         </ReactMarkdown>
                     </div>
                 </div>

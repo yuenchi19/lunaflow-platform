@@ -56,6 +56,17 @@ model User {
   bankAccountHolder  String?
   kobutsushoNumber   String? // Antique Dealer License Number
   invoiceRegistrationNumber String?      // Added for Partner Invoice
+  agreedToCompliance Boolean             @default(false)
+  
+  // Community Flags
+  communityRulesAgreed Boolean           @default(false)
+  communityIntroRead   Boolean           @default(false)
+}
+
+model SystemConfig {
+  key   String @id
+  value String @db.Text
+  updatedAt DateTime @updatedAt
 }
 
 model OneTimeToken {
@@ -225,6 +236,7 @@ model PurchaseRequest {
   updatedAt          DateTime            @updatedAt
   note               String?
   carrier            String?             // 'jp', 'ym', 'sg'
+  trackingNumber     String?
   scheduledDate      DateTime?
   user               User                @relation(fields: [userId], references: [id])
   rewardTransactions RewardTransaction[]
@@ -362,3 +374,5 @@ model PayoutRequest {
   processedAt DateTime?
   note      String?
 }
+
+

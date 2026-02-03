@@ -7,7 +7,7 @@ import { hasAgreedToCompliance, getAffiliateEarnings, MOCK_USERS } from "@/lib/d
 import ComplianceModal from "@/components/affiliate/ComplianceModal";
 import PayoutSettings from "@/components/affiliate/PayoutSettings";
 import Link from "next/link";
-import { LogOut, Copy, ExternalLink, TrendingUp, Users, DollarSign, Github, BookOpen } from "lucide-react";
+import { LogOut, Copy, TrendingUp, Users, DollarSign, BookOpen } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function PartnerDashboardPage() {
@@ -20,59 +20,59 @@ export default function PartnerDashboardPage() {
 
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const { data: { user: authUser } } = await supabase.auth.getUser();
-                if (!authUser) {
-                    router.push("/login?redirect=/affiliate/dashboard");
+    const fetchUser = async () => {
+        try {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (!authUser) {
+                router.push("/login?redirect=/affiliate/dashboard");
+                return;
+            }
+
+            // Fetch full profile
+            const res = await fetch('/api/user/profile');
+            if (res.ok) {
+                const profile = await res.json();
+
+                // STRICT PERMISSION CHECK
+                const ALLOWED_PLANS = ['standard', 'premium', 'partner'];
+                if (!ALLOWED_PLANS.includes(profile.plan)) {
+                    setError("このプラン（Light等）ではアフィリエイト機能をご利用いただけません。スタンダードプラン以上へのアップグレードが必要です。");
                     return;
                 }
 
-                // Fetch full profile
-                const res = await fetch('/api/user/profile');
-                if (res.ok) {
-                    const profile = await res.json();
-
-                    // STRICT PERMISSION CHECK
-                    const ALLOWED_PLANS = ['standard', 'premium', 'partner'];
-                    if (!ALLOWED_PLANS.includes(profile.plan)) {
-                        setError("このプラン（Light等）ではアフィリエイト機能をご利用いただけません。スタンダードプラン以上へのアップグレードが必要です。");
-                        return;
-                    }
-
-                    if (profile.plan !== 'partner' && profile.plan !== 'standard' && profile.plan !== 'premium') {
-                        // Redundant safety check 
-                        setError("権限がありません。");
-                        return;
-                    }
-
-                    setUser(profile);
-
-                    // Check Compliance
-                    if (!hasAgreedToCompliance(profile.id)) {
-                        setIsComplianceModalOpen(true);
-                    }
-
-                    // Fetch Earnings from API
-                    const earningsRes = await fetch('/api/affiliate/earnings');
-                    if (earningsRes.ok) {
-                        const e = await earningsRes.json();
-                        setEarnings(e);
-                    }
-                } else {
-                    const errData = await res.json().catch(() => ({}));
-                    console.error("Profile fetch error:", res.status, errData);
-                    setError(`プロフィールの取得に失敗しました (Status: ${res.status})`);
+                if (profile.plan !== 'partner' && profile.plan !== 'standard' && profile.plan !== 'premium') {
+                    // Redundant safety check 
+                    setError("権限がありません。");
+                    return;
                 }
-            } catch (e: any) {
-                console.error("Auth check failed", e);
-                setError(`エラーが発生しました: ${e.message}`);
-            } finally {
-                setIsLoading(false);
-            }
-        };
 
+                setUser(profile);
+
+                // Check Compliance
+                if (!profile.agreedToCompliance) {
+                    setIsComplianceModalOpen(true);
+                }
+
+                // Fetch Earnings from API
+                const earningsRes = await fetch('/api/affiliate/earnings');
+                if (earningsRes.ok) {
+                    const e = await earningsRes.json();
+                    setEarnings(e);
+                }
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                console.error("Profile fetch error:", res.status, errData);
+                setError(`プロフィールの取得に失敗しました (Status: ${res.status})`);
+            }
+        } catch (e: any) {
+            console.error("Auth check failed", e);
+            setError(`エラーが発生しました: ${e.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchUser();
     }, [router, supabase]);
 
@@ -152,7 +152,7 @@ export default function PartnerDashboardPage() {
                 userId={user.id}
                 onAgree={() => {
                     setIsComplianceModalOpen(false);
-                    // Ideally refresh user state or just local close
+                    fetchUser(); // Refresh user state from DB
                 }}
             />
 
@@ -190,7 +190,10 @@ export default function PartnerDashboardPage() {
                         </div>
                         <div className="flex-1">
                             <h3 className="font-bold text-rose-800 text-sm">報酬を受け取るために、口座情報の登録が必要です。</h3>
-                            <p className="text-xs text-rose-600">ここをクリックして設定を行ってください。</p>
+                            <p className="text-xs text-rose-600 leading-relaxed">
+                                ここをクリックして設定を行ってください。<br />
+                                ※口座情報の登録前に登録を間違えてできなかった場合にで、月の途中での支払い希望の場合には、報酬金額の１０％を徴収します。
+                            </p>
                         </div>
                         <div className="text-rose-400">
                             →
@@ -262,72 +265,11 @@ export default function PartnerDashboardPage() {
                     </div>
 
                     <div className="space-y-6">
-                        {/* GitHub Integration */}
-                        <div className="bg-slate-900 text-white rounded-2xl p-6 md:p-8 relative overflow-hidden shadow-xl shadow-slate-200">
-                            <div className="absolute top-0 right-0 p-6 opacity-20 pointer-events-none">
-                                <Github className="w-32 h-32 text-white" />
-                            </div>
-                            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2 relative z-10">
-                                <Github className="w-5 h-5" />
-                                GitHub連携
-                            </h2>
-                            <div className="relative z-10 space-y-4">
-                                <p className="text-sm text-slate-300 leading-relaxed">
-                                    アフィリエイト活動に必要な素材やマインドセット教材は、GitHubリポジトリ（Luna Flow-Partner）で提供されます。
-                                </p>
 
-                                <div className="p-4 bg-white/10 rounded-xl border border-white/10 backdrop-blur-sm">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <span className="text-xs font-bold text-slate-400">STATUS</span>
-                                        {user.githubInviteStatus === 'joined' ? (
-                                            <span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">Active</span>
-                                        ) : user.githubInviteStatus === 'invited' ? (
-                                            <span className="text-xs font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Invited</span>
-                                        ) : (
-                                            <span className="text-xs font-bold text-slate-400 bg-slate-400/10 px-2 py-0.5 rounded border border-slate-400/20">Not Linked</span>
-                                        )}
-                                    </div>
-                                    <p className="text-sm font-medium">
-                                        {user.githubInviteStatus === 'joined' ? '連携済み (Access Granted)' :
-                                            user.githubInviteStatus === 'invited' ? '招待メールを確認してください' :
-                                                '連携してアクセス権を取得'}
-                                    </p>
-                                </div>
-
-                                {user.githubInviteStatus !== 'joined' && user.githubInviteStatus !== 'invited' && (
-                                    <button
-                                        onClick={async () => {
-                                            const username = prompt("GitHubのユーザー名を入力してください");
-                                            if (!username) return;
-                                            try {
-                                                const res = await fetch('/api/github/invite', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ githubUsername: username })
-                                                });
-                                                const data = await res.json();
-                                                if (res.ok) {
-                                                    alert(data.message || '招待を送りました。');
-                                                    setUser(prev => prev ? ({ ...prev, githubInviteStatus: 'invited' }) : null);
-                                                } else {
-                                                    alert(`エラー: ${data.error}`);
-                                                }
-                                            } catch (e) {
-                                                alert('通信エラーが発生しました');
-                                            }
-                                        }}
-                                        className="w-full py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        <Github className="w-4 h-4" />
-                                        GitHubアカウントを連携
-                                    </button>
-                                )}
-                            </div>
-                        </div>
 
                         {/* Payout Settings */}
                         <div id="payout-settings">
-                            <PayoutSettings user={user} />
+                            <PayoutSettings user={user} onUpdate={fetchUser} />
                         </div>
 
                         {/* Material Link */}

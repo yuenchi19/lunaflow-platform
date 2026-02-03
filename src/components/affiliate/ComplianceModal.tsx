@@ -15,10 +15,22 @@ export default function ComplianceModal({ isOpen, onAgree, userId }: ComplianceM
 
     if (!isOpen) return null;
 
-    const handleAgree = () => {
+    const handleAgree = async () => {
         if (!checked) return;
-        setComplianceAgreement(userId);
-        onAgree();
+        try {
+            const res = await fetch('/api/user/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ agreedToCompliance: true })
+            });
+            if (res.ok) {
+                onAgree();
+            } else {
+                alert("エラーが発生しました。");
+            }
+        } catch (e) {
+            alert("通信エラーが発生しました。");
+        }
     };
 
     return (

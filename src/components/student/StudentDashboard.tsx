@@ -209,10 +209,22 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
         const earnings = getAffiliateEarnings(user.id);
         setAffiliateEarnings(earnings);
+
+        if (user.id) {
+            fetch(`/api/admin/feedbacks?userId=${user.id}`).then(res => res.json()).then(data => {
+                if (Array.isArray(data)) setFeedbacks(data);
+            }).catch(e => console.error(e));
+
+            // Fetch Purchase History
+            fetch('/api/student/purchase-requests').then(res => res.json()).then(data => {
+                if (Array.isArray(data)) setPurchaseRequests(data);
+            }).catch(e => console.error(e));
+        }
     }, [user.id]);
 
     // AI Feedback
-    const [feedbacks, setFeedbacks] = useState<import("@/types").ProgressDetail[]>([]);
+    const [feedbacks, setFeedbacks] = useState<import("@/types").ProgressDetail[]>([]); // New Feedbacks
+    const [purchaseRequests, setPurchaseRequests] = useState<any[]>([]); // Purchase History
     const [showFeedbackToast, setShowFeedbackToast] = useState(false);
 
     useEffect(() => {
@@ -438,6 +450,62 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                     </div>
                 </div>
             </LockOverlay>
+        );
+    };
+
+    const renderPurchaseHistory = () => {
+        if (purchaseRequests.length === 0) return null;
+
+        return (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6 mt-6">
+                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <span className="bg-slate-100 p-1.5 rounded-lg text-slate-500">📄</span>
+                    仕入れ・納品履歴
+                </h3>
+                <div className="space-y-4">
+                    {purchaseRequests.map((req: any) => (
+                        <div key={req.id} className="border border-slate-100 rounded-lg p-4 bg-slate-50/50">
+                            <div className="flex justify-between items-start mb-2">
+                                <div>
+                                    <div className="text-[10px] text-slate-400 font-bold uppercase">{new Date(req.createdAt).toLocaleDateString('ja-JP')}</div>
+                                    <div className="font-bold text-slate-700">おまかせ仕入れ</div>
+                                </div>
+                                <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${req.status === 'completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                                    {req.status === 'completed' ? '発送済み' : '準備中'}
+                                </span>
+                            </div>
+
+                            <div className="text-sm text-slate-600 mb-2">
+                                <span className="text-xs text-slate-400 mr-2">金額:</span>
+                                ¥{req.amount.toLocaleString()}
+                            </div>
+
+                            {req.status === 'completed' && req.trackingNumber && (
+                                <div className="bg-white border border-emerald-100 rounded p-2 mb-2">
+                                    <div className="text-[10px] text-emerald-600 font-bold uppercase mb-1">追跡番号</div>
+                                    <div className="font-mono text-sm text-slate-700 tracking-wider">
+                                        {req.trackingNumber}
+                                    </div>
+                                </div>
+                            )}
+
+                            {req.inventoryItems && req.inventoryItems.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-slate-200">
+                                    <p className="text-[10px] text-slate-400 font-bold mb-2">納品明細</p>
+                                    <ul className="space-y-1">
+                                        {req.inventoryItems.map((item: any) => (
+                                            <li key={item.id} className="text-xs text-slate-600 flex justify-between">
+                                                <span>{item.brand} {item.name || item.brand}</span>
+                                                {/* <span className="text-slate-400">¥{item.costPrice.toLocaleString()}</span> Cost should be hidden? Usually Delivery Note shows items. */}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
         );
     };
 
@@ -708,7 +776,10 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                     {renderProfileCard()}
                     {renderCourses()}
                     {renderAnnouncements()}
+                    {renderAnnouncements()}
                     {renderPurchaseTracker()}
+                    {renderPurchaseHistory()}
+                    {renderAffiliateCard()}
                     {renderAffiliateCard()}
                     {renderStoreWidget()}
 
@@ -724,6 +795,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                         {renderProfileCard()}
                         {renderLedgerWidget()}
                         {renderPurchaseTracker()}
+                        {renderPurchaseHistory()}
                         {renderAffiliateCard()}
                         {renderStoreWidget()}
                         {renderQuickMenu()}

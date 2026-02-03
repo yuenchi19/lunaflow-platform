@@ -14,7 +14,7 @@ export async function GET() {
         // Fetch full user profile to get plan
         const user = await prisma.user.findUnique({
             where: { email: authUser.email },
-            select: { id: true, plan: true }
+            select: { id: true, plan: true, isLedgerEnabled: true }
         });
 
         if (!user) {
@@ -75,6 +75,13 @@ export async function GET() {
                 });
                 unlocks[feature] = completedCount >= blocks.length;
             }
+        }
+
+        if (unlocks['inventory'] && !user.isLedgerEnabled) {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { isLedgerEnabled: true }
+            });
         }
 
         return NextResponse.json(unlocks);

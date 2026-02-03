@@ -91,9 +91,14 @@ export async function GET(req: NextRequest) {
 
         const items = await prisma.inventoryItem.findMany({
             where: {
-                OR: [
-                    { adminId: user.id },
-                    { assignedToUserId: user.id }
+                AND: [
+                    {
+                        OR: [
+                            { adminId: user.id },
+                            { assignedToUserId: user.id }
+                        ]
+                    },
+                    { adminId: { not: 'system_store' } }
                 ]
             },
             orderBy: { createdAt: 'desc' }

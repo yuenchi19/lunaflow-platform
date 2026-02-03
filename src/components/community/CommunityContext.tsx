@@ -22,8 +22,11 @@ export function CommunityProvider({ children, user }: { children: React.ReactNod
 
     useEffect(() => {
         if (user) {
-            setIsRulesAgreed(hasAgreedToRules(user.id));
-            setIsIntroRead(hasReadIntro2(user.id));
+            // Priority: DB > LocalStorage
+            // If DB says false, we trust DB? Or check LS too? 
+            // Better to rely on DB if available.
+            setIsRulesAgreed(user.communityRulesAgreed || hasAgreedToRules(user.id));
+            setIsIntroRead(user.communityIntroRead || hasReadIntro2(user.id));
         }
     }, [user]);
 
