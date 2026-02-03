@@ -120,9 +120,8 @@ export default function PurchaseRequestsPage() {
     };
 
     const filteredRequests = requests.filter(req => {
-        if (!req.user) return false;
-        const name = req.user.name || "";
-        const email = req.user.email || "";
+        const name = req.user?.name || "未設定";
+        const email = req.user?.email || "未設定";
         return name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             email.toLowerCase().includes(searchTerm.toLowerCase());
     });

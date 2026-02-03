@@ -28,7 +28,9 @@ export default function CommunityLayout({ children }: { children: React.ReactNod
                 const res = await fetch('/api/user/profile');
                 if (res.ok) {
                     const profile = await res.json();
-                    setUser(profile);
+                    if (profile && profile.id) {
+                        setUser(profile);
+                    }
                 }
             } else {
                 // Handle unauth or just keep mock/redirect? 

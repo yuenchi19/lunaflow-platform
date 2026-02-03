@@ -12,23 +12,16 @@ import { useRouter } from "next/navigation";
 import { useCommunity } from "@/components/community/CommunityContext";
 
 export default function ChannelPage({ params }: { params: { channelId: string } }) {
-    const [user, setUser] = useState<User>(MOCK_USERS[0]); // Default to Alice (Free)
+    const { user, agreeToRules, readIntro } = useCommunity(); // Use context user
     const [hasAgreed, setHasAgreed] = useState(false);
     const router = useRouter();
-    const { agreeToRules, readIntro } = useCommunity();
 
     // Synchronously resolve channel to avoid render flash
     const channels = getChannels();
     const channel = channels.find(c => c.id === params.channelId);
 
-    // Initial load for User persistence
-    useEffect(() => {
-        const storedUserId = localStorage.getItem("currentUserId");
-        if (storedUserId) {
-            const found = MOCK_USERS.find(u => u.id === storedUserId);
-            if (found) setUser(found);
-        }
-    }, []);
+    // Remove legacy local storage user fetch
+    // useEffect(() => { ... }, []);
 
     // Check agreement status
     useEffect(() => {

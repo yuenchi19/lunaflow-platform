@@ -6,6 +6,7 @@ import { User } from "@/types";
 import { hasAgreedToRules, setAgreedToRules, hasReadIntro2, setReadIntro2 } from "@/lib/data";
 
 interface CommunityContextType {
+    user: User;
     isRulesAgreed: boolean;
     isIntroRead: boolean;
     agreeToRules: () => void;
@@ -47,7 +48,7 @@ export function CommunityProvider({ children, user }: { children: React.ReactNod
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     return (
-        <CommunityContext.Provider value={{ isRulesAgreed, isIntroRead, agreeToRules, readIntro, isMobileMenuOpen, setIsMobileMenuOpen }}>
+        <CommunityContext.Provider value={{ user, isRulesAgreed, isIntroRead, agreeToRules, readIntro, isMobileMenuOpen, setIsMobileMenuOpen }}>
             {children}
         </CommunityContext.Provider>
     );

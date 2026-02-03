@@ -26,10 +26,13 @@ export default function ComplianceModal({ isOpen, onAgree, userId }: ComplianceM
             if (res.ok) {
                 onAgree();
             } else {
-                alert("エラーが発生しました。");
+                const errData = await res.json().catch(() => ({}));
+                alert(`エラーが発生しました: ${errData.error || res.statusText}`);
+                console.error("Compliance Error:", errData);
             }
-        } catch (e) {
-            alert("通信エラーが発生しました。");
+        } catch (e: any) {
+            console.error("Compliance Net Error:", e);
+            alert(`通信エラーが発生しました: ${e.message}`);
         }
     };
 
