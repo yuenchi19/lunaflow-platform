@@ -5,7 +5,7 @@ import styles from '../../components/admin/AdminLayout.module.css';
 import AdminSidebar from '../../components/admin/AdminSidebar';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function AdminLayout({
     children,
@@ -13,15 +13,12 @@ export default function AdminLayout({
     children: React.ReactNode;
 }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const router = useRouter();
+    const pathname = usePathname();
 
-    // Legacy token check removed. Access is protected by Middleware and AccessControl component.
-    // useEffect(() => {
-    //     const token = localStorage.getItem("admin_token");
-    //     if (!token) {
-    //         router.push("/");
-    //     }
-    // }, [router]);
+    // Exclude login page from AdminLayout structure
+    if (pathname === '/admin/login') {
+        return <>{children}</>;
+    }
 
     return (
         <div className={styles.container}>
