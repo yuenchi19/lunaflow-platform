@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { incrementQuota, checkQuota } from "@/lib/quota";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
@@ -30,6 +31,14 @@ export async function POST(req: NextRequest) {
         // Validation
         if (!brand || !costPrice || !images || images.length === 0) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        }
+
+        // Quota Check
+        const quota = await checkQuota(user.id, 'listing');
+        if (!quota.allowed) {
+            return NextResponse.json({
+                error: `Listing limit exceeded for this month. (${quota.current}/${quota.limit})`
+            }, { status: 403 });
         }
 
         // Calculate Selling Price (Cost + 15%)
@@ -72,6 +81,8 @@ export async function POST(req: NextRequest) {
                 purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date(),
             }
         });
+
+        await incrementQuota(user.id, 'listing');
 
         return NextResponse.json(newItem);
 

@@ -1,7 +1,8 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { calculateStudentStatus } from '@/lib/utils'; // You might need to move stats logic or recalc here
+import { calculateStudentStatus } from '@/lib/utils';
+import { getQuota } from '@/lib/quota';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
     try {
@@ -43,12 +44,21 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         // Since I haven't seen a Progress model in schema, I will check if I should return empty or mock.
         // For now, let's just return what we have.
 
+        // Fetch Quota
+        const quota = await getQuota(user.id);
+
         return NextResponse.json({
             user: {
                 ...user,
                 // Add computed total if needed, or rely on frontend
-                lifetimePurchaseTotal: payments.reduce((sum, p) => sum + p.amount, 0),
+                lifetimePurchaseTotal: payments.reduce((sum, p) => sum + p.amount || 0, 0),
                 registrationDate: user.createdAt.toISOString().split('T')[0] // Format YYYY-MM-DD
+            },
+            quota: {
+                researchCount: quota.researchCount,
+                researchLimit: quota.researchLimit,
+                listingCount: quota.listingCount,
+                listingLimit: quota.listingLimit
             },
             payments,
             progressLogs: [] // Placeholder until we confirm where logs are stored
@@ -56,6 +66,66 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     } catch (e: any) {
         console.error("Fetch Student Detail Error:", e);
+        return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+}
+
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
+    try {
+        const id = params.id;
+        const body = await req.json();
+        const { name, email, plan, communityNickname, lineUserId, researchLimit, listingLimit } = body;
+
+        // Update User
+        const updatedUser = await prisma.user.update({
+            where: { id },
+            data: {
+                name,
+                email,
+                plan,
+                communityNickname,
+                lineUserId: lineUserId || null // Handle empty string
+            }
+        });
+
+        // Update/Upsert Quota if limits provided
+        if (researchLimit !== undefined || listingLimit !== undefined) {
+            const date = new Date();
+            const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+            await prisma.userQuota.upsert({
+                where: {
+                    userId_month: {
+                        userId: id,
+                        month
+                    }
+                },
+                update: {
+                    researchLimit: researchLimit !== undefined ? Number(researchLimit) : undefined,
+                    listingLimit: listingLimit !== undefined ? Number(listingLimit) : undefined
+                },
+                create: {
+                    userId: id,
+                    month,
+                    researchLimit: researchLimit !== undefined ? Number(researchLimit) : 50,
+                    listingLimit: listingLimit !== undefined ? Number(listingLimit) : 50
+                }
+            });
+        }
+
+        // Fetch fresh data to return
+        // Reuse GET logic or just return updated User? 
+        // For simplicity, just return updatedUser and assume frontend updates state. 
+        // But frontend expects { user: ... } format from handleSave?
+        // Let's check handleSave in page.tsx: `setStudent(data.user)`.
+
+        return NextResponse.json({
+            user: updatedUser,
+            message: "Updated successfully"
+        });
+
+    } catch (e: any) {
+        console.error("Update Student Error:", e);
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
 }

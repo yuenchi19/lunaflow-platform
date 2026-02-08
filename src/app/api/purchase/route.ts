@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr';
 import { getShippingFee, Carrier } from '@/lib/shipping';
 import Stripe from "stripe";
 import { unstable_noStore as noStore } from 'next/cache';
+import { checkQuota, incrementQuota } from '@/lib/quota';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -50,6 +51,14 @@ export async function POST(req: NextRequest) {
 
         if (!user.isLedgerEnabled) {
             return NextResponse.json({ error: "This feature is currently locked for your account." }, { status: 403 });
+        }
+
+        // Quota Check
+        const quota = await checkQuota(user.id, 'research');
+        if (!quota.allowed) {
+            return NextResponse.json({
+                error: `Research limit exceeded for this month. (${quota.current}/${quota.limit})`
+            }, { status: 403 });
         }
 
         // 1. Calculate Totals
@@ -204,6 +213,9 @@ export async function POST(req: NextRequest) {
                 }
             });
         }
+
+        // Increment Quota
+        await incrementQuota(user.id, 'research');
 
         // 6. Generate Stripe Invoice
         let invoiceId = null;

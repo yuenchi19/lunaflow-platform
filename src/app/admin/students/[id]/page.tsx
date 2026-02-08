@@ -21,7 +21,16 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
         email: "",
         communityNickname: "",
         plan: "light",
-        lineUserId: ""
+        lineUserId: "",
+        researchLimit: 50,
+        listingLimit: 50
+    });
+
+    const [quota, setQuota] = useState({
+        researchCount: 0,
+        researchLimit: 0,
+        listingCount: 0,
+        listingLimit: 0
     });
 
     useEffect(() => {
@@ -36,8 +45,14 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                         email: data.user.email || "",
                         communityNickname: data.user.communityNickname || "",
                         plan: data.user.plan || "light",
-                        lineUserId: data.user.lineUserId || ""
+                        lineUserId: data.user.lineUserId || "",
+                        researchLimit: data.quota?.researchLimit || 50,
+                        listingLimit: data.quota?.listingLimit || 50
                     });
+
+                    if (data.quota) {
+                        setQuota(data.quota);
+                    }
 
                     // Payments
                     setPayments(data.payments || []);
@@ -305,7 +320,73 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {/* Contract Status Details */}
+                {/* Quota Management - NEW */}
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">月間活動制限 (Quota)</h3>
+                    <div className="space-y-4">
+                        {/* Research Quota */}
+                        <div>
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-gray-500 text-sm">リサーチ (購入リクエスト)</span>
+                                {isEditing ? (
+                                    <div className="flex items-center gap-1">
+                                        <input
+                                            type="number"
+                                            className="border p-1 rounded w-16 text-right text-sm"
+                                            value={editForm.researchLimit}
+                                            onChange={e => setEditForm({ ...editForm, researchLimit: Number(e.target.value) })}
+                                        />
+                                        <span className="text-xs text-gray-400">回/月</span>
+                                    </div>
+                                ) : (
+                                    <span className="font-mono font-bold text-gray-700">
+                                        {quota.researchCount} <span className="text-xs text-gray-400">/ {quota.researchLimit} 回</span>
+                                    </span>
+                                )}
+                            </div>
+                            {!isEditing && (
+                                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div
+                                        className={`h-2.5 rounded-full ${quota.researchCount >= quota.researchLimit ? 'bg-red-500' : 'bg-indigo-500'}`}
+                                        style={{ width: `${Math.min(100, (quota.researchCount / (quota.researchLimit || 1)) * 100)}%` }}
+                                    ></div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Listing Quota */}
+                        <div>
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-gray-500 text-sm">出品・在庫登録</span>
+                                {isEditing ? (
+                                    <div className="flex items-center gap-1">
+                                        <input
+                                            type="number"
+                                            className="border p-1 rounded w-16 text-right text-sm"
+                                            value={editForm.listingLimit}
+                                            onChange={e => setEditForm({ ...editForm, listingLimit: Number(e.target.value) })}
+                                        />
+                                        <span className="text-xs text-gray-400">回/月</span>
+                                    </div>
+                                ) : (
+                                    <span className="font-mono font-bold text-gray-700">
+                                        {quota.listingCount} <span className="text-xs text-gray-400">/ {quota.listingLimit} 回</span>
+                                    </span>
+                                )}
+                            </div>
+                            {!isEditing && (
+                                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div
+                                        className={`h-2.5 rounded-full ${quota.listingCount >= quota.listingLimit ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                        style={{ width: `${Math.min(100, (quota.listingCount / (quota.listingLimit || 1)) * 100)}%` }}
+                                    ></div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Contract Status Details - Adjusted Grid */}
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
                     <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">契約期間・条件</h3>
                     <div className="space-y-4">
@@ -502,6 +583,6 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
             <div className={styles.footer}>
                 <button onClick={() => router.back()} className={styles.backBtn}>← バック</button>
             </div>
-        </div>
+        </div >
     );
 }

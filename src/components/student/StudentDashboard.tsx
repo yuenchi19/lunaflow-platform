@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { User, Course, Announcement } from "@/types";
 import { createMockStripeSession } from "@/lib/stripe-integration";
 import { MOCK_USERS, MOCK_COURSES, getAffiliateEarnings, getStudentProgressDetail } from "@/lib/data";
-import { User as UserIcon, Bell, ExternalLink, Book, LogOut, Settings, PlayCircle, Clock, TrendingUp, Lock, MessageSquare, X } from "lucide-react";
+import { User as UserIcon, Bell, ExternalLink, Book, LogOut, ChevronRight, PlayCircle, MessageSquare, Search, TrendingUp, Calculator, Lock, X } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import LockOverlay from "../LockOverlay";
@@ -376,24 +376,24 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     // --- Sub-components (Render Functions) ---
 
     const renderProfileCard = () => (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group">
+        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden group">
             <div className="pt-4 pb-4 px-4 md:pt-6 md:pb-6 text-center">
                 <div className="flex flex-col items-center justify-center gap-1 mb-1">
-                    <h2 className="font-bold text-xl text-slate-800">{user.name}</h2>
-                    <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full uppercase">Contract: {user.plan}</span>
+                    <h2 className="font-bold text-xl text-[var(--color-text-main)] font-serif">{user.name}</h2>
+                    <span className="text-xs font-bold text-[var(--color-text-muted)] bg-[var(--color-background)] px-2 py-0.5 rounded-full uppercase">Contract: {user.plan}</span>
                 </div>
                 <div className="mt-6 flex justify-center">
                     <button
                         onClick={() => setIsProfileModalOpen(true)}
-                        className="text-xs font-bold text-white bg-rose-600 rounded-lg px-6 py-2 hover:bg-rose-700 transition-colors shadow-sm"
+                        className="text-xs font-bold text-white bg-[var(--color-primary)] rounded-lg px-6 py-2 hover:bg-[var(--color-primary-dark)] transition-colors shadow-sm"
                     >
                         プロフィール編集
                     </button>
                 </div>
             </div>
-            <div className="border-t border-slate-100 p-4 bg-slate-50/50">
-                <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-2">アカウント情報</div>
-                <div className="text-xs text-slate-600 truncate mb-1">{user.email || "未設定"}</div>
+            <div className="border-t border-[var(--color-border)] p-4 bg-[var(--color-background)]/50">
+                <div className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-widest font-bold mb-2">アカウント情報</div>
+                <div className="text-xs text-[var(--color-text-secondary)] truncate mb-1">{user.email || "未設定"}</div>
             </div>
         </div>
     );
@@ -415,34 +415,34 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
                 blur="sm"
             >
-                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 shadow-sm p-4 md:p-6 relative overflow-hidden">
+                <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm p-4 md:p-6 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-5">
-                        <TrendingUp className="w-24 h-24 text-indigo-900" />
+                        <TrendingUp className="w-24 h-24 text-[var(--color-primary-dark)]" />
                     </div>
-                    <h3 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
-                        <span className="bg-indigo-100 p-1 rounded-md text-indigo-600">📊</span>
+                    <h3 className="font-bold text-[var(--color-text-main)] mb-4 flex items-center gap-2 font-serif">
+                        <span className="bg-[var(--color-background)] p-1 rounded-md text-[var(--color-primary)]">📊</span>
                         今月のおまかせ仕入れ状況
                     </h3>
                     <div className="relative z-10 space-y-4">
                         <div>
-                            <div className="flex justify-between text-xs font-bold text-indigo-800 mb-1">
+                            <div className="flex justify-between text-xs font-bold text-[var(--color-primary-dark)] mb-1">
                                 <span>今月の目標</span>
                                 <span>{displayPercent}% 達成</span>
                             </div>
-                            <div className="w-full bg-white h-2.5 rounded-full overflow-hidden border border-indigo-100">
+                            <div className="w-full bg-[var(--color-background)] h-2.5 rounded-full overflow-hidden border border-[var(--color-border)]">
                                 <div
-                                    className="bg-indigo-500 h-full rounded-full transition-all duration-1000"
+                                    className="bg-[var(--color-primary)] h-full rounded-full transition-all duration-1000"
                                     style={{ width: `${Math.min(displayPercent, 100)}%` }}
                                 ></div>
                             </div>
-                            <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                            <div className="flex justify-between text-[10px] text-[var(--color-text-secondary)] mt-1">
                                 <span>現在: ¥{displayTotal.toLocaleString()}</span>
                                 <span>目標: ¥{displayTarget.toLocaleString()}</span>
                             </div>
                         </div>
                         <button
                             onClick={() => setIsPurchaseModalOpen(true)}
-                            className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                            className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--color-primary)] text-white font-bold rounded-xl hover:bg-[var(--color-primary-dark)] transition-colors shadow-lg"
                         >
                             <ExternalLink className="w-4 h-4" />
                             仕入れ希望フォーム
@@ -457,44 +457,44 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         if (purchaseRequests.length === 0) return null;
 
         return (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6 mt-6">
-                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <span className="bg-slate-100 p-1.5 rounded-lg text-slate-500">📄</span>
+            <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden p-6 mt-6">
+                <h3 className="font-bold text-[var(--color-text-main)] mb-4 flex items-center gap-2 font-serif">
+                    <span className="bg-[var(--color-background)] p-1.5 rounded-lg text-[var(--color-text-muted)]">📄</span>
                     仕入れ・納品履歴
                 </h3>
                 <div className="space-y-4">
                     {purchaseRequests.map((req: any) => (
-                        <div key={req.id} className="border border-slate-100 rounded-lg p-4 bg-slate-50/50">
+                        <div key={req.id} className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-background)]/50">
                             <div className="flex justify-between items-start mb-2">
                                 <div>
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase">{new Date(req.createdAt).toLocaleDateString('ja-JP')}</div>
-                                    <div className="font-bold text-slate-700">おまかせ仕入れ</div>
+                                    <div className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase">{new Date(req.createdAt).toLocaleDateString('ja-JP')}</div>
+                                    <div className="font-bold text-[var(--color-text-main)]">おまかせ仕入れ</div>
                                 </div>
                                 <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${req.status === 'completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
                                     {req.status === 'completed' ? '発送済み' : '準備中'}
                                 </span>
                             </div>
 
-                            <div className="text-sm text-slate-600 mb-2">
-                                <span className="text-xs text-slate-400 mr-2">金額:</span>
+                            <div className="text-sm text-[var(--color-text-secondary)] mb-2">
+                                <span className="text-xs text-[var(--color-text-muted)] mr-2">金額:</span>
                                 ¥{req.amount.toLocaleString()}
                             </div>
 
                             {req.status === 'completed' && req.trackingNumber && (
-                                <div className="bg-white border border-emerald-100 rounded p-2 mb-2">
+                                <div className="bg-[var(--color-background)] border border-emerald-100 rounded p-2 mb-2">
                                     <div className="text-[10px] text-emerald-600 font-bold uppercase mb-1">追跡番号</div>
-                                    <div className="font-mono text-sm text-slate-700 tracking-wider">
+                                    <div className="font-mono text-sm text-[var(--color-text-main)] tracking-wider">
                                         {req.trackingNumber}
                                     </div>
                                 </div>
                             )}
 
                             {req.inventoryItems && req.inventoryItems.length > 0 && (
-                                <div className="mt-3 pt-3 border-t border-slate-200">
-                                    <p className="text-[10px] text-slate-400 font-bold mb-2">納品明細</p>
+                                <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
+                                    <p className="text-[10px] text-[var(--color-text-muted)] font-bold mb-2">納品明細</p>
                                     <ul className="space-y-1">
                                         {req.inventoryItems.map((item: any) => (
-                                            <li key={item.id} className="text-xs text-slate-600 flex justify-between">
+                                            <li key={item.id} className="text-xs text-[var(--color-text-secondary)] flex justify-between">
                                                 <span>{item.brand} {item.name || item.brand}</span>
                                                 {/* <span className="text-slate-400">¥{item.costPrice.toLocaleString()}</span> Cost should be hidden? Usually Delivery Note shows items. */}
                                             </li>
@@ -531,22 +531,22 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 actionLink={!hasPlan ? "/pricing" : (courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1")}
                 blur="sm"
             >
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 shadow-sm overflow-hidden p-4 md:p-6 relative">
+                <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden p-4 md:p-6 relative">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                         <span className="text-6xl">🤝</span>
                     </div>
-                    <h3 className="font-bold text-amber-900 mb-2 flex items-center gap-2">
-                        <span className="bg-amber-100 p-1 rounded-md">🤝</span>
+                    <h3 className="font-bold text-[var(--color-text-main)] mb-2 flex items-center gap-2 font-serif">
+                        <span className="bg-[var(--color-background)] p-1 rounded-md">🤝</span>
                         アフィリエイト
                     </h3>
 
                     <div className="space-y-4 relative z-10">
                         <div>
-                            <p className="text-[10px] text-amber-700 font-bold uppercase tracking-wider mb-1">あなたの紹介コード</p>
-                            <div className="flex items-center gap-2 bg-white border border-amber-200 rounded-lg p-2">
-                                <code className="flex-1 font-mono text-sm font-bold text-amber-800 text-center">{user.affiliateCode || "CODE_GENERATING..."}</code>
+                            <p className="text-[10px] text-[var(--color-primary)] font-bold uppercase tracking-wider mb-1">あなたの紹介コード</p>
+                            <div className="flex items-center gap-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg p-2">
+                                <code className="flex-1 font-mono text-sm font-bold text-[var(--color-text-main)] text-center">{user.affiliateCode || "CODE_GENERATING..."}</code>
                                 <button
-                                    className="text-[10px] bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold hover:bg-amber-200 transition-colors"
+                                    className="text-[10px] bg-[var(--color-primary-light)]/20 text-[var(--color-primary)] px-2 py-1 rounded font-bold hover:bg-[var(--color-primary-light)]/40 transition-colors"
                                     onClick={() => {
                                         const url = typeof window !== 'undefined' ? window.location.origin : 'https://lunaflow.space';
                                         navigator.clipboard.writeText(`${url}?mode=register&ref=${user.affiliateCode}`);
@@ -557,10 +557,10 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                                 </button>
                             </div>
                         </div>
-                        <div className="bg-white/60 rounded-lg p-3">
+                        <div className="bg-[var(--color-background)]/60 rounded-lg p-3">
                             <div className="flex justify-between items-end mb-1">
-                                <span className="text-[10px] text-amber-800 font-bold">今月の見込み収益</span>
-                                <span className="text-lg font-bold text-amber-600">
+                                <span className="text-[10px] text-[var(--color-text-main)] font-bold">今月の見込み収益</span>
+                                <span className="text-lg font-bold text-[var(--color-primary)]">
                                     ¥{affiliateEarnings.monthlyEarnings.toLocaleString()}
                                 </span>
                             </div>
@@ -585,26 +585,26 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
                 blur="sm"
             >
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
+                <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm p-4 md:p-6 relative overflow-hidden group hover:border-[var(--color-primary-light)] transition-colors">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                        <h3 className="font-bold text-[var(--color-text-main)] flex items-center gap-2 font-serif">
                             <span className="bg-emerald-100 text-emerald-600 p-1.5 rounded-lg"><Book className="w-4 h-4" /></span>
                             デジタル商品管理台帳 (在庫/売上)
                         </h3>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="bg-slate-50 p-3 rounded-lg text-center">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase">在庫数</p>
-                            <p className="text-lg font-bold text-slate-700">{displayCount} <span className="text-sm font-normal text-slate-400">点</span></p>
+                        <div className="bg-[var(--color-background)] p-3 rounded-lg text-center">
+                            <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase">在庫数</p>
+                            <p className="text-lg font-bold text-[var(--color-text-main)]">{displayCount} <span className="text-sm font-normal text-[var(--color-text-muted)]">点</span></p>
                         </div>
-                        <div className="bg-slate-50 p-3 rounded-lg text-center">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase">今月の利益</p>
+                        <div className="bg-[var(--color-background)] p-3 rounded-lg text-center">
+                            <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase">今月の利益</p>
                             <p className="text-lg font-bold text-emerald-600">¥{displayProfit.toLocaleString()}</p>
                         </div>
                     </div>
 
-                    <Link href="/student/inventory" className="block w-full text-center py-2 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors">
+                    <Link href="/student/inventory" className="block w-full text-center py-2 bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-primary)] rounded-lg text-xs font-bold hover:bg-[var(--color-surface-hover)] transition-colors">
                         台帳を開く
                     </Link>
                 </div>
@@ -617,20 +617,20 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
         return (
             <section>
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-serif font-bold text-slate-800 flex items-center gap-2">
-                        <MessageSquare className="w-5 h-5 text-indigo-600" />
+                    <h2 className="text-xl font-serif font-bold text-[var(--color-text-main)] flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-[var(--color-primary)]" />
                         新着フィードバック
                     </h2>
                 </div>
                 <div className="space-y-4">
                     {feedbacks.map((item, idx) => (
-                        <div key={idx} className="bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm relative overflow-hidden">
+                        <div key={idx} className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-6 shadow-sm relative overflow-hidden">
                             <div className="flex justify-between items-start mb-2">
-                                <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded-full">AI/講師からのコメント</span>
-                                <span className="text-[10px] text-slate-400">{new Date(item.feedbackAt || item.completedAt).toLocaleString()}</span>
+                                <span className="bg-[var(--color-background)] text-[var(--color-primary)] text-[10px] font-bold px-2 py-1 rounded-full">AI/講師からのコメント</span>
+                                <span className="text-[10px] text-[var(--color-text-muted)]">{new Date(item.feedbackAt || item.completedAt).toLocaleString()}</span>
                             </div>
-                            <h3 className="font-bold text-slate-800 mb-2">{item.blockTitle}</h3>
-                            <div className="bg-slate-50 rounded-lg p-4 text-sm text-slate-600 leading-relaxed border border-slate-100">
+                            <h3 className="font-bold text-[var(--color-text-main)] mb-2 font-serif">{item.blockTitle}</h3>
+                            <div className="bg-[var(--color-background)] rounded-lg p-4 text-sm text-[var(--color-text-secondary)] leading-relaxed border border-[var(--color-border)]">
                                 {item.feedbackContent}
                             </div>
                         </div>
@@ -643,30 +643,30 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     const renderCourses = () => (
         <section>
             <div className="flex items-center justify-between mb-4 md:mb-6">
-                <h2 className="text-lg md:text-xl font-serif font-bold text-slate-800 flex items-center gap-2">
-                    <PlayCircle className="w-5 h-5 text-rose-600" />
+                <h2 className="text-lg md:text-xl font-serif font-bold text-[var(--color-text-main)] flex items-center gap-2">
+                    <PlayCircle className="w-5 h-5 text-[var(--color-primary)]" />
                     受講中のコース
                 </h2>
             </div>
             <div className="space-y-4 md:space-y-6">
                 {courses.map((course) => (
-                    <div key={course.id} className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+                    <div key={course.id} className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-4 md:p-6 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
                         <div className="relative z-10">
                             <div className="flex justify-between items-start mb-3 md:mb-4">
-                                <span className="bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-1 rounded-full">受講中</span>
+                                <span className="bg-[var(--color-background)] text-[var(--color-primary)] text-[10px] font-bold px-2 py-1 rounded-full">受講中</span>
                             </div>
-                            <h3 className="text-base md:text-lg font-bold text-slate-800 mb-2 leading-relaxed group-hover:text-rose-700 transition-colors">
+                            <h3 className="text-base md:text-lg font-bold text-[var(--color-text-main)] mb-2 leading-relaxed group-hover:text-[var(--color-primary)] transition-colors font-serif">
                                 <Link href={`/student/course/${course.id}`} className="before:absolute before:inset-0">
                                     {course.title}
                                 </Link>
                             </h3>
-                            <ProgressBar value={10} color="bg-rose-500" height="h-1.5" className="mb-4" />
+                            <ProgressBar value={10} color="bg-[var(--color-primary)]" height="h-1.5" className="mb-4" />
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-6">
-                                <p className="text-xs text-slate-500 leading-tight md:flex-1">
+                                <p className="text-xs text-[var(--color-text-secondary)] leading-tight md:flex-1">
                                     {course.title}へようこそ！まずは動画を確認して感想を記載して受講を開始してください。
                                 </p>
                                 <div className="flex justify-end md:justify-start">
-                                    <span className="text-xs font-bold text-white bg-rose-600 px-3 py-2 rounded-lg shadow-sm group-hover:bg-rose-700 transition-colors">
+                                    <span className="text-xs font-bold text-white bg-[var(--color-primary)] px-3 py-2 rounded-lg shadow-sm group-hover:bg-[var(--color-primary-dark)] transition-colors">
                                         感想を送ってスタート &rarr;
                                     </span>
                                 </div>
@@ -681,19 +681,19 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     const renderAnnouncements = () => (
         <section>
             <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-serif font-bold text-slate-800 flex items-center gap-2">
+                <h2 className="text-xl font-serif font-bold text-[var(--color-text-main)] flex items-center gap-2">
                     <Bell className="w-5 h-5 text-amber-500" />
                     お知らせ
                 </h2>
-                <Link href="#" className="text-xs font-bold text-slate-400 hover:text-rose-700">すべて見る</Link>
+                <Link href="#" className="text-xs font-bold text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">すべて見る</Link>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100">
+            <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm divide-y divide-[var(--color-border)]">
                 {announcements.map((item) => (
-                    <div key={item.id} className="p-4 md:p-5 flex items-start gap-4 hover:bg-slate-50/80 transition-colors cursor-pointer group">
-                        <div className="text-xs font-bold text-slate-400 pt-1 w-24 flex-shrink-0">{item.date}</div>
+                    <div key={item.id} className="p-4 md:p-5 flex items-start gap-4 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer group">
+                        <div className="text-xs font-bold text-[var(--color-text-muted)] pt-1 w-24 flex-shrink-0">{item.date}</div>
                         <div className="flex-1">
-                            <h4 className="text-sm font-bold text-slate-700 mb-1 group-hover:text-rose-700 transition-colors">{item.title}</h4>
-                            <p className="text-xs text-slate-500 line-clamp-1">{item.content}</p>
+                            <h4 className="text-sm font-bold text-[var(--color-text-main)] mb-1 group-hover:text-[var(--color-primary)] transition-colors font-serif">{item.title}</h4>
+                            <p className="text-xs text-[var(--color-text-secondary)] line-clamp-1">{item.content}</p>
                         </div>
                     </div>
                 ))}
@@ -702,30 +702,34 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     );
 
     const renderManual = () => (
-        <section className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100 flex items-center justify-between">
+        <section className="bg-[var(--color-surface)] rounded-2xl p-6 border border-[var(--color-border)] flex items-center justify-between">
             <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+                <div className="w-10 h-10 bg-[var(--color-background)] rounded-full flex items-center justify-center text-[var(--color-primary)]">
                     <Book className="w-5 h-5" />
                 </div>
                 <div>
-                    <h3 className="font-bold text-indigo-900 text-sm">学習ガイド・マニュアル</h3>
-                    <p className="text-xs text-indigo-700">システムの使い方がわからない場合はこちら</p>
+                    <h3 className="font-bold text-[var(--color-text-main)] text-sm font-serif">学習ガイド・マニュアル</h3>
+                    <p className="text-xs text-[var(--color-text-secondary)]">システムの使い方がわからない場合はこちら</p>
                 </div>
             </div>
-            <Link href="/manual" className="px-4 py-2 bg-white text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 hover:bg-indigo-50 transition-colors">
+            <Link href="/manual" className="px-4 py-2 bg-[var(--color-background)] text-[var(--color-primary)] text-xs font-bold rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] transition-colors">
                 マニュアルを見る
             </Link>
         </section>
     );
 
     const renderQuickMenu = () => (
-        <nav className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-2">
-            <Link href="/manual" className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors group">
-                <Book className="w-4 h-4 text-slate-400 group-hover:text-rose-600" />
+        <nav className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden p-2">
+            <Link href="/manual" className="flex items-center gap-3 px-4 py-3 text-[var(--color-text-main)] hover:bg-[var(--color-background)] rounded-lg transition-colors group">
+                <Book className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]" />
                 <span className="text-sm font-medium">利用マニュアル</span>
             </Link>
-            <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-50 hover:text-red-600 rounded-lg transition-colors group text-left">
-                <LogOut className="w-4 h-4 text-slate-300 group-hover:text-red-400" />
+            <Link href="/student/simulator" className="flex items-center gap-3 px-4 py-3 text-[var(--color-text-main)] hover:bg-[var(--color-background)] rounded-lg transition-colors group">
+                <Calculator className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]" />
+                <span className="text-sm font-medium">利益シミュレーター</span>
+            </Link>
+            <button className="w-full flex items-center gap-3 px-4 py-3 text-[var(--color-text-muted)] hover:bg-[var(--color-background)] hover:text-red-600 rounded-lg transition-colors group text-left">
+                <LogOut className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-red-400" />
                 <span className="text-sm font-medium">ログアウト</span>
             </button>
         </nav>
@@ -743,17 +747,17 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
                 blur="sm"
             >
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 relative overflow-hidden group hover:border-indigo-300 transition-colors">
+                <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm p-4 md:p-6 relative overflow-hidden group hover:border-[var(--color-primary-light)] transition-colors">
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                            <span className="bg-indigo-100 p-1.5 rounded-lg text-indigo-600">👜</span>
+                        <h3 className="font-bold text-[var(--color-text-main)] flex items-center gap-2 font-serif">
+                            <span className="bg-[var(--color-background)] p-1.5 rounded-lg text-[var(--color-primary)]">👜</span>
                             リペアグッズストア
                         </h3>
                     </div>
-                    <p className="text-xs text-slate-500 mb-4">
+                    <p className="text-xs text-[var(--color-text-secondary)] mb-4">
                         転売実践に必要な道具を購入できます。
                     </p>
-                    <Link href="/student/store" className="block w-full text-center py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm">
+                    <Link href="/student/store" className="block w-full text-center py-2 bg-[var(--color-primary)] text-white rounded-lg text-xs font-bold hover:bg-[var(--color-primary-dark)] transition-colors shadow-sm">
                         ストアを見る
                     </Link>
                 </div>
@@ -764,8 +768,8 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     // --- Main Render ---
 
     return (
-        <div className="min-h-screen bg-[#FDFCFB] text-slate-800 pb-32 relative">
-            <header className="bg-white border-b border-slate-200 px-8 py-4 sticky top-0 z-20 shadow-sm hidden">
+        <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-text-main)] pb-32 relative">
+            <header className="bg-white border-b border-[var(--color-border)] px-8 py-4 sticky top-0 z-20 shadow-sm hidden">
                 {/* Header content moved to separate Header component, this block is just a placeholder if needed, but redundant with Layout */}
             </header>
 

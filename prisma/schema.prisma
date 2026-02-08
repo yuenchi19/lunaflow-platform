@@ -61,6 +61,25 @@ model User {
   // Community Flags
   communityRulesAgreed Boolean           @default(false)
   communityIntroRead   Boolean           @default(false)
+  
+  quotas             UserQuota[]
+}
+
+model UserQuota {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month     String   // Format: "YYYY-MM"
+  
+  researchCount Int  @default(0)
+  researchLimit Int  @default(50)
+  
+  listingCount  Int  @default(0)
+  listingLimit  Int  @default(50)
+  
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, month])
 }
 
 model SystemConfig {
