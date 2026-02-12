@@ -57,6 +57,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
 
     const [unlocks, setUnlocks] = useState({ affiliate: false, inventory: false });
+    const [quota, setQuota] = useState<{ researchCount: number; researchLimit: number; listingCount: number; listingLimit: number } | null>(null);
 
     useEffect(() => {
         // Fetch Unlock Status
@@ -68,6 +69,16 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 }
             })
             .catch(err => console.error("Failed to fetch unlock status", err));
+
+        // Fetch Quota Status
+        fetch('/api/student/quota')
+            .then(res => res.json())
+            .then(data => {
+                if (data && !data.error) {
+                    setQuota(data);
+                }
+            })
+            .catch(err => console.error("Failed to fetch quota", err));
     }, []);
 
     useEffect(() => {
@@ -440,6 +451,24 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                                 <span>目標: ¥{displayTarget.toLocaleString()}</span>
                             </div>
                         </div>
+
+                        {/* Research Quota Display */}
+                        {quota && (
+                            <div className="bg-[var(--color-background)] rounded-lg p-3 border border-[var(--color-border)]">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">リサーチ (購入リクエスト)</span>
+                                    <span className={`text-xs font-bold font-mono ${quota.researchCount >= quota.researchLimit ? 'text-red-500' : 'text-[var(--color-text-main)]'}`}>
+                                        {quota.researchCount} / {quota.researchLimit} 回
+                                    </span>
+                                </div>
+                                <div className="w-full bg-[var(--color-border)] h-1.5 rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full rounded-full ${quota.researchCount >= quota.researchLimit ? 'bg-red-500' : 'bg-indigo-500'}`}
+                                        style={{ width: `${Math.min(100, (quota.researchCount / (quota.researchLimit || 1)) * 100)}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        )}
                         <button
                             onClick={() => setIsPurchaseModalOpen(true)}
                             className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--color-primary)] text-white font-bold rounded-xl hover:bg-[var(--color-primary-dark)] transition-colors shadow-lg"
@@ -603,6 +632,24 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                             <p className="text-lg font-bold text-emerald-600">¥{displayProfit.toLocaleString()}</p>
                         </div>
                     </div>
+
+                    {/* Listing Quota Display */}
+                    {quota && (
+                        <div className="bg-[var(--color-background)] rounded-lg p-3 border border-[var(--color-border)] mb-4">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">出品・在庫登録</span>
+                                <span className={`text-xs font-bold font-mono ${quota.listingCount >= quota.listingLimit ? 'text-red-500' : 'text-[var(--color-text-main)]'}`}>
+                                    {quota.listingCount} / {quota.listingLimit} 回
+                                </span>
+                            </div>
+                            <div className="w-full bg-[var(--color-border)] h-1.5 rounded-full overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full ${quota.listingCount >= quota.listingLimit ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                    style={{ width: `${Math.min(100, (quota.listingCount / (quota.listingLimit || 1)) * 100)}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                    )}
 
                     <Link href="/student/inventory" className="block w-full text-center py-2 bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-primary)] rounded-lg text-xs font-bold hover:bg-[var(--color-surface-hover)] transition-colors">
                         台帳を開く
