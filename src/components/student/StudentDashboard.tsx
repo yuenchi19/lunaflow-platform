@@ -14,6 +14,9 @@ import { ProgressBar } from "../ui/ProgressBar";
 import { useCart } from "@/context/CartContext";
 import { getShippingFee, PREFECTURES, Carrier } from "@/lib/shipping";
 import { useSearchParams } from "next/navigation";
+import NotificationInbox from "./NotificationInbox";
+import ProfitGoal from "./ProfitGoal";
+import SalesCalendar from "./SalesCalendar";
 
 interface StudentDashboardProps {
     initialUser?: User | null;
@@ -389,7 +392,10 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     // --- Sub-components (Render Functions) ---
 
     const renderProfileCard = () => (
-        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden group">
+        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden group relative">
+            <div className="absolute top-2 right-2 z-10">
+                <NotificationInbox />
+            </div>
             <div className="pt-4 pb-4 px-4 md:pt-6 md:pb-6 text-center">
                 <div className="flex flex-col items-center justify-center gap-1 mb-1">
                     <h2 className="font-bold text-xl text-[var(--color-text-main)] font-serif">{user.name}</h2>
@@ -827,6 +833,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 {/* Mobile Order Layout (Stack) */}
                 <div className="lg:hidden space-y-6">
                     {renderProfileCard()}
+                    <ProfitGoal />
                     {renderCourses()}
                     {renderAnnouncements()}
                     {renderAnnouncements()}
@@ -834,6 +841,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                     {renderPurchaseHistory()}
                     {renderAffiliateCard()}
                     {renderAffiliateCard()}
+                    <SalesCalendar />
                     {renderStoreWidget()}
 
                     {renderManual()}
@@ -846,6 +854,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                     {/* Left Sidebar */}
                     <div className="lg:col-span-4 space-y-8">
                         {renderProfileCard()}
+                        <ProfitGoal />
                         {renderLedgerWidget()}
                         {renderPurchaseTracker()}
                         {renderPurchaseHistory()}
@@ -857,6 +866,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                     {/* Right Content */}
                     <div className="lg:col-span-8 space-y-10">
                         {renderFeedbacks()}
+                        <SalesCalendar />
                         {renderCourses()}
                         {renderAnnouncements()}
                         {renderManual()}

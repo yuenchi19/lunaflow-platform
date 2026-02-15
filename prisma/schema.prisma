@@ -68,6 +68,10 @@ model User {
   timelinePosts      TimelinePost[]
   timelineComments   TimelineComment[]
   timelineLikes      TimelineLike[]
+
+  // Notifications & Goals
+  notifications      Notification[]
+  monthlyProfitGoal  Int?                @default(0)
 }
 
 model UserQuota {
@@ -432,6 +436,18 @@ model TimelineLike {
   createdAt DateTime @default(now())
 
   @@unique([postId, userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // info, success, warning, error
+  title     String
+  message   String   @db.Text
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 
