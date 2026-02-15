@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Download, Search, CheckCircle, Clock, FileText } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Download, Search, CheckCircle, Clock, FileText, Upload } from "lucide-react";
 import { useToast } from "@/components/ui/ToastContext";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -60,6 +60,78 @@ export default function PurchaseRequestsPage() {
     const [selectedRequest, setSelectedRequest] = useState<AdminPurchaseRequest | null>(null);
     const [trackingNumber, setTrackingNumber] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const text = await file.text();
+        const lines = text.split('\n');
+        const updates: any[] = [];
+
+        // Simple CSV Parser
+        // Expected format: ID,TrackingNumber,Status(optional)
+        // Check for header
+        const startIndex = lines[0].toLowerCase().includes('id') ? 1 : 0;
+
+        for (let i = startIndex; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            // Handle quotes if necessary, but assuming simple CSV for now
+            const parts = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+            const [id, tracking, status] = parts;
+
+            if (id) {
+                updates.push({
+                    id,
+                    trackingNumber: tracking || undefined,
+                    status: status || 'completed' // Default to completed if imported with tracking
+                });
+            }
+        }
+
+        if (updates.length === 0) {
+            showToast("有効なデータが見つかりませんでした。", 'error');
+            return;
+        }
+
+        if (!confirm(`${updates.length}件のデータを一括更新しますか？`)) {
+            e.target.value = '';
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/purchase-requests/bulk-update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ updates })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                showToast(`${data.processed}件の更新が完了しました。`, 'success');
+                if (data.errors && data.errors.length > 0) {
+                    console.error("Bulk update errors:", data.errors);
+                    alert(`${data.errors.length}件のエラーが発生しました。コンソールを確認してください。`);
+                }
+                fetchRequests();
+            } else {
+                showToast(`エラー: ${data.error}`, 'error');
+            }
+        } catch (error) {
+            console.error("Bulk import error:", error);
+            showToast("通信エラーが発生しました。", 'error');
+        } finally {
+            setLoading(false);
+            e.target.value = '';
+        }
+    };
 
     const openCompleteModal = (req: AdminPurchaseRequest) => {
         setSelectedRequest(req);
@@ -144,6 +216,20 @@ export default function PurchaseRequestsPage() {
                         <Download className="w-4 h-4" />
                         <span>CSVエクスポート</span>
                     </button>
+                    <button
+                        onClick={handleImportClick}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                    >
+                        <Upload className="w-4 h-4" />
+                        <span>CSV一括更新</span>
+                    </button>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        className="hidden"
+                        accept=".csv"
+                    />
                     <div className="relative">
                         <input
                             type="text"

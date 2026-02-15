@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import { User, Course, Announcement } from "@/types";
 import { createMockStripeSession } from "@/lib/stripe-integration";
 import { MOCK_USERS, MOCK_COURSES, getAffiliateEarnings, getStudentProgressDetail } from "@/lib/data";
-import { User as UserIcon, Bell, ExternalLink, Book, LogOut, ChevronRight, PlayCircle, MessageSquare, Search, TrendingUp, Calculator, Lock, X } from "lucide-react";
+import {
+    User as UserIcon, Bell, ExternalLink, Book, LogOut, ChevronRight, PlayCircle, MessageSquare, Search, TrendingUp, Calculator, Lock, X     TrendingUp,
+    MessageSquare
+} from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import LockOverlay from "../LockOverlay";
