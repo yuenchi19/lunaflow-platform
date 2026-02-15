@@ -5,8 +5,7 @@ import { User, Course, Announcement } from "@/types";
 import { createMockStripeSession } from "@/lib/stripe-integration";
 import { MOCK_USERS, MOCK_COURSES, getAffiliateEarnings, getStudentProgressDetail } from "@/lib/data";
 import {
-    User as UserIcon, Bell, ExternalLink, Book, LogOut, ChevronRight, PlayCircle, MessageSquare, Search, TrendingUp, Calculator, Lock, X     TrendingUp,
-    MessageSquare
+    User as UserIcon, Bell, ExternalLink, Book, LogOut, ChevronRight, PlayCircle, MessageSquare, Search, TrendingUp, Calculator, Lock, X, ShoppingCart, Package, FileText
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
