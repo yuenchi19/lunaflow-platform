@@ -6,6 +6,7 @@ import { Block, User, Category, ProgressDetail } from "@/types";
 import { PlayCircle, MessageSquare, Send, CheckCircle, ChevronRight, AlertCircle, RotateCcw, Clock } from "lucide-react";
 import { storage } from "@/app/lib/storage"; // Added import
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 interface LessonViewProps {
     courseId: string;
@@ -22,6 +23,10 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccessToast, setShowSuccessToast] = useState(false);
     const [nav, setNav] = useState<{ next: string | null, prev: string | null, nextCategoryId?: string | null }>({ next: null, prev: null });
+
+    const searchParams = useSearchParams();
+    const forceUnlock = searchParams ? searchParams.get('unlocked') === 'true' : false;
+    const unlockQuery = forceUnlock ? '?unlocked=true' : '';
 
     const loadData = async () => {
         let fetchedBlock: Block | null = null;
@@ -119,9 +124,9 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
             if (res.ok) {
                 // Determine where to go
                 if (nav.next) {
-                    window.location.href = `/student/course/${courseId}/learn/${nav.next}`;
+                    window.location.href = `/student/course/${courseId}/learn/${nav.next}${unlockQuery}`;
                 } else {
-                    window.location.href = `/student/course/${courseId}`;
+                    window.location.href = `/student/course/${courseId}${unlockQuery}`;
                 }
             } else {
                 const data = await res.json().catch(() => ({}));
@@ -156,7 +161,7 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
             {/* Header / Breadcrumb */}
             <div className="bg-white border-b border-slate-100 px-8 py-4 shadow-sm">
                 <div className="max-w-5xl mx-auto flex items-center gap-2 text-sm text-slate-400">
-                    <Link href={`/student/course/${courseId}`} className="hover:text-rose-700 transition-colors">コースTOP</Link>
+                    <Link href={`/student/course/${courseId}${unlockQuery}`} className="hover:text-rose-700 transition-colors">コースTOP</Link>
                     <span>/</span>
                     <span className="text-slate-600 font-bold">{category?.title}</span>
                 </div>
@@ -230,7 +235,7 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                                                     const isNextCat = nav.nextCategoryId && nav.nextCategoryId !== block.categoryId;
                                                     return (
                                                         <Link
-                                                            href={`/student/course/${courseId}/learn/${nav.next}`}
+                                                            href={`/student/course/${courseId}/learn/${nav.next}${unlockQuery}`}
                                                             className="bg-[#0047AB] text-white px-8 py-3 rounded-md font-bold hover:bg-[#003580] transition-all flex items-center gap-2"
                                                         >
                                                             {isNextCat ? "次のカテゴリへ" : "次のレッスンへ"}
@@ -240,7 +245,7 @@ export default function LessonView({ courseId, blockId }: LessonViewProps) {
                                                 } else {
                                                     return (
                                                         <Link
-                                                            href={`/student/course/${courseId}`}
+                                                            href={`/student/course/${courseId}${unlockQuery}`}
                                                             className="bg-emerald-600 text-white px-8 py-3 rounded-md font-bold hover:bg-emerald-700 transition-all"
                                                         >
                                                             コース完了！一覧へ

@@ -25,6 +25,7 @@ interface StudentDashboardProps {
 export default function StudentDashboard({ initialUser }: StudentDashboardProps) {
     const supabase = createClient();
     const searchParams = useSearchParams();
+    const forceUnlock = searchParams ? searchParams.get('unlocked') === 'true' : false;
     // STRICT: Unsafe to fallback to Mock User (which is Premium).
     // If no initialUser, we must assume loading or unauthenticated.
     // However, if called from Server Component, initialUser should be present if logged in.
@@ -87,7 +88,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     }, []);
 
     useEffect(() => {
-        const isUnlocked = user.isLedgerEnabled || unlocks.inventory;
+        const isUnlocked = forceUnlock || user.isLedgerEnabled || unlocks.inventory;
         if (searchParams.get('openPurchase') === 'true' && isUnlocked) {
             setIsPurchaseModalOpen(true);
         }
@@ -420,7 +421,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
 
     const renderPurchaseTracker = () => {
-        const isUnlocked = user.isLedgerEnabled || unlocks.inventory;
+        const isUnlocked = forceUnlock || user.isLedgerEnabled || unlocks.inventory;
         const displayTotal = !isUnlocked ? 150000 : currentMonthPurchaseTotal;
         const displayTarget = !isUnlocked ? 300000 : (purchaseTarget || 1);
         const displayPercent = Math.round((displayTotal / displayTarget) * 100);
@@ -431,7 +432,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 title="仕入れ・在庫管理・ストア公開機能はロックされています"
                 message="規定のカリキュラムを完了することで、利用可能になります。"
                 actionLabel="コースを進める"
-                actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
+                actionLink={courses.length > 0 ? `/student/course/${courses[0].id}${forceUnlock ? '?unlocked=true' : ''}` : `/student/course/course_1${forceUnlock ? '?unlocked=true' : ''}`}
                 blur="sm"
             >
                 <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm p-4 md:p-6 relative overflow-hidden">
@@ -548,7 +549,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
 
     const renderAffiliateCard = () => {
         const hasPlan = ['standard', 'premium', 'partner'].includes(user.plan || '');
-        const isUnlocked = hasPlan && unlocks.affiliate;
+        const isUnlocked = forceUnlock || (hasPlan && unlocks.affiliate);
 
         // Determine Lock Message
         let lockTitle = "アフィリエイト機能はロックされています";
@@ -565,7 +566,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 title={lockTitle}
                 message={lockMessage}
                 actionLabel={!hasPlan ? "プランを確認" : "コースを進める"}
-                actionLink={!hasPlan ? "/pricing" : (courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1")}
+                actionLink={!hasPlan ? "/pricing" : (courses.length > 0 ? `/student/course/${courses[0].id}${forceUnlock ? '?unlocked=true' : ''}` : `/student/course/course_1${forceUnlock ? '?unlocked=true' : ''}`)}
                 blur="sm"
             >
                 <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden p-4 md:p-6 relative">
@@ -609,7 +610,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     };
 
     const renderLedgerWidget = () => {
-        const isUnlocked = user.isLedgerEnabled || unlocks.inventory;
+        const isUnlocked = forceUnlock || user.isLedgerEnabled || unlocks.inventory;
         const displayCount = !isUnlocked ? 12 : inventoryStats.count;
         const displayProfit = !isUnlocked ? 85000 : inventoryStats.profit;
 
@@ -619,7 +620,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 title="まずはカリキュラムを進めましょう！"
                 message="規定のカリキュラムを完了することで、利用可能になります。"
                 actionLabel="コースを進める"
-                actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
+                actionLink={courses.length > 0 ? `/student/course/${courses[0].id}${forceUnlock ? '?unlocked=true' : ''}` : `/student/course/course_1${forceUnlock ? '?unlocked=true' : ''}`}
                 blur="sm"
             >
                 <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm p-4 md:p-6 relative overflow-hidden group hover:border-[var(--color-primary-light)] transition-colors">
@@ -711,7 +712,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                                 <span className="bg-[var(--color-background)] text-[var(--color-primary)] text-[10px] font-bold px-2 py-1 rounded-full">受講中</span>
                             </div>
                             <h3 className="text-base md:text-lg font-bold text-[var(--color-text-main)] mb-2 leading-relaxed group-hover:text-[var(--color-primary)] transition-colors font-serif">
-                                <Link href={`/student/course/${course.id}`} className="before:absolute before:inset-0">
+                                <Link href={`/student/course/${course.id}${forceUnlock ? '?unlocked=true' : ''}`} className="before:absolute before:inset-0">
                                     {course.title}
                                 </Link>
                             </h3>
@@ -791,7 +792,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
     );
 
     const renderStoreWidget = () => {
-        const isUnlocked = user.isLedgerEnabled || unlocks.inventory;
+        const isUnlocked = forceUnlock || user.isLedgerEnabled || unlocks.inventory;
 
         return (
             <LockOverlay
@@ -799,7 +800,7 @@ export default function StudentDashboard({ initialUser }: StudentDashboardProps)
                 title="ストア機能はロックされています"
                 message="規定のカリキュラムを完了することで、利用可能になります。"
                 actionLabel="コースを進める"
-                actionLink={courses.length > 0 ? `/student/course/${courses[0].id}` : "/student/course/course_1"}
+                actionLink={courses.length > 0 ? `/student/course/${courses[0].id}${forceUnlock ? '?unlocked=true' : ''}` : `/student/course/course_1${forceUnlock ? '?unlocked=true' : ''}`}
                 blur="sm"
             >
                 <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm p-4 md:p-6 relative overflow-hidden group hover:border-[var(--color-primary-light)] transition-colors">

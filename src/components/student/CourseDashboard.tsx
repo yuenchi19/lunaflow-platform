@@ -6,6 +6,7 @@ import { storage } from "@/app/lib/storage";
 import { Category, Block, Course, User } from "@/types";
 import { Calendar, BookOpen, MessageSquare, PlayCircle, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 interface CourseDashboardProps {
     courseId: string;
@@ -21,6 +22,9 @@ export default function CourseDashboard({ courseId, initialCourse, initialProgre
     const [user] = useState<User>(MOCK_USERS[0]); // Mock student
     // Progress State
     const [allProgress, setAllProgress] = useState<any[]>(initialProgress);
+
+    const searchParams = useSearchParams();
+    const forceUnlock = searchParams ? searchParams.get('unlocked') === 'true' : false;
 
     // Derive completed blocks from initial progress
     const [completedBlockIds, setCompletedBlockIds] = useState<string[]>(() => {
@@ -118,7 +122,7 @@ export default function CourseDashboard({ courseId, initialCourse, initialProgre
                                     // If everything is complete (index -1), nothing is locked.
                                     // Otherwise, any category AFTER the first incomplete one is locked.
                                     // Also, strict sequential: current one is unlocked, next ones are locked.
-                                    const isLocked = firstIncompleteIndex !== -1 && idx > firstIncompleteIndex;
+                                    const isLocked = !forceUnlock && firstIncompleteIndex !== -1 && idx > firstIncompleteIndex;
 
                                     if (isLocked) {
                                         return (
@@ -145,7 +149,7 @@ export default function CourseDashboard({ courseId, initialCourse, initialProgre
 
                                     return (
                                         <Link
-                                            href={catBlocks.length > 0 ? `/student/course/${course.id}/categories/${cat.id}` : '#'}
+                                            href={catBlocks.length > 0 ? `/student/course/${course.id}/categories/${cat.id}${forceUnlock ? '?unlocked=true' : ''}` : '#'}
                                             key={cat.id}
                                             className="block p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors group cursor-pointer"
                                             onClick={(e) => {

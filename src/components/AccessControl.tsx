@@ -17,7 +17,7 @@ export function AccessControl({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const checkUser = async () => {
             // Allow Public Routes
-            if (pathname === '/' || pathname === '/login' || pathname === '/pricing') {
+            if (pathname === '/' || pathname === '/login' || pathname === '/pricing' || pathname === '/admin/login') {
                 setIsBlocked(false);
                 setIsLoading(false);
                 return;

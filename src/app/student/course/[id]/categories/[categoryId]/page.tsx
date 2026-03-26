@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { getBlocks, getCategories, MOCK_COURSES } from "@/lib/data";
 import Link from "next/link";
 import { CheckCircle, PlayCircle, ArrowLeft } from "lucide-react";
@@ -11,6 +11,9 @@ export default function CategoryDetailPage() {
     const params = useParams();
     const courseId = params.id as string;
     const categoryId = params.categoryId as string;
+
+    const searchParams = useSearchParams();
+    const forceUnlock = searchParams ? searchParams.get('unlocked') === 'true' : false;
 
     const [course, setCourse] = useState<any | null>(null);
     const [category, setCategory] = useState<any | null>(null);
@@ -66,16 +69,16 @@ export default function CategoryDetailPage() {
             {/* Header */}
             <div className="bg-white border-b border-slate-100 px-8 py-4 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-2 text-sm text-slate-400">
-                    <Link href="/student/dashboard" className="hover:text-rose-700 transition-colors">マイページ</Link>
+                    <Link href={`/student/dashboard${forceUnlock ? '?unlocked=true' : ''}`} className="hover:text-rose-700 transition-colors">マイページ</Link>
                     <span>/</span>
-                    <Link href={`/student/course/${courseId}`} className="hover:text-rose-700 transition-colors">{course.title}</Link>
+                    <Link href={`/student/course/${courseId}${forceUnlock ? '?unlocked=true' : ''}`} className="hover:text-rose-700 transition-colors">{course.title}</Link>
                     <span>/</span>
                     <span className="text-slate-600 font-bold">{category.title}</span>
                 </div>
             </div>
 
             <main className="max-w-4xl mx-auto p-4 md:p-8">
-                <Link href={`/student/course/${courseId}`} className="inline-flex items-center text-sm text-slate-500 hover:text-rose-700 mb-6 font-bold">
+                <Link href={`/student/course/${courseId}${forceUnlock ? '?unlocked=true' : ''}`} className="inline-flex items-center text-sm text-slate-500 hover:text-rose-700 mb-6 font-bold">
                     <ArrowLeft className="w-4 h-4 mr-1" />
                     コーストップに戻る
                 </Link>
@@ -87,7 +90,7 @@ export default function CategoryDetailPage() {
                     {blocks.map((block, idx) => {
                         const isCompleted = completedBlockIds.includes(block.id);
                         // Lock if previous block (idx-1) is NOT completed, unless it's the first block (idx 0)
-                        const isLocked = idx > 0 && !completedBlockIds.includes(blocks[idx - 1].id);
+                        const isLocked = !forceUnlock && idx > 0 && !completedBlockIds.includes(blocks[idx - 1].id);
 
                         if (isLocked) {
                             return (
@@ -112,7 +115,7 @@ export default function CategoryDetailPage() {
 
                         return (
                             <Link
-                                href={`/student/course/${courseId}/learn/${block.id}`}
+                                href={`/student/course/${courseId}/learn/${block.id}${forceUnlock ? '?unlocked=true' : ''}`}
                                 key={block.id}
                                 className="block bg-white rounded-xl border border-slate-200 p-5 hover:bg-slate-50 transition-all hover:shadow-md group"
                             >
